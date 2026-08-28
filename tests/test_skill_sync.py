@@ -135,17 +135,24 @@ def _advertised_mcp_tools() -> set:
     Not a hardcoded list: `render_task_screenshot` lives on the server rather
     than in `tools_local`, and that split is exactly the kind of thing a second
     list gets wrong.
+
+    Both degraded paths return the fallback rather than an empty set. An empty
+    set does not weaken the guard, it inverts it -- the caller treats every
+    name it does not return as invented, so a machine without the MCP SDK
+    rejects prose that is correct. That is how this first failed in CI, where
+    the `mcp` extra is not installed by default.
     """
+    fallback = {"render_task_screenshot"}
     try:
         from potato.mcp_server.server import build_server, check_sdk_available
         if not check_sdk_available():
-            return set()
+            return fallback
         import asyncio
         server = build_server(root=REPO_ROOT)
         tools = asyncio.run(server.list_tools())
         return {t.name for t in tools}
     except Exception:
-        return {"render_task_screenshot"}
+        return fallback
 
 
 def _read(name: str) -> str:
