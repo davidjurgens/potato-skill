@@ -1,0 +1,265 @@
+# A task that runs
+
+Copying something that works beats assembling a config from field lists. Potato
+ships 213 examples for exactly this reason — but they are text-classification and
+schema demos, and none of them is a whole study: consent, instructions, a
+practice round, attention checks, the annotation itself, and a survey at the end.
+
+This is that skeleton. Every block below is the literal content of a file in
+`examples/advanced/full-study-skeleton/`, which validates under `--strict` and
+boots with `Loaded 2 training instances`, `Loaded 1 attention check items` and
+nothing about phases. A test in the Potato repo fails if this page and those
+files stop agreeing, so what you copy is what was run.
+
+Change the labels and the prose; keep the shapes.
+
+```
+project/
+├── config.yaml
+├── data/
+│   ├── items.json          # the real items
+│   ├── training.json       # practice, with model answers
+│   └── attention.json      # attention checks
+├── pages/
+│   ├── consent.jsonl
+│   ├── instructions.jsonl
+│   └── poststudy.jsonl
+└── static/
+    └── study.css
+```
+
+Every file in that tree is below. A phase whose `file:` is missing does not stop
+the boot — the phase is dropped with one `ERROR` line and the study runs without
+it — so copy all three page files, not just the one you plan to edit.
+
+## config.yaml
+
+```yaml
+# yaml-language-server: $schema=https://potatoannotator.readthedocs.io/en/latest/schemas/potato-config.schema.json
+annotation_task_name: Full Study Skeleton
+task_dir: .
+output_annotation_dir: annotation_output/
+
+data_files: [data/items.json]
+item_properties:
+  id_key: id
+  text_key: body
+
+instance_display:
+  fields:
+    - {key: title, type: text, label: Title}
+    - {key: body, type: text, label: Item, span_target: true}
+  layout: {direction: vertical, gap: 10px}
+  resizable: false                 # otherwise one line of text gets a 130px card
+
+base_css: static/study.css
+annotation_instructions: >-
+  <p><b>Reminder.</b> One line per rule, not the full definitions. Those live on
+  the instructions page.</p>
+
+annotation_schemes:
+  - annotation_type: span
+    name: evidence
+    description: Highlight the part that decides your answer.
+    target_field: body             # names the span_target field above
+    labels: [Evidence, Counter-evidence]
+    humanize_labels: false
+    sequential_key_binding: true
+    show_span_labels: true
+
+  - annotation_type: radio
+    name: category
+    description: Which category is this?
+    labels: [A, B, C, Unclear]     # always have a "none" or "unclear" option
+    humanize_labels: false
+    sequential_key_binding: true
+    label_requirement: {required: true}
+
+  - annotation_type: likert        # ordered judgement -> ordinal metric
+    name: severity
+    description: How severe is it?
+    size: 3
+    min_label: Low
+    max_label: High
+    humanize_labels: false
+    labels: [Low, Medium, High]    # label every point, not just the ends
+    sequential_key_binding: true
+    label_requirement: {required: true}
+
+  - annotation_type: text          # follow-up, hidden until it applies
+    name: why_unclear
+    description: What made it unclear?
+    multiline: true                # without this a `text` scheme is a one-line <input>
+    rows: 3
+    min_chars: 10
+    display_logic:
+      show_when:
+        - {schema: category, operator: equals, value: Unclear}
+
+num_annotators_per_item: 3
+assignment_strategy: random
+random_seed: 1
+max_annotations_per_user: 12       # every annotator sees all 12 items
+require_fully_annotated: true
+
+training:
+  enabled: true
+  data_file: data/training.json
+  allow_retry: true
+  feedback: {enabled: true}
+
+attention_checks:
+  enabled: true
+  frequency: 4
+  items_file: data/attention.json
+  min_response_time: 5
+  failure_handling: {action: warn}
+
+agreement_metrics: {enabled: true}
+
+phases:
+  order: [consent, instructions, training, annotation, poststudy]
+  consent:      {type: consent,      title: Consent,        file: pages/consent.jsonl}
+  instructions: {type: instructions, title: Instructions,   file: pages/instructions.jsonl}
+  training:     {type: training,     title: Practice}
+  annotation:   {type: annotation}
+  poststudy:    {type: poststudy,    title: Last questions, file: pages/poststudy.jsonl}
+
+login: {type: password}
+user_config: {allow_all_users: true}
+```
+
+## data/items.json
+
+Any of JSON array, JSONL, CSV or TSV. Fields beyond `id_key` and `text_key` are
+available to `instance_display` by name.
+
+```json
+[
+ {"id": "c001", "source": "forum", "title": "Thread 1", "body": "Body text of item 1. It has two sentences so a span has somewhere to go."},
+ {"id": "c002", "source": "forum", "title": "Thread 2", "body": "Body text of item 2. It has two sentences so a span has somewhere to go."},
+ {"id": "c003", "source": "forum", "title": "Thread 3", "body": "Body text of item 3. It has two sentences so a span has somewhere to go."},
+ {"id": "c004", "source": "forum", "title": "Thread 4", "body": "Body text of item 4. It has two sentences so a span has somewhere to go."},
+ {"id": "c005", "source": "forum", "title": "Thread 5", "body": "Body text of item 5. It has two sentences so a span has somewhere to go."},
+ {"id": "c006", "source": "forum", "title": "Thread 6", "body": "Body text of item 6. It has two sentences so a span has somewhere to go."},
+ {"id": "c007", "source": "forum", "title": "Thread 7", "body": "Body text of item 7. It has two sentences so a span has somewhere to go."},
+ {"id": "c008", "source": "forum", "title": "Thread 8", "body": "Body text of item 8. It has two sentences so a span has somewhere to go."},
+ {"id": "c009", "source": "forum", "title": "Thread 9", "body": "Body text of item 9. It has two sentences so a span has somewhere to go."},
+ {"id": "c010", "source": "forum", "title": "Thread 10", "body": "Body text of item 10. It has two sentences so a span has somewhere to go."},
+ {"id": "c011", "source": "forum", "title": "Thread 11", "body": "Body text of item 11. It has two sentences so a span has somewhere to go."},
+ {"id": "c012", "source": "forum", "title": "Thread 12", "body": "Body text of item 12. It has two sentences so a span has somewhere to go."}
+]
+```
+
+## data/training.json
+
+An **object**, not an array. Each instance needs `id`, `text`, `correct_answers`.
+
+```json
+{
+  "training_instances": [
+    {"id": "t1",
+     "text": "Worked example one. The model answer is A.",
+     "correct_answers": {"category": "A", "severity": "Low"},
+     "explanation": "Why A is right, in a sentence the annotator can act on."},
+    {"id": "t2",
+     "text": "Worked example two. Nothing here decides the category, so it is Unclear.",
+     "correct_answers": {"category": "Unclear", "severity": "Low"},
+     "explanation": "Unclear is a real answer, not a way of skipping the item."}
+  ]
+}
+```
+
+`correct_answers` keys are scheme names; values are the label strings exactly as
+written in `labels:`. Span schemes cannot be graded here. The training page
+renders `text` only, so fold any context the annotator needs into that string.
+
+## data/attention.json
+
+An array. Each item needs `id` and `expected_answer`, plus whatever fields your
+`instance_display` renders.
+
+```json
+[
+ {"id": "chk1",
+  "title": "Attention check",
+  "body": "This is a check, not a real item. Highlight this sentence and mark it Evidence, select A for category, and Low for severity.",
+  "text": "This is a check, not a real item. Highlight this sentence and mark it Evidence, select A for category, and Low for severity.",
+  "expected_answer": {"category": "A", "severity": "Low"}}
+]
+```
+
+Instruct **every required scheme**, span schemes included. A check item that
+leaves a required span unanswered dead-ends the annotator on a 400 with only a
+corner toast for feedback.
+
+## pages/consent.jsonl
+
+One annotation scheme per line, same syntax as `annotation_schemes`. Prose goes
+in a `pure_display` scheme with `allow_html: true`.
+
+```jsonl
+{"annotation_type":"pure_display","name":"consent_text","allow_html":true,"description":"<h3>Consent</h3><p>Draft. Replace with the approved wording.</p>"}
+{"annotation_type":"radio","name":"consent_agree","description":"Do you agree to take part?","labels":["I agree","I do not agree"],"humanize_labels":false,"label_requirement":{"required":true}}
+```
+
+## pages/instructions.jsonl
+
+The full definitions live here, not in `annotation_instructions` — that banner
+sits on top of every item and pushes the questions below the fold.
+
+```jsonl
+{"annotation_type":"pure_display","name":"instructions_text","allow_html":true,"description":"<h3>What to do</h3><p>Read the item, highlight the part that decides your answer, then pick a category and a severity.</p><p><b>A.</b> Replace with the real definition.</p><p><b>B.</b> Replace with the real definition.</p><p><b>C.</b> Replace with the real definition.</p><p><b>Unclear.</b> Use it when the item genuinely does not decide. It is an answer, not a skip.</p>"}
+```
+
+## pages/poststudy.jsonl
+
+A phase page can ask real questions, not just display prose. These land in
+`annotation_output/<user>/` like any other answer.
+
+```jsonl
+{"annotation_type":"pure_display","name":"poststudy_text","allow_html":true,"description":"<h3>Last questions</h3><p>Two questions, then you are done.</p>"}
+{"annotation_type":"likert","name":"task_clarity","description":"How clear were the instructions?","size":5,"min_label":"Very unclear","max_label":"Very clear","label_requirement":{"required":true}}
+{"annotation_type":"text","name":"comments","description":"Anything that was hard to judge?","multiline":true,"rows":3}
+```
+
+## static/study.css
+
+Phase-page prose lands in a `<legend>`, which the theme sets to weight 600, so
+consent and instructions render entirely bold without this.
+
+```css
+form.pure-display legend { font-weight: 400; line-height: 1.55; }
+form.pure-display legend h3 { font-weight: 650; }
+form.pure-display legend b, form.pure-display legend strong { font-weight: 650; }
+```
+
+## Check it
+
+```bash
+potato validate config.yaml --strict
+python .claude/skills/potato-tasks/scripts/boot_and_check.py config.yaml -p 8000
+```
+
+`boot_and_check.py` backgrounds the server, waits for a 200, and reports every
+feature that is configured but loaded nothing — which is the failure the log
+lines above exist to catch. By hand:
+
+```bash
+nohup potato start config.yaml -p 8000 > server.log 2>&1 &
+until curl -s -o /dev/null http://localhost:8000/; do sleep 2; done
+grep -E "ERROR|Loaded [0-9]+|phase" server.log
+```
+
+Then walk it in a browser — `running-a-task.md`.
+
+## What to change first
+
+| Want | Change |
+|---|---|
+| No practice round | Drop `training:` **and** `training` from `phases.order` |
+| No attention checks | Drop `attention_checks:` |
+| One annotator per item | `num_annotators_per_item: 1`, drop `agreement_metrics` |
+| Images, audio, PDFs, dialogues | `instance_display.fields[].type` — see `building-the-ui.md` |
+| Screening before the task | A `prestudy` phase with its own page file |
+| Different questions per cohort | `scheme_sets` + `batch_assignment` |

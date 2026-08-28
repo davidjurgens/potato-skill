@@ -1,0 +1,34 @@
+{
+  "name": "potato",
+  "description": "Claude Code plugins for Potato, the portable text annotation tool",
+  "owner": {
+    "name": "Potato Development Team",
+    "email": "jurgens@umich.edu",
+    "url": "https://github.com/davidjurgens/potato"
+  },
+  "plugins": [
+    {
+      "name": "potato-tasks",
+      "source": "./",
+      "displayName": "Potato annotation tasks",
+      "description": "Design, build, run and visually check Potato annotation tasks.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Potato Development Team",
+        "email": "jurgens@umich.edu"
+      },
+      "homepage": "https://davidjurgens.github.io/potato-skill/",
+      "repository": "https://github.com/davidjurgens/potato-skill",
+      "license": "GPL-3.0-or-later",
+      "category": "data",
+      "keywords": [
+        "annotation",
+        "potato",
+        "nlp",
+        "labeling",
+        "research",
+        "crowdsourcing"
+      ]
+    }
+  ]
+}

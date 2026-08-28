@@ -1,0 +1,209 @@
+# Putting a task somewhere other people can reach
+
+`potato start` serves on one machine. Three ways past that, in increasing order
+of commitment:
+
+| Want | Use |
+|---|---|
+| A colleague on the same network | `potato start --host 0.0.0.0 -p 8000`, give them the LAN address |
+| Someone to look at it for an hour | `potato share config.yaml` — temporary public HTTPS |
+| Annotators working over days or weeks | `potato deploy up config.yaml --provider …` |
+
+`potato deploy` and `potato share` are listed under **other commands** in `potato --help`:
+`potato deploy --help`, `potato share --help`.
+
+## A temporary public URL
+
+```bash
+potato share config.yaml -p 8000 --backend cloudflared   # or tailscale, ngrok
+```
+
+Serves the task and opens a tunnel to it. The URL dies when the command does, so
+it is for a demo or a pilot with three people, not for a study. It runs a
+preflight first and asks you to confirm the exposure; `--yes` skips the
+confirmation and `--skip-preflight` skips the assessment, which you should not do
+on anything with real annotators behind it.
+
+Same rule as `potato start`: it does not return. Background it.
+
+## Hosted deployment
+
+```bash
+potato deploy providers                  # what targets exist, which have credentials
+potato deploy check   config.yaml --provider render     # preflight, changes nothing
+potato deploy build   config.yaml --out ./bundle        # assemble, stop
+potato deploy up      config.yaml --provider render     # provision
+potato deploy status  config.yaml
+potato deploy logs    config.yaml -f
+potato deploy pull    config.yaml --dest ./collected    # get the annotations back
+potato deploy destroy config.yaml
+potato deploy list    config.yaml                       # deployments recorded for this config
+```
+
+### The five targets
+
+```
+digitalocean   supports pull
+huggingface    ephemeral filesystem, supports pull
+local          local only, supports pull
+render         ephemeral filesystem, supports pull
+tunnel         temporary public URL; stops when `potato share` does
+```
+
+`potato deploy providers --verify` asks each one whether its token actually
+works, rather than only whether one is present. Credentials are picked up from
+the environment and from provider caches — a HuggingFace token in the
+`huggingface_hub` cache is found without being configured for Potato.
+
+**"Ephemeral filesystem" means annotations are lost when the host restarts.** On
+`render` and `huggingface` this is not a warning about an edge case; a redeploy
+or an idle timeout takes the data with it. Either give it somewhere to back up
+to, or accept that the run is disposable:
+
+```bash
+potato deploy up config.yaml --provider huggingface \
+    --hf-token $HF_TOKEN --backup-minutes 30     # mirror annotations to a Dataset
+potato deploy up config.yaml --provider render --demo   # throwaway; silences the warning
+```
+
+`--hf-token` works on **any** provider, not only HuggingFace: it is the generic
+"back the annotations up somewhere durable" flag.
+
+## The preflight
+
+`potato deploy check` is the part of this worth learning. It never touches a
+provider, it takes a second, and it reports what the deployment exposes:
+
+```
+$ potato deploy check config.yaml --provider render
+
+WARNING [D003] Anyone who finds the URL can register and annotate.
+        -> Set user_config.allow_all_users: false and list your annotators under
+           user_config.users, or use authentication.method: oauth.
+WARNING [D011] The render filesystem is ephemeral: annotations are lost when the
+        host restarts or redeploys.
+        -> Provide an HF token so a backup dataset can be configured, or pass
+           --demo to accept throwaway data.
+note    [D012] No secret_key is set, so one will be generated and injected as
+        POTATO_SECRET_KEY. Sessions survive restarts only because of it.
+
+Exposure:
+  Reachable from the public internet: yes
+  Sign-in: open — anyone with the URL can create an account
+  Password required: yes
+  Admin access: via the generated admin API key
+  Preflight: 0 error(s), 2 warning(s)
+
+PASS — safe to deploy
+```
+
+Exit codes: **0 for PASS, 2 for BLOCKED.** Errors block; warnings do not.
+
+The one that blocks most often:
+
+```
+ERROR [D002] debug is true, which disables admin authentication entirely:
+      validate_admin_api_key returns True unconditionally in debug mode, so
+      anyone reaching /admin has full control.
+      -> Remove `debug: true` from the config before deploying.
+```
+
+If you turned on `debug` to check the interface, take it out. It is not a
+logging flag; it removes login and admin auth.
+
+Run `check` against the provider you actually intend to use. `local` reports no
+exposure and no durability problem, so a clean `check` with the default provider
+tells you nothing about hosting it.
+
+Add `--private` when the host will not be public (behind a VPN, on an internal
+network) so the assessment is not arguing about exposure you have already
+handled.
+
+## What ships
+
+`potato deploy build` assembles a bundle and stops, which is the cheap way to see
+what would be uploaded:
+
+```
+Bundle: ./bundle
+  20 files, 152.6KB
+  sha256 f70b22ad201b4e37
+```
+
+Two things to know about it:
+
+- **It copies the whole task directory.** Screenshots in `shots/`, a stray
+  `config_unsafe.yaml`, notes, scratch data — all of it goes. Clean the
+  directory before building, and look at the file list rather than the count.
+- **`annotation_output/` is stripped** to an empty `.gitkeep`. Annotations you
+  collected while testing do not ship. Verified by putting a `user_state.json` in
+  there and rebuilding.
+
+The bundle also carries the generated `layouts/`, so the host does not
+regenerate them. Delete `layouts/` and rebuild if you changed schemes and the
+deployed page looks stale.
+
+Secrets are **not** written into the bundle. The secret key and admin API key are
+generated and injected as `POTATO_SECRET_KEY` and `POTATO_ADMIN_API_KEY`
+environment variables at deploy time. Pass your own with `--env KEY=VALUE` and
+`--secret KEY=VALUE`.
+
+## Before you expose anything
+
+The preflight will say all of this, but decide it before you type `up`:
+
+| Question | Where it is answered |
+|---|---|
+| Who can sign in? | `user_config.allow_all_users: false` plus `user_config.users`, or `authentication.method: oauth`. The default lets anyone with the URL create an account |
+| Is `debug` off? | It must be. It disables admin auth outright |
+| Do sessions survive a restart? | `secret_key`, or let deploy generate one |
+| Where do annotations live if the host restarts? | Durable disk (`digitalocean --volume-gb`) or a backup Dataset (`--hf-token`) |
+| Who holds the admin key? | Generated per deployment; `potato deploy status` and the provider's env |
+| Is anything identifiable in the data or the survey answers? | `export_include_phase_data` defaults to false for a reason |
+
+## Getting the data back
+
+```bash
+potato deploy pull config.yaml --dest ./collected
+```
+
+Every provider supports pull. Do this **before** `destroy` — `destroy` refuses to
+run without a prior successful pull unless you pass `--force`, which is a
+deliberate guard rather than an annoyance. `--keep-data` on destroy keeps the
+provider-side volume.
+
+`pull --allow-empty` records a pull that returned nothing, for when you know the
+task collected nothing and want `destroy` to proceed.
+
+## After it is up
+
+Deploying is not verifying. The same standard as `running-a-task.md` applies, and
+the failure modes are worse remotely because you cannot read the log by looking
+sideways:
+
+1. `potato deploy status config.yaml`. It should say provisioned and running.
+2. `potato deploy logs config.yaml --lines 200` — the **startup log**, with the
+   same lines you grep locally: `Loaded N training instances`, `Loaded N
+   attention check items`, any phase errors. A feature that loaded locally can
+   fail on the host if a side file was excluded from the bundle.
+3. Open the URL and walk the study as an annotator: register, consent, one item,
+   navigate away and back.
+4. Run `potato deploy pull` once, early, and check the files are what you
+   expect. Finding out that pull does not work after four weeks of annotation is
+   the expensive version of this mistake.
+
+Then tell the researcher the URL, who can sign in, where the annotations live,
+how to pull them, and how to take it down. A deployment nobody can pull from or
+destroy is worse than a local server.
+
+## What I have and have not verified
+
+Verified against potato-annotation 2.7.0: the subcommands and their flags, the
+provider list and credential detection, `check` output and exit codes for all
+five providers, the `debug` block, and what `build` includes and strips.
+
+Not verified here: an actual `up` against a real provider, and therefore the
+provisioning, DNS, TLS and pull behaviour of a live host. Provisioning costs
+money and creates real resources, so do it deliberately and with the
+researcher's knowledge — and say plainly in a handover which of these steps you
+ran and which you only prepared.

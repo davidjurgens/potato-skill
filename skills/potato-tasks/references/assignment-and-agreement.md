@@ -1,0 +1,173 @@
+# Assignment and agreement
+
+Two questions that look separate and are not: the number of annotators per item
+decides whether an agreement number exists at all, and the per-annotator quota
+decides whether the items you care about ever reach three annotators.
+
+## The keys
+
+| Key | What it does | Default |
+|---|---|---|
+| `num_annotators_per_item` | Target annotators per item. **Set this one.** | 3 |
+| `min_annotators_per_instance` | Floor before an item counts as done | unset |
+| `max_annotations_per_item` | Hard cap per item; `-1` unlimited | -1 |
+| `max_annotations_per_user` | **Cap on dataset items per annotator. The only key that sets it.** | the item count |
+| `automatic_assignment.instance_per_annotator` | Nothing. See below. | — |
+| `assignment_strategy` | Order items are handed out in | `fixed_order` |
+| `random_seed` | Makes the ordering reproducible | unset |
+
+Setting `num_annotators_per_item`, `min_annotators_per_instance` and
+`max_annotations_per_item` to the same number works and says you were unsure.
+
+#### `instance_per_annotator`
+
+Measured on 10 items, reading the assignment the server actually built:
+
+| Config | Items served to one annotator |
+|---|---|
+| nothing set | 10 — all of them |
+| `max_annotations_per_user: 5` | 5 |
+| `automatic_assignment.instance_per_annotator: 5` | 10 — **no effect** |
+| `num_annotators_per_item: 3` | 10 — no effect on the quota |
+
+`instance_per_annotator` is not read anywhere in the server, and
+`automatic_assignment` does not validate its sub-keys, so it produces no warning
+and no behaviour. If you want a per-annotator workload cap,
+`max_annotations_per_user` is the key.
+
+Left unset, the cap is the number of items loaded, so every annotator is offered
+the whole corpus. `-1` is explicit unlimited, and is what a dynamic data source
+needs for items added after boot to be assignable at all.
+
+## Quality-control items do not consume the quota
+
+Attention checks and gold items are injected into the annotator's ordering as
+they work, rather than drawn from the pool at assignment time. They do not count
+against `max_annotations_per_user`, so enabling them does not shorten the corpus
+each annotator sees. On a six-article study with checks every third item, both
+annotators are served all six articles plus the checks:
+
+```
+ordering = [n001, n002, n003, check01, n004, n005, n006]
+```
+
+You do not need to pad the quota to make room for them. If you set the quota
+explicitly, set it to the number of **dataset items** an annotator should see.
+
+**Verify with a count across every annotator, not one.** Per-annotator ordering
+looks plausible in isolation; what matters is whether each item reached the
+number of annotators you asked for:
+
+```python
+import json, glob, collections
+c = collections.Counter()
+for f in glob.glob("annotation_output/*/user_state.json"):
+    c.update(json.load(open(f))["instance_id_to_label_to_value"])
+print(sorted(c.items()))          # every real item should hit num_annotators_per_item
+```
+
+## Choosing the number of annotators
+
+| Situation | Number |
+|---|---|
+| Near-mechanical labels, or prototyping, nobody reporting agreement | 1 |
+| Any judgement involved and an agreement number will be reported | 3 |
+| Genuinely subjective constructs, or per-annotator reliability is the object of study | 5+ |
+
+Three is the smallest number where a majority can break a tie. More annotators on
+fewer items beats fewer annotators on more items whenever you do not yet know the
+labels are learnable — find that out on 100 items before spending the budget on
+10,000.
+
+This is the researcher's decision, not yours. Propose a number with the reason
+and say what it costs.
+
+## Order
+
+`assignment_strategy` takes: `random`, `fixed_order`, `active_learning`,
+`llm_confidence`, `max_diversity`, `least_annotated`, `category_based`,
+`diversity_clustering`, `batch`, `priority`, `psychometric`.
+
+`random` with a `random_seed` is right unless there is a reason:
+
+- `fixed_order` when items are a narrative and order carries meaning
+- `least_annotated` when finishing every item matters more than annotator
+  experience — the one to reach for when the quota trap above is biting and you
+  cannot raise the cap
+- `active_learning` / `llm_confidence` when a model is in the loop and the point
+  is to spend annotator time where it changes something
+
+## The response format decides the metric
+
+Potato classifies each scheme and computes what fits. You do not choose the
+metric separately, which makes this a measurement decision rather than a
+cosmetic one.
+
+| Kind | Schemes | What it computes |
+|---|---|---|
+| nominal | `radio`, `multiselect` capped at 1 | percent agreement, Cohen's κ, Fleiss' κ, α |
+| ordinal | `likert`, ordered scales | linear and quadratic weighted κ, Spearman ρ, ordinal α |
+| continuous | `slider`, `number`, `vas` | Pearson r, MAE, RMSE, interval α, ICC(2,k) |
+| multilabel | `multiselect` | mean Jaccard, MASI α |
+| ranking | `ranking`, `bws` | Kendall's τ, Spearman footrule |
+| span | `span`, `error_span` | token-level κ, exact and partial span F1, Krippendorff's αU, γ |
+| geometry | boxes, polygons, points | matched IoU, detection F1, chance-corrected σ, ks, detection α |
+| | | *(the only way to score a geometry task against a known answer — `gold_label` cannot hold a box)* |
+| free text | `text`, `text_edit` | nothing |
+
+Consequences worth stating to a researcher up front:
+
+- **A 1–5 rating stored as a `radio` is scored as unordered**, so "1 vs 2" counts
+  the same as "1 vs 5" and the agreement number is badly understated. Store
+  ordered judgements as `likert`.
+- **Span agreement tolerates disagreement about boundaries.** Annotators asked to
+  mark sentences will not agree on where a sentence starts; token-level and
+  partial-overlap measures handle that, whereas splitting the text into sentence
+  rows and computing per-sentence κ requires the units to match exactly.
+- **Free text has no metric.** If a judgement is going to be counted, make it a
+  scale. If it is genuinely prose, plan to read it and say so.
+
+Enable the admin-side computation with:
+
+```yaml
+num_annotators_per_item: 3
+agreement_metrics:
+  enabled: true
+```
+
+`agreement_metrics` recognizes `enabled` and nothing else — `metrics`, `measures`,
+`types`, `min_annotators` and `by_scheme` are all rejected by `--strict`. The
+measures follow from the schema kinds; there is nothing to select.
+
+### Reading the agreement report
+
+Nothing is computed at boot, and nothing is linked from the annotation page.
+Agreement appears once items have more than one annotator.
+
+```bash
+cat admin_api_key.txt        # generated into task_dir at first boot
+curl -H "X-API-Key: $(cat admin_api_key.txt)" localhost:8000/admin/iaa
+```
+
+`/admin/iaa` returns, per scheme, the `kind` it inferred and the metrics that
+follow from it, plus `n_overlap_items`. Confirming the `kind` matters more than
+the number: it is where you find out a rating you meant as ordinal is being
+scored as nominal.
+
+Without the header, every admin JSON route answers
+`403 {"error":"Admin access required"}` — which reads like a broken config if you
+do not know the key exists. `/admin` itself serves HTML with no key.
+
+`/admin/api/agreement` covers the same ground and has been seen to fail on a
+geometry task with `calculate_krippendorffs_alpha() got an unexpected keyword
+argument 'experiment_col'` for every scheme, while `/admin/iaa` returned proper
+numbers for the same data. If it errors, that is the build, not your config —
+use `/admin/iaa`.
+
+An empty report on a fresh task means "no overlapping annotations yet".
+
+## Related
+
+- `quality-control.md` — the checks that consume the quota
+- `designing-a-task.md` — the seven decisions, including how many annotators
+- `running-a-task.md` — reading `instance_id_ordering` to see what was assigned

@@ -1,0 +1,8 @@
+# Potato itself is installed from a checkout, not from PyPI: the reference
+# generator imports `potato.server_utils.config_key_docs` and
+# `potato.server_utils.schema_examples`, and the guards need `examples/`,
+# which is not in the wheel. See .github/workflows/checks.yml.
+pytest>=7.0
+PyYAML>=6.0
+mkdocs>=1.5
+mkdocs-material>=9.0

@@ -1,0 +1,168 @@
+# Data files and admin access
+
+Where items come from, and who is allowed to annotate them. Nothing else in this
+pack covers either.
+
+## Items
+
+```yaml
+data_files:
+  - data/articles.json
+item_properties:
+  id_key: id
+  text_key: body
+```
+
+`data_files` accepts JSON, JSONL, CSV and TSV. JSON may be an array of objects or
+one object per line. Every object needs the fields named by `id_key` and
+`text_key`.
+
+| Key | Effect |
+|---|---|
+| `item_properties.id_key` | Field holding the unique identifier |
+| `item_properties.text_key` | Field shown to the annotator when there is no `instance_display` |
+| `item_properties.category_key` | Field holding a category, used by `category_based` assignment |
+| `item_properties.kwargs` | Extra per-item fields carried through to the display layer |
+
+**`text_key` still matters when you define `instance_display`.** It is what
+plain-text rendering falls back to, what span schemes anchor to by default, and
+what the training and search surfaces read. Point it at the field with the actual
+content, not at a title.
+
+**Every other field in the row is available to the display layer** by name. A row
+with `outlet`, `headline` and `body` can render all three as separate
+`instance_display.fields` without any of them being `text_key`. Fields you do not
+display are still stored and still exported, which is how you keep a condition
+label out of the annotator's view without dropping it from the data.
+
+### A directory instead of a list
+
+```yaml
+data_directory: ./data/incoming
+data_directory_encoding: utf-8
+watch_data_directory: true      # rescan while running and pick up new files
+watch_poll_interval: 5.0
+```
+
+### Remote and live sources
+
+```yaml
+# type: url, s3, huggingface, google_sheets, database, google_drive,
+#       dropbox or file
+data_sources:
+  - type: url
+    url: https://example.org/items.json
+data_cache:
+  enabled: true
+  ttl_seconds: 3600
+  max_size_mb: 200
+```
+
+Sources can be polled for new rows, which is how a task keeps ingesting while
+annotators work. Pair with `automation` (rules over incoming items) and `triage`
+(rank what arrives). Both are in `modes-and-subsystems.md`.
+
+### Media
+
+```yaml
+media_directory: media      # default; served at /media/
+```
+
+Put images, audio and video under it and reference them by relative path from a
+data field. Without an `instance_display` field of the right type, that path
+renders as **text** — the classic "the item shows a file path instead of an
+image". See `building-the-ui.md` for the display types.
+
+### Big corpora
+
+```yaml
+partial_loading: {...}          # load lazily rather than reading everything at boot
+item_store:
+  backend: paged                # memory (default) or paged
+  cache_size: 1000
+  path: .item_cache.sqlite      # under the output directory when unset
+```
+
+An unknown `item_store.backend` warns and silently falls back to memory rather
+than refusing to start, so check the boot log if paging was the point.
+
+## Output
+
+```yaml
+output_annotation_dir: annotation_output/
+export_annotation_format: [csv]        # periodic auto-export; empty means none
+auto_export_interval: 60               # seconds
+export_include_phase_data: false       # consent and survey answers; usually where the PII is
+export_include_annotation_changes: false
+```
+
+**There is one storage format and it is not configurable.** Annotations live at
+`annotation_output/<user>/user_state.json`, one file per annotator, whatever
+else the config says. Any other shape is an export, and there are two ways to
+ask for one: `export_annotation_format`, which writes it on a timer, and the
+admin export route, which writes it on demand. `output_annotation_format` is
+deprecated — the loader reads it as `export_annotation_format` and warns. Write
+the live key in anything you author.
+
+So what a researcher gets at the end of a study is a directory of per-annotator
+JSON, not a table. If they want one row per item, produce it: either set
+`export_annotation_format: [csv]`, or read the `user_state.json` files and write
+the table yourself. Decide which before handover and say so, because "where is
+my CSV" is the first question after the annotators finish.
+
+`annotation_output/` is rewritten wholesale by the server. Never hand-edit
+anything in it — `potato repair-annotations` exists for when something already
+did.
+
+Per-annotator state lives at `annotation_output/<user>/user_state.json` and is
+the fastest way to check what the server actually stored. Keys worth knowing:
+`instance_id_ordering`, `instance_id_to_label_to_value`,
+`instance_id_to_span_to_value`, `phase_to_page_to_label_to_value`,
+`training_state`, `max_assignments`.
+
+## Who may log in
+
+```yaml
+login:
+  type: password          # password | url_direct | none
+user_config:
+  allow_all_users: true   # anyone may register
+```
+
+| Key | Effect |
+|---|---|
+| `login.type` | `password` (register and sign in), `url_direct` (identity in a query parameter), `none` |
+| `login.url_argument` | The query parameter carrying the user id under `url_direct` |
+| `user_config.allow_all_users` | Default `true`. Anyone can register |
+| `user_config.users` | Allowlist, used when `allow_all_users: false` |
+| `require_password` / `require_no_password` | Force the choice regardless of `login.type` |
+| `authentication` | SSO and database-backed accounts |
+| `rbac` | Role assignments and SSO role mapping |
+
+`url_direct` is what crowdsourcing platforms want: the platform appends the
+worker id and the annotator never sees a login screen. Pair it with
+`completion_code` and `auto_redirect_on_completion`.
+
+The login page has two tabs, `login` and `register`, in one document — if you are
+driving it in a browser, switch with `switchTab('register')` before filling the
+register form.
+
+## Serving it
+
+| Key | Effect | Default |
+|---|---|---|
+| `port` | Port; `-p` overrides | 8000 |
+| `host` | Interface to bind; `0.0.0.0` exposes beyond localhost | localhost |
+| `secret_key` | Flask session signing key. Set it for anything that must keep sessions across a restart | — |
+| `persist_sessions`, `session_lifetime_days` | Keep annotator sessions across a restart | false, 2 |
+| `admin_api_key` | Admin API key, sent as `X-API-Key`. Generated into `{task_dir}/admin_api_key.txt` when unset | — |
+
+**`debug: true` disables admin authentication and skips login entirely.** It is
+for developing the interface, never for anything an annotator can reach. The same
+goes for `--debug` on the command line: it is what makes
+`--debug-phase annotation` able to drop you straight into the task, and it is
+also what makes any admin-auth check you run under it meaningless.
+
+Binding `0.0.0.0` is how a researcher on the same network opens the task. Say so
+explicitly in a handover, along with the port, rather than leaving them to guess
+that localhost is not the only address.

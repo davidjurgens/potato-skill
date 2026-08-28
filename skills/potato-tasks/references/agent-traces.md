@@ -1,0 +1,189 @@
+# Agent traces and agent evaluation
+
+The largest family in Potato and the one least like text annotation: about
+twenty schema types, eight trace displays, and sixty example projects
+(57 under `examples/agent-traces/`, 3 under `examples/agent-testing/`). Its
+binding model fails silently when you get it wrong.
+
+## How a trace scheme finds its steps
+
+Almost every scheme in this family reads a **list off the item** and renders one
+card per entry. The key it reads is configurable and defaulted:
+
+| Key | Default | Read by |
+|---|---|---|
+| `steps_key` | `steps` | `gui_trajectory`, `tool_call_review`, `process_reward`, `failure_attribution`, `agent_scorecard`, `trajectory_eval`, `trajectory_edit`, `multimodal_reasoning`, `emergent_behavior`, `handoff_review`, `agent_interaction_graph` |
+| `turns_key` | varies | `consensus_tracking`, `context_attribution` |
+| `agent_key` | varies | the multi-agent schemes, for who is speaking |
+| `step_text_key` | varies | which field of a step holds the text to show |
+
+**Almost nothing in this family has a required field.** `rubric_eval` needs
+`criteria`; the rest need only `name` and `description`. So a scheme pointed at
+a key your data does not have renders an empty card list, `validate --strict`
+passes, and the boot log says nothing. If a trace widget comes up blank, check
+the key name before anything else:
+
+```bash
+python -c "import json;d=json.load(open('data/traces.json'));print(list(d[0]))"
+```
+
+Answers are stored as a hidden-input JSON list keyed by step `index`, and only
+judged steps are saved — the list is **not** positional, so do not read it as
+one entry per step.
+
+## Routing from what they said
+
+| They said | Reach for |
+|---|---|
+| "was each step right" | `trajectory_eval` (taxonomy + severity) or `tool_call_review` (right tool / args / ordering) |
+| "where did it first go wrong" | `process_reward` in `first_error` mode |
+| "label every step for PRM training" | `process_reward` in `per_step` mode |
+| "fix the bad steps, don't just score them" | `trajectory_edit` — produces SFT/DPO data |
+| "which agent caused the failure" | `failure_attribution` |
+| "rate each agent and the team" | `agent_scorecard` |
+| "did the handoff lose something" | `handoff_review` |
+| "are they colluding / groupthinking / drifting" | `emergent_behavior` |
+| "who used the shared resource when" | `tool_contention` |
+| "how does the conversation use earlier context" | `context_attribution` |
+| "did they actually reach consensus" | `consensus_tracking` |
+| "draw me the interaction graph" | `agent_interaction_graph` |
+| "did the click land on the right button" | `gui_trajectory` |
+| "score it against a rubric" | `rubric_eval` (needs `criteria`) |
+| "keep or drop this trace" | `triage` |
+| "is this generated video physically plausible" | `rollout_evaluation` |
+| "does our judge agree with our humans" | `judge_alignment`, `judge_calibration` |
+| "compare two models' answers" | `arena`, or a `pairwise` / `bws` scheme |
+| "traces arrive from production" | `trace_ingestion` (`/api/traces/*`) + `automation` + `triage` |
+| "judge it while it runs" | `live_agent`, `live_coding_agent`, `agent_proxy` |
+
+## Picking the display
+
+The scheme decides the question; the display decides what the annotator sees.
+They are chosen separately, and several schemes render their own cards and need
+no display field at all.
+
+| Display | For | Span target |
+|---|---|---|
+| `agent_trace` | Generic steps with type badges | yes, per step |
+| `coding_trace` | Diffs, terminal blocks, a file tree | yes |
+| `cot_trace` | Long chain-of-thought with a progress rail | no |
+| `eval_trace` | Three panes: reasoning, calls, final answer | yes |
+| `web_agent_trace` | Screenshots with SVG overlays | no |
+| `multi_agent_discussion` | Several agents, colour-coded, filterable | yes |
+| `conversation_tree` | Branching, collapsible | no |
+| `interactive_chat` | Live chat, then the trace | yes |
+| `live_agent`, `live_coding_agent` | Streaming, with intervention controls | no |
+
+"Highlight the sentence where the reasoning broke" therefore works on
+`eval_trace` and `coding_trace` and **not** on `cot_trace` or `web_agent_trace`.
+If the researcher wants spans over a long chain of thought, that is
+`cot_trace` for reading plus a separate `span` scheme over the text field, or
+`process_reward` if what they actually want is per-step judgements.
+
+Ask the registry rather than the flag:
+`display_registry.get_span_target_capable_types()` returns twelve;
+`list_displays()`'s `supports_span_target` says nine, because `pdf`,
+`spreadsheet` and `agent_trace` anchor spans their own way and are missing from
+it.
+
+## Quirks worth knowing before you build
+
+**`gui_trajectory` coordinates default to normalized.** Each step may carry
+`x`/`y` for the grounding marker, read as 0..1 **unless** you set
+`coord_space: pixels`. A trace exported in pixels with the default setting puts
+every marker in the top-left corner — the overlay renders, so it looks
+configured rather than broken.
+
+**Screenshots come from a second static root.** Trace data that sets
+`screenshot_url: screenshots/step_000.png` is served from `<task_dir>/screenshots/`,
+which is separate from `media_directory` and not configurable. Miss it and every
+step image and filmstrip thumbnail 404s.
+
+**`process_reward` has two modes and they are different tasks.**
+`first_error` (the default) asks for the first step that goes wrong and cascades
+from there; `per_step` labels every step. `allow_neutral` is only meaningful in
+`per_step`, because the cascade has no place for it. `inline_with_trace` puts the
+controls inside the trace cards instead of beside them, and `ai_prelabel` seeds
+suggestions the annotator corrects.
+
+**`rubric_eval` is the only one with a required field:** `criteria`.
+
+## World-model rollouts
+
+`rollout_evaluation` is the odd one out and worth reading the module docstring
+for. Several videos of the same scenario — real recording, model rollouts,
+optionally a counterfactual under an intervention — on one frame-locked
+timeline.
+
+Its design decision is worth repeating to a researcher who asks for a
+plausibility scale: **the primitive is a break-point, not a score.** Rating a
+generated video 3/5 "produces a number that cannot be checked, cannot be
+localised, and cannot be used to fix anything." A frame index plus a violation
+type can be checked against the tensor and compared between annotators.
+
+Three layers, three questions: `violations` (where does it break, and why),
+`preference` (which rollout is better), `counterfactual` (is the divergence
+plausible *given* the intervention). The third is the one that separates a world
+model from a video generator: a beautiful continuation that ignores the
+intervention is a failure no plausibility rating detects.
+
+Three defaults that are on unless you turn them off: `blind` (hide generator
+names), `shuffle` (permute panel order per annotator), and `require_clean` —
+which refuses a submission that leaves a stream neither marked nor explicitly
+cleared, because "no marks" otherwise conflates "watched it, found nothing" with
+"never got to it".
+
+## Blinding and the DOM
+
+`rollout_evaluation` blinds server-side: under blinding the labels are
+positional and the server chose the positions. **Every other scheme does not.**
+The whole data row is serialized into the page — `data-instance-fields` on the
+display container and a `data-instance-json` block — so a field you leave out of
+`instance_display` is still in the DOM and still readable by anyone who looks.
+
+To withhold something from annotators, withhold it from the data file. Omitting
+it from the display is presentation, not access control.
+
+## Judges and automatic evaluators
+
+Sixteen evaluators are registered and run without a human:
+
+```python
+from potato.evaluators.registry import get_supported_evaluators
+get_supported_evaluators()
+# exact_match, contains, regex_match, json_valid, json_schema_match,
+# edit_distance, embedding_similarity, tool_use, tool_call_accuracy,
+# trajectory_match, llm_trajectory_judge, agent_as_judge, rubric_dag,
+# groundedness, answer_relevance, context_relevance
+```
+
+Use them where the answer is checkable and save the annotators for what is not.
+The human side of the same question is `judge_alignment` (score items with a
+judge, compare against the humans, track agreement) and `judge_calibration`
+(auto-label a sample, have humans re-label the same items). If a researcher
+says "we want to know if we can trust the judge", that is the pair — not another
+rating scheme.
+
+## Live agents
+
+`live_agent` and `live_coding_agent` run an agent inside the annotation page so
+annotators judge it as it happens; `agent_proxy` makes an agent the subject of
+annotation. These open control surfaces, so treat them the way you would treat
+anything that executes: do not expose them on a deployment that anyone with the
+URL can register for, and check `deploying.md` before handing out a link.
+
+## Verifying one
+
+The failure mode is an empty card list, and an empty card list looks like a
+short trace.
+
+1. **Count what rendered against what is in the data.** If the item has eleven
+   steps, eleven cards should exist. This is the check that catches a wrong
+   `steps_key`, and nothing else does.
+2. **Judge one step, navigate away and back.** Answers are stored keyed by
+   `index` with only-judged steps saved; a restore bug shows up as answers
+   attaching to the wrong card.
+3. **Read `user_state.json`** and confirm the stored JSON list has the shape the
+   export expects.
+4. **For `gui_trajectory`, look at where the marker landed.** That is the whole
+   point of the scheme, and it is the thing `coord_space` silently breaks.

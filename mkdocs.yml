@@ -1,0 +1,73 @@
+site_name: Potato Annotation Tasks
+site_url: https://davidjurgens.github.io/potato-skill/
+site_description: The Claude Code skill for designing, building and running Potato annotation tasks.
+repo_url: https://github.com/davidjurgens/potato-skill
+edit_uri: ""
+
+nav:
+  - Home: index.md
+  - Agent Instructions: agents-md.md
+  - Designing:
+      - Designing an Annotation Task: designing-a-task.md
+      - What to Confirm With the Researcher: asking-the-experimenter.md
+      - Writing the Annotation Guidelines: writing-guidelines.md
+      - Recording Design Decisions: recording-decisions.md
+      - Starting From a Published Design: finding-a-design.md
+  - Building:
+      - Building the Annotation Interface: building-the-ui.md
+      - Evaluating and Iterating on the Interface: evaluating-the-ui.md
+      - Images, Video, Audio and 3D: modalities.md
+      - Agent Traces and Agent Evaluation: agent-traces.md
+      - Phases and Pages: phases-and-pages.md
+  - Quality:
+      - Attention Checks and Gold Standards: quality-control.md
+      - Assignment and Agreement: assignment-and-agreement.md
+      - Modes and Subsystems: modes-and-subsystems.md
+  - Data:
+      - Data Files and Admin Access: data-and-access.md
+      - Importing Existing Annotations, Transcripts and Corpora: importing-existing-work.md
+      - Getting the Annotations Out: getting-the-data-out.md
+  - Running:
+      - Running a Task: running-a-task.md
+      - After Annotators Start: after-annotators-start.md
+      - Deploying a Task: deploying.md
+      - When a Task Misbehaves: troubleshooting.md
+      - Interrogating Potato: interrogating-potato.md
+  - A Worked Example: worked-example.md
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true

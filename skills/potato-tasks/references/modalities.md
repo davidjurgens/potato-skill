@@ -1,0 +1,245 @@
+# Images, video, audio, dialogue and 3D
+
+Everything here is a display type plus a scheme type plus one or two quirks that
+are silent when you get them wrong. The generated reference (`annotation-types.md`)
+has the field lists and a worked example for every type; this file is the routing
+and the traps.
+
+Agent traces and agent evaluation are their own family — `agent-traces.md`.
+
+## Routing from what they brought
+
+| They have | Display field | Scheme | Watch |
+|---|---|---|---|
+| Images, one per item | `image` | `image_annotation` | `tools` **and** `labels` are required; the image renders twice |
+| Very large images, microscopy, maps | `image` + `viewer`/`tiles` on the scheme | `image_annotation` | Deep zoom drives the transform; never compute it yourself |
+| Several images per item | `gallery` | a classification scheme, or `image_annotation` per field | `gallery` cannot be a `span_target` |
+| Depth or range data | `depth_map` | classification, or `spatial_annotation` | Windowing and colormap are display options, not data |
+| A region and a phrase for it | `image` | `region_caption` | Agreement is over *matched* regions — `agreement_distance` |
+| "Did the model point at the right thing" | `image` | `grounding_eval` | `region_type: point` scores differently from boxes; see below |
+| Video, judge the whole clip | `video` | any classification scheme | Nothing special |
+| Video, mark moments or objects | *(none needed)* | `video_annotation` | Five modes, and `labels` is required in every one |
+| "Find the interval this sentence describes" | *(none needed)* | `temporal_grounding` | Reads `video_key`/`events_key`, **not** `source_field` |
+| Audio, judge the whole clip | `audio` | any classification scheme | Nothing special |
+| Audio, mark regions | *(none needed)* | `audio_annotation` | `mode` decides whether `labels` or `segment_schemes` is required |
+| ASR/TTS output against a reference | *(none needed)* | `speech_transcript` | Its own key names: `audio_key`, `segments_key`, `turns_key` |
+| ELAN-style tiers over audio or video | *(none needed)* | `tiered_annotation` | `media_type` defaults to `audio` — set it for video |
+| A podcast or interview, turn by turn | `audio_dialogue` | spans, ratings, links | Per-turn playback is built in; it is a span target |
+| A chat log or conversation | `dialogue` | anything, often `turn_level` | Span target; threading is a display option |
+| A branching conversation | `conversation_tree` | `tree_annotation` | **Not** a span target |
+| Several agents talking | `multi_agent_discussion` | `failure_attribution`, ratings | Span target; see `agent-traces.md` |
+| Point clouds, LiDAR, 3D scans | *(none needed)* | `spatial_annotation` | `lod` defaults on, which changes what `max_points` does |
+| Robot episodes, teleop logs | *(none needed)* | `episode_annotation` | Four layers; pick the ones you need |
+
+## Where the widget looks for its data
+
+**This is the mistake to design against.** There are at least six conventions,
+and picking the wrong one gives you an empty widget with nothing in the log.
+
+| Key | Types that read it |
+|---|---|
+| `source_field` | `image_annotation`, `video_annotation`, `audio_annotation`, `spatial_annotation`, `episode_annotation`, `tiered_annotation`, `text_edit` |
+| `video_key`, `events_key` | `temporal_grounding` |
+| `audio_key`, `segments_key`, `turns_key`, `speaker_key`, `text_key` | `speech_transcript`, `voice_interaction`, `tiered_annotation` |
+| `screenshot_key`, `steps_key` | `gui_trajectory` |
+| `steps_key`, `agent_key` | the multi-agent and trajectory families |
+| `image_key`, `rows_key`, `cols_key` | `table_grid` |
+| `episode_field` | `episode_annotation` (alongside `source_field`) |
+| `caption_field`, `expressions_field`, `predictions_field` | `grounding_eval` |
+| `video_path` | the `video` *scheme*, which is not the `video` display type |
+| `target_field` | `span` |
+| `span_schema` | `coreference`, `event_annotation`, `span_link` |
+
+Check before you write it:
+
+```python
+from potato.server_utils.schemas.registry import schema_registry
+s = schema_registry.get("temporal_grounding")
+sorted(set(s.required_fields) | set(s.optional_fields))
+```
+
+Two names collide. **`video` is both an annotation type and a display type**,
+with different required fields — the scheme wants `video_path`, the display field
+wants `key`. It is also the one annotation type with no example config anywhere,
+so there is nothing to copy. For anything beyond "play this clip", you want
+`video_annotation`.
+
+## Serving the media
+
+Two static roots, and neither of them is `data_files`.
+
+```yaml
+media_directory: media        # default; served at /media/<path>
+```
+
+- **`/media/...`** ← `media_directory` under the task directory. Reference it
+  from your data as `/media/clip_01.mp4`. Path traversal is blocked.
+- **`/screenshots/...`** ← a `screenshots/` directory under `task_dir`,
+  separate and not configurable. Agent-trace data setting `screenshot_url` to
+  `screenshots/step_000.png` is served from here. Miss it and every step image
+  404s.
+
+Remote URLs work too, and are the right answer for a corpus you do not want in
+the bundle. `potato deploy` ships the whole task directory.
+
+## Images and CV
+
+Both halves or nothing:
+
+```yaml
+instance_display:
+  fields:
+    - {key: image, type: image, label: Screenshot}
+annotation_schemes:
+  - annotation_type: image_annotation
+    name: regions
+    description: Draw a box around each problem.
+    source_field: image
+    tools: [bbox]                # required
+    labels: [Broken, Confusing]  # required
+```
+
+`source_field` names the data key, but the canvas takes its bitmap from the
+`<img>` that `instance_display` renders. No display field, no `<img>`, empty
+canvas, and no error. The consequence is that the image renders twice, which is
+correct; `building-the-ui.md` has the CSS to hide the display copy.
+
+**Deep zoom.** `viewer` and `tiles` switch to a tiled viewer for images too big
+to send whole. The viewer owns the transform and the canvas draws in image
+pixels; anything that recomputes the mapping itself will be wrong at every zoom
+level but the first.
+
+**Pointing is not grounding with a small box.** `grounding_eval` takes
+`region_type` ∈ `box`, `polygon`, `mask`, `point`. The default is `box`. The
+scoring is not interchangeable, and the module says why: "A point has no area.
+Every IoU against it is 0, so scoring points the way boxes are scored reports
+total failure for a model that is pointing perfectly." Points are scored as a
+hit rate over regions. If the researcher is evaluating a pointing model, set
+`region_type: point` and report the hit rate; do not quote it beside an IoU as
+though they were the same number.
+
+`grounding_eval` also distinguishes three states per expression — answered with
+a region, answered as *absent*, and not answered — because "no region" otherwise
+conflates "there is no referent" with "I did not get to this one", and those
+support opposite conclusions about a model that also produced nothing.
+
+## Video
+
+```yaml
+- annotation_type: video_annotation
+  name: actions
+  description: Mark each action and label it.
+  source_field: clip
+  mode: segment                  # segment | frame | keyframe | tracking | combined
+  labels: [Reach, Grasp, Release]
+  video_fps: 30
+```
+
+`mode` defaults to `segment`. **`labels` is required in all five modes** — the
+generator raises without it. (It was declared optional in the registry until
+this pack was written, so `--strict` passed a config that could not render; it
+is required now.) `combined` additionally wants `segment_schemes`, a list of
+whole schemes asked once per segment. That is how you get "for each action,
+rate the quality" rather than one label per action.
+
+`video_fps` is what frame numbers are computed against. Wrong value, wrong frame
+indices in the export, and nothing complains.
+
+**`temporal_grounding` is a different task and a different config shape.** It
+takes `video_key` and `events_key` off the item and scores the annotator's
+interval against a predicted one with live IoU. Writing `source_field` there
+gets you a player with no video.
+
+## Audio and speech
+
+`audio_annotation` renders a Peaks.js waveform. Its `mode` decides what else is
+required, and the requirement is conditional so `--strict` cannot see it:
+
+| `mode` | Also required | For |
+|---|---|---|
+| `label` (default) | `labels` | Mark regions and label them |
+| `questions` | `segment_schemes` | Mark regions and answer questions about each |
+| `both` | `labels` **and** `segment_schemes` | Both |
+
+`waveform` defaults on, `spectrogram` defaults off; turning the spectrogram on
+is the right call for anything phonetic and costs render time on long files.
+
+`speech_transcript` scores ASR or TTS against an aligned reference, with
+per-segment error tags plus a correction. It reads `audio_key`,
+`segments_key`, `turns_key`, `speaker_key` and `text_key`.
+
+`tiered_annotation` is the ELAN/Praat shape: named tiers stacked over one
+timeline. It requires `source_field` and `tiers`, and **`media_type` defaults to
+`audio`** — a video task that forgets to set it gets an audio element and no
+picture.
+
+## Dialogue and podcasts
+
+Four displays, and the difference is the shape of the conversation:
+
+| Display | Shape | Span target |
+|---|---|---|
+| `dialogue` | A flat or reply-threaded log | yes |
+| `audio_dialogue` | Interview or podcast turns, each with its own play button | yes |
+| `conversation_tree` | Branching, collapsible | no |
+| `multi_agent_discussion` | Several agents, colour-coded, filterable | yes |
+
+For per-turn questions rather than one judgment for the whole thing, use
+`turn_level: true` on the scheme; for one judgment over a whole session, use
+`sessions` and `session_level: true`. Both are in `modes-and-subsystems.md`.
+
+**`list_displays()` under-reports span-target support.** Its
+`supports_span_target` flag is true for nine types, but twelve accept
+`span_target` — `pdf`, `spreadsheet` and `agent_trace` anchor spans their own way
+and are missing from the flag. Ask
+`display_registry.get_span_target_capable_types()`, which is what the validator
+uses.
+
+## 3D and embodied
+
+```yaml
+- annotation_type: spatial_annotation
+  name: objects
+  description: Box each object in the scan.
+  source_field: cloud
+  tools: [cuboid]
+  labels: [Vehicle, Pedestrian]
+```
+
+`tools` and `labels` are required, as with images.
+
+**`lod` defaults to `True`**, and that changes the meaning of the neighbouring
+keys: under LOD the cloud loads as an octree and `point_budget` /
+`max_loaded_nodes` govern what is in memory, while **`max_points` is used only
+when `lod: false`**. Setting `max_points` on a default config and expecting a cap
+does nothing at all. `mpr` and `slab_thickness` switch to slab views for
+medical-style data.
+
+`episode_annotation` is the embodied one: synchronized video streams plus
+time-series lanes. Its four `layers` (`phases`, `outcome`, `reward`,
+`instruction`) are all on by default, and each answers a different question, so name the ones you
+want rather than asking annotators for all four on every episode.
+`series_shown` picks which sensor lanes to draw; omit it and you get all of them,
+which on a real robot log is unreadable.
+
+## Verifying a non-text task
+
+`potato preview --screenshot` is close to useless here. It renders the viewport
+of one page, and a canvas that has not loaded its bitmap, a waveform that has not
+decoded, and a video that has not buffered all look the same as ones that have.
+
+What actually proves it:
+
+1. **Boot and read the log.** A geometry or media generator that failed renders
+   a heading with no inputs, and the startup log names the scheme.
+2. **Open it and interact.** Draw one box, drag one segment, play one turn. The
+   media pipeline is what breaks, and only a real gesture exercises it.
+3. **Read `user_state.json`.** Geometry lands in
+   `instance_id_to_span_to_value` and the scheme's `_data` inputs. If the shape
+   there is not what you expected, the export will not be either.
+4. **Use a format the test browser can play.** The browser tests in this repo
+   use WebM fixtures for video; a clip that plays in your desktop player is not
+   evidence that headless Chromium will decode it.
+
+`running-a-task.md` has the driver. `scripts/walk_task.py` will answer a
+media task's classification questions but cannot draw a box for you.
