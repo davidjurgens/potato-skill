@@ -23,6 +23,10 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          # setup-python's default cache key looks for requirements.txt or
+          # pyproject.toml at the root, neither of which this repository has,
+          # and it errors out rather than skipping the cache.
+          cache-dependency-path: requirements-dev.txt
       - run: pip install mkdocs mkdocs-material
       - run: mkdocs build --strict
       - uses: actions/upload-pages-artifact@v3
