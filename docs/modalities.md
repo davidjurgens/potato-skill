@@ -257,7 +257,8 @@ For per-turn questions rather than one judgment for the whole thing, use
 `span_target` — `pdf`, `spreadsheet` and `agent_trace` anchor spans their own way
 and are missing from the flag. Ask
 `display_registry.get_span_target_capable_types()`, which is what the validator
-uses.
+uses. It under-reports the options too, `speaker_key` and `text_key` among them;
+`building-the-ui.md` has that list and the way round it.
 
 ## 3D and embodied
 

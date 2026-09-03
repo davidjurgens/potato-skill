@@ -54,7 +54,28 @@ def _counts():
     with_phases = sum(1 for e in manifest["examples"]
                       if "phases" in (e.get("config_keys") or []))
 
+    # How far the display registry's own table has drifted from the renderer
+    # classes it wraps. `building-the-ui.md` tells an agent not to trust
+    # `list_displays()` for options, and these are the numbers behind that; when
+    # Potato fixes the drift the advice should go rather than quietly rot.
+    drifted, missing_total, pdf_missing = 0, 0, 0
+    for entry in display_registry.list_displays():
+        registered = display_registry.get(entry["name"])
+        renderer = getattr(registered, "renderer", registered)
+        declared = set(getattr(type(renderer), "optional_fields", {}) or {})
+        if not declared:
+            continue
+        missing = declared - set(entry["optional_fields"])
+        if missing:
+            drifted += 1
+            missing_total += len(missing)
+            if entry["name"] == "pdf":
+                pdf_missing = len(missing)
+
     return {
+        "displays_under_reported": drifted,
+        "display_options_missing": missing_total,
+        "pdf_options_missing": pdf_missing,
         "examples_with_phases": with_phases,
         "annotation_types": len(schema_registry.get_supported_types()),
         "display_types": len(display_registry.get_supported_types()),
@@ -92,6 +113,12 @@ CLAIMS = [
 
     ("references/building-the-ui.md",
      r"### The (\d+) display types", "display_types"),
+    ("references/building-the-ui.md",
+     r"\*\*(\d+)\*\* of the 24 entries", "displays_under_reported"),
+    ("references/building-the-ui.md",
+     r"\*\*(\d+)\*\* options are missing", "display_options_missing"),
+    ("references/building-the-ui.md",
+     r"\*\*(\d+)\*\* of those on `pdf`", "pdf_options_missing"),
     ("references/worked-example.md", r"ships (\d+) examples", "examples"),
     ("references/designing-a-task.md", r"(\d+) types", "annotation_types"),
 

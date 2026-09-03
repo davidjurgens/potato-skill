@@ -7,8 +7,9 @@ Walk a running Potato task the way an annotator would, and report where it stops
 
 Registers a fresh account, answers whatever each page asks, advances until the
 study ends, navigates back to an earlier item to check the answers were stored,
-and -- given `--task-dir` -- reads `annotation_output/<user>/user_state.json` to
-confirm the server has them rather than the browser.
+and -- given `--task-dir` and `--config` -- reads
+`<output_annotation_dir>/<user>/user_state.json` to confirm the server has them
+rather than the browser.
 
 Four things it exists to catch, each of which has shipped broken:
 
@@ -22,6 +23,14 @@ Four things it exists to catch, each of which has shipped broken:
 It is deliberately generic: it picks the first available option for every
 question rather than annotating meaningfully. It proves the machinery works,
 not that the labels make sense.
+
+Radios, checkboxes, selects, numbers, sliders and tiles it drives directly. The
+schemes that answer through a hidden JSON input and a row of buttons -- the whole
+agent and trace family, `consensus_tracking`, `emergent_behavior` -- get one
+click per group of sibling controls, which is enough to fill a page and not
+enough to be a meaningful annotation. A span, a drag-and-drop sort and a canvas
+region it cannot drive at all; when it stops, it names the schemes it left
+holding nothing so you know which ones to open by hand.
 
 Needs Playwright: `pip install potato-annotation[preview] && playwright install chromium`.
 """
@@ -51,6 +60,57 @@ FILL_TEXT = "Checked by walk_task.py."
 def _fresh_user() -> str:
     tail = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(6))
     return f"walkcheck-{tail}"
+
+
+EMPTY_SCHEMES_JS = """
+() => {
+  // Schemes with nothing recorded in them: no checked input, no text typed, no
+  // option picked, no hidden value. `{}` and `[]` count as nothing, because that
+  // is what the composite widgets initialise their hidden input to.
+  const out = [];
+  for (const form of document.querySelectorAll('.annotation-form, [data-schema-name]')) {
+    const name = form.getAttribute('data-schema-name') || form.id || '';
+    if (!name) continue;
+    const checked = form.querySelector('input:checked');
+    const typed = [...form.querySelectorAll('input[type=text], textarea')]
+        .some(e => (e.value || '').trim());
+    const held = [...form.querySelectorAll('input[type=hidden]')]
+        .some(e => (e.value || '').trim() && e.value.trim() !== '{}' && e.value.trim() !== '[]');
+    const picked = [...form.querySelectorAll('select')].some(e => (e.value || '').trim());
+    if (checked || typed || held || picked) continue;
+    out.push({name: name,
+              type: form.getAttribute('data-annotation-type') || ''});
+  }
+  return out;
+}
+"""
+
+
+def _schemes_holding_nothing(page) -> list:
+    """Which schemes on this page have no answer in them at all."""
+    try:
+        return page.evaluate(EMPTY_SCHEMES_JS) or []
+    except Exception:
+        return []
+
+
+def _output_dir(config_path: str) -> str:
+    """Where this config writes `<user>/user_state.json`, relative to task_dir.
+
+    `annotation_output/` is only the convention. A config naming anything else in
+    `output_annotation_dir` used to make the walk report "Nothing this walk did
+    reached the server" on a task that had stored every answer, which is the one
+    problem line nobody should have to disbelieve.
+    """
+    if not config_path or not os.path.isfile(config_path):
+        return "annotation_output"
+    try:
+        import yaml
+        with open(config_path, encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+    except Exception:
+        return "annotation_output"
+    return str(config.get("output_annotation_dir") or "annotation_output").rstrip("/")
 
 
 def _training_answers(config_path: str) -> dict:
@@ -131,6 +191,94 @@ def _answer_as_told(page, answers: dict) -> int:
                         break
                 except Exception:
                     pass
+    return touched
+
+
+#: Buttons inside an annotation form that do something other than answer it:
+#: panel controls, span deletes, tree path resets. Matched against the button's
+#: own text, lowercased.
+NOT_AN_ANSWER = (
+    "clear", "cancel", "delete", "remove", "reset", "undo", "close", "create",
+    "add ", "save", "submit", "expand", "collapse", "×", "x",
+)
+
+COMPOSITE_CLICK_JS = """
+(skipWords) => {
+  // One click per group of sibling controls, inside annotation forms only.
+  // The trace and multi-agent schemes answer through buttons carrying data
+  // attributes and a hidden JSON input, so no radio, checkbox or tile selector
+  // finds them: a required `agent_scorecard` or `handoff_review` otherwise
+  // dead-ends the walk with the page reporting nothing wrong.
+  const forms = document.querySelectorAll(
+      '.annotation-form, [data-schema-name], [data-annotation-type]');
+  const groups = new Map();
+  for (const form of forms) {
+    const controls = form.querySelectorAll(
+        'button[type=button], [role=button]');
+    for (const el of controls) {
+      const data = [...el.attributes].filter(a => a.name.startsWith('data-'));
+      if (!data.length) continue;                       // plain panel button
+      const text = (el.innerText || '').trim().toLowerCase();
+      if (skipWords.some(w => text === w.trim() || text.startsWith(w))) continue;
+      if (el.disabled) continue;
+      const box = el.getBoundingClientRect();
+      const isSvg = el.ownerSVGElement || el.tagName.toLowerCase() === 'g';
+      if (!isSvg && (box.width === 0 || box.height === 0)) continue;
+      const key = el.parentElement;
+      if (!groups.has(key)) groups.set(key, el);
+    }
+  }
+  let clicked = 0;
+  for (const el of groups.values()) {
+    if (el.getAttribute('aria-pressed') === 'true'
+        || (el.className || '').toString().includes('active')) continue;
+    el.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    clicked += 1;
+  }
+  return clicked;
+}
+"""
+
+
+def _answer_composite_widgets(page) -> int:
+    """Click one control per group in the button-and-hidden-input schemes.
+
+    `agent_scorecard`, `handoff_review`, `failure_attribution`,
+    `consensus_tracking`, `emergent_behavior`, `tool_contention` and
+    `agent_interaction_graph` answer by clicking a button that writes to a
+    hidden JSON input. They carry no `annotation-input` class on anything
+    clickable, so every other pass here walks straight past them and reports
+    "0 answered" on a page the annotator can fill in.
+    """
+    try:
+        return int(page.evaluate(COMPOSITE_CLICK_JS, list(NOT_AN_ANSWER)))
+    except Exception:
+        return 0
+
+
+def _answer_selects(page) -> int:
+    """Choose the first real option in any select still sitting on its placeholder.
+
+    From 2.8.2-10 a `select` opens on a disabled `-- select one --` rather than
+    preselecting its first label, which is right, and means a required select now
+    blocks the walk until something picks. `failure_attribution` renders two
+    selects with no `name` at all, so this cannot key off the name the way the
+    text pass does.
+    """
+    touched = 0
+    for element in page.query_selector_all("select"):
+        try:
+            if not element.is_visible() or (element.input_value() or "").strip():
+                continue
+            values = element.evaluate(
+                "s => [...s.options].filter(o => o.value && !o.disabled)"
+                ".map(o => o.value)")
+            if not values:
+                continue
+            element.select_option(values[0])
+            touched += 1
+        except Exception:
+            pass
     return touched
 
 
@@ -263,6 +411,9 @@ def _answer_everything(page) -> int:
             touched += 1
         except Exception:
             pass
+
+    touched += _answer_selects(page)
+    touched += _answer_composite_widgets(page)
 
     for selector in ("textarea", "input[type=text]", "input[type=search]"):
         for element in page.query_selector_all(selector):
@@ -455,12 +606,23 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                     # does not have. What is left is a required scheme the
                     # walker could not fill.
                     hint = ("The config names no training data, so this is "
-                            "not a graded answer. Something required on the "
-                            "page is unanswered: a scheme whose widget the "
-                            "walker cannot drive (a span, a waveform region, "
-                            "a canvas), or one whose options it answered only "
-                            "partly. Open the page and press Next -- the "
-                            "inline message names the question.")
+                            "not a graded answer.")
+                empty = _schemes_holding_nothing(page)
+                if empty:
+                    named = ", ".join(
+                        f"{item['name']}"
+                        + (f" ({item['type']})" if item.get("type") else "")
+                        for item in empty[:6])
+                    hint += (f" Nothing was recorded in: {named}. Those are the "
+                             f"widgets the walker could not drive -- a span, a "
+                             f"drag-and-drop sort, a canvas region -- so check "
+                             f"them by hand.")
+                else:
+                    hint += (" Every scheme on the page holds an answer, so the "
+                             "page is not refusing to advance for want of one. "
+                             "On the last item with nothing stored, Potato keeps "
+                             "the annotator on it rather than showing the "
+                             "finished page.")
                 blocking = _unanswered_message(page)
                 if blocking:
                     hint = (f"The page says: {blocking} That message is the "
@@ -515,7 +677,8 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
         browser.close()
 
     if task_dir:
-        state_path = os.path.join(task_dir, "annotation_output", user, "user_state.json")
+        state_path = os.path.join(
+            task_dir, _output_dir(config_path), user, "user_state.json")
         report["user_state"] = state_path
         if os.path.isfile(state_path):
             with open(state_path, encoding="utf-8") as f:

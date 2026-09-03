@@ -108,6 +108,37 @@ suggestions the annotator corrects.
 
 **`rubric_eval` is the only one with a required field:** `criteria`.
 
+**`tool_contention` needs times on its calls.** A call is `{agent, tool, start,
+end, resource}` and the seconds are what make a contention: same resource,
+overlapping interval. Feed it `{agent, tool, resource}` and the lanes still
+render, one per agent, and every item reports "No shared-resource contention
+detected", which is what a trace with no contention looks like too. It also
+pairs a single agent's own overlapping calls with each other, so expect a few
+`coder <-> coder` cards to classify.
+
+**The display reads different keys from the schemes.** Both halves of the page
+take the step list, and they disagree about what a step is called: the schemes
+take `agent_key` and `steps_key`, while `multi_agent_discussion`, `agent_trace`,
+`cot_trace` and `eval_trace` take `speaker_key` and `text_key`, defaulting to
+`speaker` and `text`. Steps shaped `{index, agent, text}` therefore render
+correctly in the questions and as a column of grey "U" avatars with no names in
+the trace above them. Set `speaker_key: agent` in `display_options`.
+`display_registry.list_displays()` does not admit the option exists; read it off
+the renderer class, as `building-the-ui.md` describes.
+
+**A linked act saves without its link.** In `consensus_tracking` and
+`context_attribution`, an act named in `linked_acts` asks for a second click on
+the turn it refers to. Skip that click and the act is stored with no `ref`, Next
+advances, and the only sign is a badge reading `agreement` where a complete one
+reads `agreement -> #1`. The widget marks the card `ct-awaiting-ref` and nothing
+consults it. If the reference is the point of the study, count the ref-less acts
+at export before you count anything else.
+
+**`required` on any of these means "touched once".** These schemes answer through
+one hidden JSON input, and requiredness tests it for a non-empty string, so a
+scorecard covering four agents on three dimensions is satisfied by one click.
+`building-the-ui.md` has the measurement and what to do instead.
+
 ## World-model rollouts
 
 `rollout_evaluation` is the odd one out and worth reading the module docstring

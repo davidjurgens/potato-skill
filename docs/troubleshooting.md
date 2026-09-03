@@ -24,6 +24,7 @@ potato-annotation 2.7.0.
 | `--strict` reports nothing about unknown keys | Warnings are suppressed while there are hard errors | Fix the errors and run again |
 | Killing the server leaves the port held | It spawns children | `pkill -f "potato start <config> -p <port>"`, or `killpg` on the process group |
 | `timeout` not found (macOS) | Not installed | Poll in a loop, or use a Python wrapper |
+| `preview` prints `ERROR: Missing required field 'task_dir'` on a config `validate --strict` just passed | `preview` reads the raw file; the loader defaults `task_dir` to the config's own directory, so the server runs fine | Write `task_dir: .` and stop thinking about it. Every other relative path resolves against it anyway |
 
 ## Boot
 

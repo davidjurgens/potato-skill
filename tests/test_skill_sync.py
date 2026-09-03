@@ -84,6 +84,24 @@ PROSE_IDENTIFIERS = {
     # about widgets that store what nobody chose are only checkable by reading
     # it; potato/adjudication.py:312 among many
     "instance_id_to_label_to_value",
+    # display options the registry table does not list, though the renderer
+    # classes declare them: `caption_key`/`url_key` on gallery_display,
+    # `ocr`/`link_schema` on pdf_display. Named in the warning that
+    # `list_displays()` under-reports, which is only checkable against the
+    # classes -- `display_registry.get(name).renderer.optional_fields`
+    "caption_key", "url_key", "ocr", "link_schema",
+    # the default `speaker_key` reads, multi_agent_discussion_display.py:85. A
+    # field name in the annotator's data, so no registry claims it
+    "speaker",
+    # a key on one entry of `event_types` on an event_annotation scheme, two
+    # levels inside a scheme entry; event_annotation.py:70
+    "trigger_labels",
+    # the HTML attribute card_sort puts on its cards, named because the
+    # accessibility warning is about that attribute being the only affordance
+    "draggable",
+    # potato/server_utils/displays/registry.py, named so a reader can open the
+    # file where the display table is hardcoded
+    "registry.py",
     # structural keys inside a scheme or an instance_display field
     "annotation_type", "name", "description", "type", "key", "label",
     "fields", "required", "value", "labels", "direction", "gap",

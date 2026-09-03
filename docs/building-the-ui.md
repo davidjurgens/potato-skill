@@ -68,13 +68,37 @@ An unknown `type` fails validation with the valid list in the message.
 | `live_agent` | Live agent viewer with controls |
 | `live_coding_agent` | Live coding agent with intervention |
 
-`display_options` differ per type and are validated per type. Look the type up
-in the registry rather than guessing:
+`display_options` differ per type, and **nothing checks them**. A misspelled
+option passes `validate --strict` with "OK — no issues found" and then does
+nothing, so the page comes up wrong with no error anywhere. Validation covers the
+required fields and whether the type supports `span_target`; it never looks
+inside `display_options`.
+
+Worse, the obvious way to look an option up is missing some. `list_displays()`
+reports a table hardcoded in `registry.py`, and on 2.8.2 **14** of the 24 entries
+list fewer options than their renderer accepts: **44** options are missing
+between them, **15** of those on `pdf` alone, including `ocr` and `link_schema`.
+Ask the renderer class instead:
 
 ```python
 from potato.server_utils.displays.registry import display_registry
-[d for d in display_registry.list_displays() if d["name"] == "dialogue"]
+entry = display_registry.get("multi_agent_discussion")
+sorted(getattr(entry, "renderer", entry).optional_fields)
+# ['collapse_environment', 'show_addressees', 'show_legend', 'show_turn_numbers',
+#  'speaker_key', 'text_key', 'thread_replies']
 ```
+
+`list_displays()` names five of those seven. The two it omits are the two that
+decide whether the display can read your data at all.
+
+**A display that reads a list has its own idea of the field names.** The
+conversation and trace displays (`dialogue`, `multi_agent_discussion`,
+`agent_trace`, `cot_trace`, `eval_trace`) take `speaker_key` and `text_key`,
+defaulting to `speaker` and `text`; `gallery` takes `url_key` and `caption_key`.
+Point one at turns shaped `{index, agent, text}` and every turn renders under a
+grey "U" avatar with no name, no colour and no legend, while the annotation
+schemes above and below it read the same list correctly, because those take
+`agent_key`. Set `speaker_key: agent` and the page is right. Nothing warns.
 
 **`pairwise` sits side by side at its defaults** from Potato 2.8.2: `cell_width`
 defaults to `auto`, which splits the row evenly and subtracts each cell's share
@@ -204,76 +228,67 @@ Quoting is the fix and it costs nothing, so quote every short label. The dict
 form (`{name: 'No', key_value: '2'}`) is also safe, because the check that
 rejects a bool accepts a dict with a `name`.
 
-### A `select` answers itself
+### `select`, `constant_sum` and `ranking`: fixed in 2.8.2-10, broken before it
 
-```yaml
-- annotation_type: select
-  name: dominant_frame
-  description: Which single frame dominates?
-  labels: [Economic consequences, Fairness and equality, Public health, No dominant frame]
+Three widgets used to answer for the annotator or lose the answer they gave. All
+three are fixed as of `v2.8.2-10-ge54fdc26`, and all three were silent, so if you
+are on an earlier build the symptom is in the data rather than on the screen.
+
+A `select` emitted one `<option>` per label and no placeholder, so the browser
+preselected the first one and `syncAnnotationsFromDOM` stored it. Register, press
+Next three times touching nothing, and three items came back annotated with the
+first label. `required: true` could never fail either, because a select always
+had a value. It now opens on a disabled `-- select one --` and three empty Nexts
+store nothing.
+
+`constant_sum` drew a live "Allocated: 40 / 100" counter and let Next through
+anyway, so a distribution question came back holding 40 points. Requiredness now
+reads the declared total and blocks with `(40 of 100 allocated)` in the message.
+`soft_label` had the same gap by a different route — `min_per_label` floors
+stopping the other sliders absorbing a drag — and the same check catches it.
+
+`ranking` wrote its config order into the hidden input on every render and
+flagged it `data-modified`, so arriving at an item counted as ranking it, and
+returning to one overwrote the real ranking with the default. It now starts
+empty, and an order survives next-then-previous.
+
+To check a build you did not test yourself, all three take about a minute: fresh
+user, three Nexts touching nothing, then read `instance_id_to_label_to_value` —
+it should be `{}`. Then rank something, advance, come back, and read it again.
+
+`range_slider` had the milder version: both thumbs at a default band the server
+did not have, so an annotator who agreed with what was on screen recorded
+nothing. It now opens at the ends in grey, reading "No range set", with both
+hidden inputs empty and no `data-modified` until the first drag. (`pairwise` used
+to pre-select its tie tile the same way; that went in 2.8.2.)
+
+### `required` on a composite widget means "touched", not "answered"
+
+A scheme that answers through a hidden JSON input — `agent_scorecard`,
+`handoff_review`, `failure_attribution`, `consensus_tracking`, `tool_call_review`,
+`image_annotation`, most of the trace family — is checked for requiredness by
+testing that input for a non-empty string. One click anywhere inside satisfies
+the whole scheme.
+
+Measured on 2.8.2-10, with all three schemes on the page marked `required: true`.
+Answer nothing and Next is blocked, naming all three. Then pick a responsible
+agent, flag one of five handoffs, click one of ten scorecard cells, and Next goes
+through with:
+
+```
+scorecard = {"agents":{"planner":{"did its own job":1}},"team":{},"milestones":{}}
+attribution = {"responsible_agent":"coder","decisive_step":null,"reason":""}
 ```
 
-Potato emits no placeholder option, so the browser preselects the first one and
-`syncAnnotationsFromDOM` stores whatever a select currently holds. Measured on
-2.8.2: register, press Next three times touching nothing, and three items come
-back annotated `dominant_frame: Economic consequences`. `required: true` on a
-select is a no-op for the same reason -- a select always has a value, so the
-check that blocks Next is always satisfied.
+Four agents times two dimensions plus two team dimensions is ten questions, and
+the check is satisfied by one. `constant_sum` is the exception, because its
+budget rule was added by hand; nothing generalises it to declared cells.
 
-There is no config key that fixes this. Either put an explicit "not answered"
-option first and treat it as missing at analysis time:
-
-```yaml
-- annotation_type: select
-  name: dominant_frame
-  description: Which single frame dominates?
-  labels: ['— choose —', Economic consequences, Fairness and equality, No dominant frame]
-```
-
-or use a `radio`, which starts genuinely unanswered. Prefer the radio unless the
-list is long enough that a dropdown is the reason you picked `select`.
-
-The same guard the sliders get (`data-modified`) is two functions away in
-`annotation.js` and is not applied to selects, so this is worth re-testing on any
-version you did not test yourself: fresh user, three Nexts, read
-`instance_id_to_label_to_value`.
-
-### `constant_sum` shows a total it does not enforce
-
-`total_points: 100` draws a live "Allocated: 40 / 100 · Remaining: 60" counter,
-colours it, and lets the annotator press Next anyway. Even with
-`required: true`, requiredness means every box is non-empty -- not that they add
-up. The widget clamps upward, so no one can exceed the budget, and everyone can
-come in under it.
-
-Say so in the question text ("the four must total 100"), and check the sums at
-export rather than trusting the widget. `soft_label` has the same shape and the
-same gap.
-
-### A ranking loses its order when the annotator comes back
-
-`ranking` renders its `labels` already numbered 1..n in config order, and the
-inline script writes that order into the hidden input and marks it
-`data-modified` on every render. On a revisit the saved order does not reach the
-page, the default order is sitting in the input already flagged as the
-annotator's answer, and the next save overwrites the real ranking with the config
-default. Measured on 2.8.2: ranked, advanced, went back, and
-`instance_id_to_label_to_value` held the config order.
-
-It is not only the Previous button. A fresh tab landing on an item that was
-already ranked shows the config order too, so resuming a session does it as well,
-and there is no config key that turns off either route. Until it is fixed you
-cannot design around it; you can only detect it. Diff the exported order against
-the order in `labels:` -- an implausible number of annotators agreeing with the
-default is the symptom -- and if the ordering matters to the study, collect it
-some other way.
-
-`range_slider` has the milder version of this: it draws both thumbs at a default
-band the server does not have, so an annotator who agrees with what is on screen
-records nothing by agreeing. It does not overwrite anything, which is the part
-that makes `ranking` worth designing around. (`pairwise` used to pre-select its
-tie tile the same way; that is fixed as of 2.8.2, and its hidden input is empty
-until the annotator clicks.)
+So `required` on these buys you "the annotator interacted with it" and not much
+else. If completeness matters, say the count in the question text ("score all
+four"), and check it at export — the stored JSON has the shape you need, one key
+per cell, so a per-item count is a few lines of pandas rather than an eyeball
+pass.
 
 ### Free text is one line unless you say otherwise
 

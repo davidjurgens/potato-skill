@@ -24,6 +24,9 @@ What it reports per page:
   * schemes, and the Next button, that sit below the fold
   * how many screens tall the page is
   * image, canvas, video and audio widgets that came up empty
+  * choice widgets whose candidate list rendered empty behind live buttons
+  * schemes writing to a hidden input that nothing collects, so the answer looks
+    stored on the page and never reaches `user_state.json`
   * anything wider than the viewport, which makes the page scroll sideways
   * console errors and failed requests, minus Potato's known phase-page noise
 
@@ -239,13 +242,43 @@ INSPECT_JS = r"""
       + '[class*="-candidates"], [class*="-profiles"]')]
     .filter(el => el.offsetParent !== null
                   && !(el.innerText || '').trim()
-                  && !el.querySelector('img, canvas, video, audio, input, select'))
+                  && !el.querySelector('img, canvas, video, audio, input, select')
+                  // An empty drop target is where the answer goes, not a missing
+                  // candidate list: `card_sort` opens with every group empty and
+                  // all its cards in the source column.
+                  && !el.hasAttribute('ondrop') && !el.hasAttribute('ondragover')
+                  && !el.closest('[data-annotation-type="card_sort"]'))
     .map(el => {
       const form = el.closest('form.annotation-form, [data-schema-name]');
       return (form && form.getAttribute('data-schema-name'))
              || (typeof el.className === 'string'
                  ? el.className.trim().split(/\s+/)[0] : 'unnamed');
     });
+
+  // A widget whose answers nothing collects. Every scheme that answers through a
+  // hidden input has to mark it `annotation-input`, because that is the class
+  // syncAnnotationsFromDOM reads; a hidden `<scheme>:::<field>` input without it
+  // is written by the widget, shown back to the annotator, and never sent. The
+  // page looks completely normal, and `user_state.json` stays empty for that
+  // scheme however long the study runs. `tree_annotation` is in this state on
+  // 2.8.2-10: its two inputs sit outside any form and carry no class at all.
+  // Four schemes are exempt because they persist through their own endpoints
+  // into their own stores -- `instance_id_to_span_to_value`,
+  // `..._to_link_to_value`, `..._to_event_to_value` -- and their hidden input is
+  // a mirror rather than the thing that is read.
+  const SIDE_STORED = ['span', 'coreference', 'span_link', 'event_annotation',
+                       'multi_document_event'];
+  const uncollected = [...document.querySelectorAll('input[type="hidden"]')]
+    .filter(el => (el.name || '').includes(':::')
+                  && !el.classList.contains('annotation-input'))
+    .map(el => {
+      const form = el.closest('.annotation-form, [data-schema-name]');
+      const type = form ? (form.getAttribute('data-annotation-type') || '') : '';
+      if (SIDE_STORED.includes(type)) return null;
+      return (form && (form.getAttribute('data-schema-name') || form.id))
+             || (el.name || '').split(':::')[0];
+    })
+    .filter(Boolean);
 
   const media = [...document.querySelectorAll('video, audio')].map(el => ({
     tag: el.tagName.toLowerCase(),
@@ -270,7 +303,7 @@ INSPECT_JS = r"""
     overflows_sideways: docEl.scrollWidth > docEl.clientWidth + 4,
     wide_elements: [...new Set(wide)],
     forms, advance, images, canvases, canvas_errors, geometry_schemes,
-    empty_choices, media,
+    empty_choices, uncollected, media,
   };
 }
 """
@@ -401,6 +434,15 @@ def _page_problems(measured: dict, declared: list) -> list:
             f"which is what generates the tuples -- the scheme does not read "
             f"candidates off the item. For the others, the field named by "
             f"`items_key` is missing from the data.")
+
+    uncollected = sorted(set(measured.get("uncollected") or []))
+    if uncollected:
+        problems.append(
+            f"{', '.join(uncollected)} writes its answer to a hidden input that "
+            f"carries no `annotation-input` class, so nothing collects it. The "
+            f"widget will look like it works and `user_state.json` will hold "
+            f"nothing for this scheme. Drive it once and read the file before "
+            f"you use it in a study.")
 
     geometry = sorted(set(measured.get("geometry_schemes") or []))
     if geometry and not [img for img in measured["images"] if not img["empty"]]:

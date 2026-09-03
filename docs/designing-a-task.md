@@ -110,8 +110,8 @@ hand-assembled version is worse in a way that shows up in the data:
 | "an acceptable range, not a point" | `range_slider` | Two number boxes that can cross |
 | "warm/cold, weak/strong, active/passive" | `semantic_differential` | One `likert` per adjective pair. Takes `pairs`, renders the bipolar grid |
 | "which package would they choose" | `conjoint` | Hand-built profile comparisons. Give it `attributes`, each with the values it can take, and it generates the profiles |
-| "group these however makes sense to you" | `card_sort` | A `multiselect` per item, which loses the grouping |
-| "find the answer in the passage" | `extractive_qa` | A `span` plus a separate question field; this takes `question_field` and `passage_field` and handles unanswerable |
+| "group these however makes sense to you" | `card_sort` | A `multiselect` per item, which loses the grouping. Mouse-only: the cards are `draggable` divs with no tabindex, no roles and no move buttons, so a keyboard or screen-reader annotator cannot do the task, and neither can a phone |
+| "find the answer in the passage" | `extractive_qa` | A `span` plus a separate question field; this takes `question_field` and `passage_field` and handles unanswerable. It renders its own copy of the passage, so leave that field out of `instance_display` unless you want it twice |
 | "the same event reported across articles" | `multi_document_event` | Per-document annotation you then have to align. Takes template `slots` |
 | "review this diff like a pull request" | `code_review` | A textbox. Inline comments, categories, per-file ratings, a verdict |
 
@@ -126,10 +126,11 @@ worked example lifted from a config that really runs. Never invent a type name:
 **`bws` is a subsystem, not just a scheme.** It draws its four candidates from
 the whole dataset, not from a field on the row, so the tuples have to be
 generated for it by a top-level `bws_config` (or `ibws_config` for the adaptive
-version). Without one the scheme still renders -- four buttons labelled A, B, C
-and D with nothing in them -- and `validate --strict` passes, the boot log is
-clean, and `check_ui` reports the page as fine, because empty tiles are not a
-shape anything checks.
+version). From 2.8.2-10 `validate --strict` refuses the combination and names the
+missing block. Before that the scheme rendered anyway -- four buttons labelled A,
+B, C and D with nothing in them -- and validation passed, the boot log was clean,
+and the annotator was asked to choose between blanks; `check_ui` now catches that
+shape wherever it comes from.
 
 ```yaml
 bws_config:
@@ -144,6 +145,37 @@ One row per candidate, `text_key` pointing at the candidate text; Potato replace
 your instances with generated tuples, so the ids in the output are
 `bws_tuple_0001` and the export is scored rather than per-row. Plan the data as a
 pool, not as pre-built comparison sets.
+
+**Three more that need a second thing before they do anything.** Each renders at
+a glance-correct default and collects nothing, and `validate --strict` passes on
+all three.
+
+`conjoint` needs `attributes` even when the profiles come from the data.
+`profiles_field` fills cells; `attributes` is what creates them, one row per
+declared attribute. With `profiles_field` alone you get three cards reading
+"Option 1 / Choose this" and no attributes at all, over data that is sitting
+right there in the row. Declare the attribute names to match the keys in your
+profiles; the levels are only used when Potato generates profiles itself.
+
+`event_annotation` builds on a `span` scheme, and every label it names has to
+exist in that scheme: each event type's `trigger_labels`, and the `entity_types`
+on each argument. Miss one and the flow cannot start — the trigger click is
+rejected in silence and *Create Event* never enables. The order is also
+particular: pick the event type, click a span to make it the trigger, click a
+*role*, then click the span that fills it. Clicking a span before a role does
+nothing at all. Its arc drawing is a separate matter: on 2.8.2-10 the arcs render
+into the legacy `#instance-text` container, which `instance_display` sets to
+`display:none`, so "Show event arcs above text" works only on a config with no
+`instance_display`. The annotation itself is unaffected.
+
+`tree_annotation` does not store anything on 2.8.2-10, so do not build a study on
+it yet. Both its hidden inputs sit outside any form and carry no
+`annotation-input` class, so nothing collects them: the path an annotator clicks
+shows on screen, and `instance_id_to_label_to_value` stays empty. Its
+`node_scheme` renders no control either — the panel says "Node annotation type:
+likert" over an empty box. If a researcher wants per-node ratings on a branching
+conversation, use the `conversation_tree` display for reading plus ordinary
+schemes beside it, and check the export before promising the path data.
 
 **When the label set is meant to be incomplete**, this table is the wrong tool.
 A researcher doing thematic analysis, grounded theory or any open coding starts
