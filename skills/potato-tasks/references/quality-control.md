@@ -89,9 +89,27 @@ Notes:
 - `explanation` is shown with the mark. Write it — a wrong answer with no
   explanation teaches nothing, and this is the one place in the task where you
   can correct a misreading before it contaminates 500 items.
-- The training page renders `text` only. Any context an annotator needs (a
-  headline, a speaker, an outlet) must be folded into that string; the display
-  fields from `instance_display` are not used here.
+- The training page renders the question text only. Any context an annotator
+  needs (a headline, a speaker, an outlet) must be folded into that string; the
+  display fields from `instance_display` are not used here. From Potato 2.8.2 a
+  training instance keeps all its fields and the question comes from the
+  project's `text_key`, so `{"text": ...}` and `{"caption": ...}` both work where
+  `text_key: caption`. Earlier builds kept six keys and dropped the rest.
+- **A practice round still cannot show media.** With no `instance_display` there
+  is no `<img>` for an `image_annotation` or other geometry scheme to take its
+  bitmap from, and `source_field` does not save it: the instance fields the
+  client would read are not serialized onto a phase page. The trainee gets an
+  empty canvas, the console says
+  `[ImageAnnotation] No image URL found! Check that the instance data contains an
+  image URL`, and the config validates clean. `check_ui.py` flags it as "a
+  geometry scheme on a page with no image on it". Potato ships no example
+  combining an image display with a training phase, which is why nothing catches
+  it. Either drop `training` on a media task, or use it only for the
+  classification schemes and say in the `explanation` that the drawing tool is
+  practised on the first real item.
+  (Before 2.8.2 this failed more loudly and more confusingly: the canvas read
+  "Failed to load image. Check the URL or CORS settings." and the console showed
+  a 404 for a URL made out of the instance's own prose.)
 - Grading is per scheme against `correct_answers`. Schemes you omit are not
   graded. Span schemes are not graded. There is no way to express a gold span here.
 - Progress shows as `Question 1 / 3` with a running `Correct: n · Mistakes: n`,

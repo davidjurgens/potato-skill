@@ -97,11 +97,68 @@ configured is not appearing, this is the first line to grep for.
 ERROR: Phase consent requires 'instrument', 'instruments', or 'file' to specify its annotation schemes
 ```
 
-- `file:` — a path to a `.jsonl` page (below). This is the one to use.
+- `file:` — a path to a `.jsonl` page (below). Use it for anything you wrote
+  yourself.
 - `instrument:` / `instruments:` — take a **string** (or list of strings) naming
-  a built-in instrument. Handing `instrument` a list of scheme dicts fails with
-  `unhashable type: 'list'`, which is the error you get if you assume it is an
-  inline scheme list.
+  a built-in instrument from the library below. Handing `instrument` a list of
+  scheme dicts fails with `unhashable type: 'list'`, which is the error you get
+  if you assume it is an inline scheme list.
+
+The two combine: instrument questions are laid out first, then the file's. Note
+that `instrument` and `instruments` do **not** — the singular wins and the list
+is ignored, silently. Use `instruments:` for one or many and forget the singular
+exists.
+
+## The instrument library
+
+Potato ships 55 validated questionnaires, so a post-study survey that asks for a
+standard measure should almost never be hand-written into a page file. Naming one
+writes the whole questionnaire, wording and response options included, into the
+phase.
+
+```yaml
+phases:
+  order: [annotation, poststudy]
+  poststudy:
+    type: poststudy
+    instruments: [tipi, who-5]
+```
+
+That boots to a page of fifteen questions — ten from `tipi`, five from `who-5` —
+with no page file anywhere. Eight categories:
+
+| Category | Examples |
+|---|---|
+| `personality` | `bfi-2` (60 items), `tipi` (10), `nfc`, `gse` |
+| `mental_health` | `phq-9`, `gad-7`, `k6`, `ces-d`, `pss-10`, `who-5` |
+| `affect` | `panas`, `iri` |
+| `social` | `rse`, `ucla-loneliness`, `mos-ss`, `macarthur-ladder` |
+| `attitudes` | `mfq`, `sdo-7`, `rwa`, `trust-ess`, `political-efficacy` |
+| `response_style` | `mc-sds` — social desirability, for detecting it in the rest |
+| `short_forms` | `bfi-10`, `mini-ipip`, `phq-2`, `gad-2`, `pss-4` |
+| `demographics` | batteries lifted from ANES, GSS, ESS, WVS, MIDUS, IPUMS and the ACS |
+
+The registry is the authority, and it carries the item count and a source URL for
+each one:
+
+```python
+from potato.survey_instruments import list_instruments, get_categories
+get_categories()                      # category -> instrument ids
+list_instruments("mental_health")     # id, name, items, description, url
+```
+
+Two things to tell a researcher before they pick one. **Long instruments are
+long**: `bfi-2` is 60 questions and `ztpi` is 56, a bigger ask than the
+annotation task in most studies. The `short_forms` category exists for that
+reason. And **a fifteen-question page runs about two and a half screens**, so the
+submit button ends up below the fold. `check_ui.py --config config.yaml --phase
+poststudy` reports the exact position — use `--phase` rather than the ordinary
+walk, which starts at the landing page and never gets past annotation on a
+corpus of any size.
+
+`psychometrics` is a different thing entirely despite the neighbouring name: it
+fits an item-response model over the *annotation labels* to estimate annotator
+ability and item difficulty. It has nothing to do with questionnaires.
 
 `training` and `annotation` need no page: training reads `training.data_file`
 and annotation reads `annotation_schemes`.

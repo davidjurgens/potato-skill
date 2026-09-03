@@ -14,6 +14,31 @@ start and stop there. It is the least likely to be where the study breaks.
 Read `AGENTS.md` in the project root if it is there — it carries project
 conventions on top of this.
 
+## If you were invoked with no task described
+
+Someone typed `/potato-tasks` and there is no brief in the conversation. Do not
+start building, and do not open with "what would you like to make?" — a
+researcher who has not used Potato cannot answer that usefully.
+
+Ask for one sentence, propose a design from it, then confirm only what you had
+to guess. `references/interviewing.md` is the question bank: the opening ask,
+the four-line proposal, then two rounds of multiple-choice covering the
+modality, the unit, the response format, annotators per item, quality control,
+the export target and who gets to log in — then a third round that offers the
+seven capability clusters as a menu and drills into only what gets ticked.
+
+Two things it is emphatic about. Ask what **modality** the data is, every time:
+it decides the display, the scheme family and the per-family key that says where
+the media lives, and getting it wrong is silent. And do not push phases —
+`consent`, `training` and `prestudy` are protocol decisions, most tasks want
+none of them, and a researcher who needs one knows they need it.
+
+The standing rule to build with stated assumptions rather than wait still holds
+— it applies once the interview has something to assume *from*. With nothing at
+all in context, asking four structured questions is faster for the researcher
+than any guess you could make.
+
+
 ## Installing Potato
 
 Most of this skill drives the `potato` command and imports Potato's registries.
@@ -29,7 +54,7 @@ The browser walk in `scripts/walk_task.py` additionally needs Playwright:
 
 ## The scripts in this skill
 
-Six of the procedures below are scripts rather than instructions, because they
+Seven of the procedures below are scripts rather than instructions, because they
 are long enough to get wrong by hand and they are what you will run repeatedly.
 They live beside this file in `scripts/`.
 
@@ -40,10 +65,12 @@ They live beside this file in `scripts/`.
 | `estimate_effort.py config.yaml --rate 15` | Items, annotators needed, minutes each, total hours and cost |
 | `find_design.py --type span --with-instructions` | Searches 440 published task designs in the Potato Showcase |
 | `handover.py config.yaml --confirm` | Removes the accounts you made while testing and writes `RUNNING.md` |
+| `check_ui.py --url … --config config.yaml` | Renders every page and reports schemes below the fold, empty media, keybinding conflicts and schemes that never appeared. `--phase poststudy` measures a page the walk cannot reach |
 | `study_status.py --url … --task-dir .` | Progress, per-annotator pace, agreement, and what looks wrong on a **running** study |
 
-Each takes `--help`, and `boot_and_check`, `walk_task` and `study_status` take
-`--json` when you want to act on the result rather than read it.
+Each takes `--help`, and `boot_and_check`, `walk_task`, `check_ui` and
+`study_status` take `--json` when you want to act on the result rather than read
+it.
 
 ## The loop
 
@@ -157,6 +184,16 @@ said to the block that does it: QDA and codebooks, solo mode, rooms,
 adjudication, review workflow, sessions, pocket, active learning, judges,
 crowdsourcing, publishing, telemetry. Check it before writing a scheme that
 sounds like a workaround.
+
+It opens with **the seven clusters** — material, the answer, unit, people, trust,
+model help, output — which is the same map the interview offers as a menu. Run it
+against the brief as a checklist: the clusters a brief never mentions are where a
+researcher is most likely to be missing something they would want. Raise at most
+two of them, and only where they matter; the rest goes in `QUESTIONS.md`.
+
+The cluster researchers miss most reliably is **the answer**. They ask for
+`radio` and `likert` and stop, and `soft_label`, `range_slider`,
+`semantic_differential`, `constant_sum` and `confidence` never get reached for.
 
 ## Designing it
 
@@ -317,7 +354,7 @@ annotation itself and a closing survey — with every side-file format filled in
 It validates under `--strict` and boots clean. Copy it and replace the labels
 and prose.
 
-Potato also ships 213 example projects, all checked in CI:
+Potato also ships 214 example projects, all checked in CI:
 
 ```python
 from potato.server_utils.examples_manifest import search_examples
@@ -414,6 +451,48 @@ works, not that the labels make sense. For a real annotation, spans, or anything
 it cannot do, `references/running-a-task.md` has the selectors, the span-drag
 recipe including the scroll offset that stops the drag landing on the navbar, and
 a driver to adapt.
+
+## Then check the interface itself
+
+`walk_task.py` proves the answers reach the server. It says nothing about whether
+a person can find the questions.
+
+```bash
+python .claude/skills/potato-tasks/scripts/check_ui.py \
+    --url http://localhost:8000 --config config.yaml --shots ui/
+```
+
+It measures each page in the live layout rather than judging a PNG, and reports
+what `validate` and `--screenshot` both miss:
+
+- **Which schemes and which button are below the fold**, with pixel positions, at
+  the same 1280×900 the screenshot uses. It is the check the screenshot section
+  above says you cannot make with `--screenshot` alone.
+- **How many screens tall each page is.** Over about two and a half, reach for
+  `instance_display.layout` before the study starts, not after.
+- **Schemes declared and never detected** on the annotation page — a scheme that
+  did not render, or a `display_logic` gate the initial state never satisfies.
+- **Image, canvas, video and audio widgets that came up empty**, which is the one
+  failure a screenshot genuinely cannot distinguish from success.
+- **Keyboard shortcuts claimed by two labels.** Only the first works and nothing
+  warns you.
+
+A config with a duplicate `key_value` and ten questions on one page passes
+`potato validate --strict` with `OK — no issues found`.
+
+The walk starts at the landing page and goes forward, so on a real corpus all
+twelve steps are annotation pages and a `poststudy` survey is hundreds of items
+out of reach. Measure that page on its own:
+
+```bash
+python .claude/skills/potato-tasks/scripts/check_ui.py \
+    --config config.yaml --phase poststudy --phase consent
+```
+
+That boots a throwaway debug server per phase and lands directly on the phase
+route. It takes `consent`, `instructions`, `training`, `annotation` and
+`poststudy` — not `prestudy`, which the preview route table does not carry and
+which the ordinary walk reaches anyway because it comes first.
 
 ## Leaving it running
 
@@ -572,6 +651,7 @@ Three that decide whether a deployment is safe to hand over:
 | `modalities.md` | Images, video, audio, dialogue, 3D — display, scheme and quirks |
 | `agent-traces.md` | Trace displays, the agent-evaluation schemes, world-model rollouts |
 | `evaluating-the-ui.md` | What to look at in a render, and when to stop |
+| `interviewing.md` | The multiple-choice question bank, for when the skill is invoked with no brief |
 | `phases-and-pages.md` | Consent, instructions, training, surveys, page files |
 | `quality-control.md` | Training, attention checks, gold standards, adjudication, side-file formats |
 | `assignment-and-agreement.md` | Quotas, ordering, and which metric each schema kind gets |

@@ -91,7 +91,7 @@ The Claude Code skill installed alongside this file has the full versions:
 
 ## Start from a working example
 
-There are 213 example projects. Copying one beats assembling a config from field
+There are 214 example projects. Copying one beats assembling a config from field
 lists, and every one of them is checked in CI.
 
 ```bash

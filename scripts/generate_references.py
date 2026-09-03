@@ -331,6 +331,10 @@ MIRRORED_REFERENCES = {
         "What to Confirm With the Researcher",
         "Which design choices to make yourself and which to hand back.",
     ),
+    "interviewing.md": (
+        "Interviewing the Researcher",
+        "The multiple-choice question bank for a task described from scratch.",
+    ),
     "building-the-ui.md": (
         "Building the Annotation Interface",
         "`instance_display`, the display types, and what a screenshot can prove.",

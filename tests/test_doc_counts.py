@@ -46,7 +46,16 @@ def _counts():
                  and top_docs[name].type in ("object", "array")))
     ]
 
+    # How many bundled examples declare a `phases` block at all. The interview
+    # tells an agent not to push consent/training/prestudy on anyone, and this
+    # is the evidence for that advice; if phases become common, the advice
+    # should change rather than quietly go stale.
+    manifest = load_manifest()
+    with_phases = sum(1 for e in manifest["examples"]
+                      if "phases" in (e.get("config_keys") or []))
+
     return {
+        "examples_with_phases": with_phases,
         "annotation_types": len(schema_registry.get_supported_types()),
         "display_types": len(display_registry.get_supported_types()),
         "documented_top_keys": len(top_docs),
@@ -85,6 +94,9 @@ CLAIMS = [
      r"### The (\d+) display types", "display_types"),
     ("references/worked-example.md", r"ships (\d+) examples", "examples"),
     ("references/designing-a-task.md", r"(\d+) types", "annotation_types"),
+
+    ("references/interviewing.md",
+     r"(\d+) of the example projects Potato ships use one", "examples_with_phases"),
 ]
 
 

@@ -21,6 +21,41 @@ thing.
 This is the routing table. Match the brief, then read the block's sub-keys in
 `config-keys-nested.md` and `get_key_doc("<block>.<key>")` for the detail.
 
+## The seven clusters
+
+Every capability decision belongs to one of seven, and each is owned by one file.
+Use this two ways. Reading a brief, walk the clusters and ask which ones it
+touches. The ones it never mentions are where a researcher is most likely to be
+missing something they would want. Running the interview in `interviewing.md`,
+these are the menu, offered as symptoms rather than by name.
+
+| Cluster | The question behind it | Owned by |
+|---|---|---|
+| **Material** | What is in front of the annotator? | `modalities.md`, `agent-traces.md`; **What they brought** below |
+| **The answer** | What kind of answer, and how precise? | `designing-a-task.md` — see below |
+| **Unit** | What counts as one thing? | `designing-a-task.md`; `sessions` and `cases` below |
+| **People** | Who annotates, and who sees which items? | `assignment-and-agreement.md`; **Different modes of working** below |
+| **Trust** | How will you know the answers are good? | `quality-control.md`, `assignment-and-agreement.md`; **Measurement and quality** below |
+| **Model help** | Should a model be involved at all? | **Models in the loop** below |
+| **Output** | What comes out, and where does it run? | `getting-the-data-out.md`, `deploying.md`; **Data in and out** below |
+
+### The answer itself
+
+This cluster is the one with no rows here, because `designing-a-task.md` owns the
+response-format tables and duplicating them is how they drift. Go there — but
+know what is in them, because this is the cluster researchers most reliably miss.
+They ask for `radio` and `likert` and stop, and Potato has a whole family for
+answers that a scale cannot hold:
+
+| They said | Reach for |
+|---|---|
+| "it isn't one label — it's mostly A, a bit B" | `soft_label`, rather than throwing the ambiguity away |
+| "an acceptable range, not a point" | `range_slider` |
+| "warm/cold, weak/strong, active/passive" | `semantic_differential` |
+| "the parts have to add up" | `constant_sum` |
+| "how sure were they" | `confidence`, with `target_schema` naming the judgment it qualifies |
+| "which of these two is better" | `pairwise`, `bws`, `ranking`, `conjoint` |
+
 ## Routing from what the researcher said
 
 ### Different modes of working
@@ -51,7 +86,7 @@ agent traces are their own family, in `agent-traces.md`.
 | Very large images | `image` + `viewer`/`tiles` | The viewer owns the transform; never recompute it |
 | Video, mark moments or track objects | `video_annotation` (no display field needed) | Five modes and `labels` is required in all of them |
 | Video, find the interval for a phrase | `temporal_grounding` | Reads `video_key`/`events_key`, not `source_field` |
-| Audio regions | `audio_annotation` | `mode` decides whether `labels` or `segment_schemes` is required, and `--strict` cannot see it |
+| Audio regions | `audio_annotation` | `mode: label` for one label per region; `questions` or `both` to ask whole schemes per region, which then need `segment_schemes` |
 | ASR/TTS against a reference | `speech_transcript` | Its own key names throughout |
 | Tiers over audio or video, ELAN-style | `tiered_annotation` | `media_type` defaults to `audio` |
 | A podcast or interview | `audio_dialogue` display | Per-turn playback is built in; it is a span target |

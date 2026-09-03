@@ -114,6 +114,16 @@ GET /api/current_instance  404
 ERROR potato.flask_server: Error getting instance text: 'null'
 ```
 
+The 404 is the endpoint's own guard: it refuses to hand back an instance outside
+the annotation phase, which is right, and the span layer asks anyway. On the
+annotation page the same call returns 200.
+
+Before Potato 2.8.2 a `POST /api/track_annotation_change 400` joined this list,
+once per answer given on a phase page, and the behavioural trail for survey and
+training pages was lost. The three tracking endpoints now agree: a missing
+instance id becomes the `__phase_page__` sentinel. That 400 in your log dates the
+checkout.
+
 They appear on a task that is working correctly, and they have a consequence:
 **`potato preview --phase consent --screenshot` exits 1 on a healthy task**,
 while `--screenshot` on the annotation page exits 0 and says "rendered cleanly".
@@ -127,6 +137,22 @@ Real errors worth reacting to, seen from the client:
 | `[NAV] Navigation failed: 400` | The server refused the save. Read the response body — it is JSON with `unsatisfied_schemas` |
 | `POST /annotate 400 {"status":"validation_error"}` | A required scheme is unanswered; a required span produces this with no inline message |
 | A scheme renders with no inputs under the heading | Generator failed for that scheme; the startup log names it |
+| A scheme is missing entirely | Same cause. `Invalid label format: True` in the log means a YAML boolean got into `labels` — see `building-the-ui.md` |
+
+### Widgets that open a native dialog
+
+Eight files in Potato call `alert()`, and `error_span` is the one you will meet
+first: saving an error span without a severity pops "Please select a severity
+level." Playwright dismisses dialogs automatically, so under automation this
+reads as a button that did nothing — no error, no console line, no change on the
+page. If a widget silently refuses to accept input, check for an `alert()` in
+its schema module before assuming the widget is broken.
+
+Register a handler if you want to see them:
+
+```python
+page.on("dialog", lambda d: (print("DIALOG:", d.message), d.dismiss()))
+```
 
 ## The admin surfaces
 
@@ -209,25 +235,46 @@ Selectors that are stable and worth knowing:
 | `input[name='<scheme>'][value='<label>']` | Radio / likert option. `value` is the raw label, not the humanized one |
 | `input[name='span_label:::<scheme>'][value='<label>']` | Span label chip; it is a **checkbox** — `.check(force=True)` |
 | `[name='<scheme>:::text_box']` | Free-text scheme. **Not** `textarea[...]` — a `text` scheme is an `<input>` unless `multiline: true` |
-| `.text-content` | The span anchor. `.span-overlays-field > *` counts drawn spans |
+| `#span-overlays` | Present only on an ordinary text task. Its children are the drawn spans, and its presence is how you tell the two shapes apart |
+| `#text-content` | The span anchor on an ordinary text task — but it exists on a span-target task too, hidden. Check the overlay first |
+| `.span-target-field .text-content` | The per-field anchor once `instance_display` names span-target fields. Overlays sit inside it, as `.span-overlays-field > *` |
 | `form.annotation-form` | One per scheme; counting these counts the questions on the page |
 
 ### Drawing a span
 
-Spans are drawn as overlays over `.text-content`, not by wrapping text, so
-"did a `<mark>` appear" is the wrong check. Count `.span-overlays-field > *`.
+Spans are drawn as overlays over the text rather than by wrapping it, so "did a
+`<mark>` appear" is the wrong check. Count the overlay container's children, in
+whichever of the two shapes the task renders.
+
+An ordinary text task renders one `div#text-content` holding the item text, with
+`div#span-overlays` inside it. A task whose `instance_display` names span-target
+fields renders one `div#text-content-<field>.text-content` per field, each with a
+`div#span-overlays-<field>.span-overlays-field` inside it.
+
+**Do not tell the two apart by asking whether `#text-content` exists.** It exists
+on both. On a span-target task it is a `0×0` hidden div holding `text_key`,
+carried along beside the real per-field anchors, and Playwright refuses to scroll
+to it — `scroll_into_view_if_needed` times out with "element is not visible"
+after thirty seconds, which reads as a hung browser rather than a wrong selector.
+Anchor on the overlay container instead, which exists in one shape each:
+
+```python
+anchor = ".text-content" if page.locator(".span-overlays-field").count() else "#text-content"
+```
 
 ```python
 page.locator("input[name='span_label:::sentence_type'][value='Factual reporting']").first.check(force=True)
-page.locator(".text-content").first.scroll_into_view_if_needed()
+page.locator(anchor).first.scroll_into_view_if_needed()
 page.mouse.wheel(0, -160)          # clear the sticky navbar, or the drag starts on it
-box = page.evaluate("""()=>{
-    const c=document.querySelector('.text-content');
-    const w=document.createTreeWalker(c, NodeFilter.SHOW_TEXT); const n=w.nextNode();
+box = page.evaluate("""(sel)=>{
+    const c=document.querySelector(sel);
+    const w=document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+    let n=w.nextNode();
+    while (n && n.textContent.trim().length < 25) n=w.nextNode();   // skip turn numbers and speaker chips
     const t=n.textContent, stop=t.indexOf('.');
     const r=document.createRange(); r.setStart(n,0); r.setEnd(n, stop>0?stop+1:40);
     const q=[...r.getClientRects()], a=q[0], z=q[q.length-1];
-    return {x1:a.left+2, y1:a.top+a.height/2, x2:z.right-2, y2:z.top+z.height/2};}""")
+    return {x1:a.left+2, y1:a.top+a.height/2, x2:z.right-2, y2:z.top+z.height/2};}""", anchor)
 page.mouse.move(box["x1"], box["y1"]); page.mouse.down()
 for k in range(1, 11):
     page.mouse.move(box["x1"] + (box["x2"]-box["x1"])*k/10, box["y1"], steps=2)
@@ -238,6 +285,11 @@ The `mouse.wheel` line is not optional. `scroll_into_view_if_needed` puts the
 text at y≈22, underneath the sticky navbar, and the drag then selects the header
 instead of the article. That looks like "spans are broken" and is not.
 
+The length filter in the tree walker is there for the same reason. A `dialogue`
+span target starts with the turn number and the speaker name as their own text
+nodes, so the first node the walker reaches is `[1]` — five pixels wide, and a
+drag across it selects nothing.
+
 **This generalizes to every synthetic drag, spans and canvases alike.**
 `page.mouse` works in viewport coordinates, so a target below the fold or under
 the navbar receives nothing:
@@ -245,8 +297,9 @@ the navbar receives nothing:
 1. `scrollIntoView({block: 'center'})` on the target element,
 2. **re-read** `getBoundingClientRect()` after the scroll,
 3. drag,
-4. **count the result** — `.span-overlays-field > *` for spans, the canvas's own
-   "Annotations: N" readout for geometry.
+4. **count the result** — `#span-overlays > *` for spans (`.span-overlays-field
+   > *` per field on a span-target task), the canvas's own "Annotations: N"
+   readout for geometry.
 
 A drag that misses produces zero annotations, zero exceptions, zero console
 output and zero network traffic. It is indistinguishable from the feature being

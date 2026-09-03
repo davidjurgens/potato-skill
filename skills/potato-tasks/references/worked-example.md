@@ -1,7 +1,7 @@
 # A task that runs
 
 Copying something that works beats assembling a config from field lists. Potato
-ships 213 examples for exactly this reason — but they are text-classification and
+ships 214 examples for exactly this reason — but they are text-classification and
 schema demos, and none of them is a whole study: consent, instructions, a
 practice round, attention checks, the annotation itself, and a survey at the end.
 

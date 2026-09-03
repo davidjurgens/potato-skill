@@ -45,6 +45,7 @@ HAND_WRITTEN = [
     "SKILL.md",
     os.path.join("references", "designing-a-task.md"),
     os.path.join("references", "asking-the-experimenter.md"),
+    os.path.join("references", "interviewing.md"),
     os.path.join("references", "building-the-ui.md"),
     os.path.join("references", "evaluating-the-ui.md"),
 ]
@@ -59,6 +60,30 @@ GENERATED = [
 PROSE_IDENTIFIERS = {
     # The distribution and the command. Not a config key or a type.
     "potato",
+    # sub-keys of one `link_types` entry on a `span_link` scheme. Two levels
+    # inside a scheme entry, which is past where any registry describes a
+    # config; they are read in span_link.py:78-79
+    "allowed_source_labels", "allowed_target_labels",
+    # the module that rejects a non-string label. Named in the warning about
+    # YAML booleans because its message is what the boot log prints, and a
+    # reader grepping for it needs the real module name
+    "identifier_utils",
+    # potato/static/annotation.js -- the client file that owns saving,
+    # restoring and requiredness. Named where a warning is only actionable if
+    # the reader can open the file
+    "annotation.js",
+    # `cell_width` is a pairwise_display option and `auto` is its default;
+    # pairwise_display.py:28 and 54. `auto` is a bare word rather than a key,
+    # so nothing in the registries claims it
+    "cell_width", "auto",
+    # the id `bws_config` gives a generated tuple, measured off a running
+    # server. bws_tuple_generator.py's own docstring says `bws_tuple_001`, one
+    # digit short of what it emits, so the code is the only source for this
+    "bws_tuple_0001",
+    # the user_state field holding every answer. Named because the warnings
+    # about widgets that store what nobody chose are only checkable by reading
+    # it; potato/adjudication.py:312 among many
+    "instance_id_to_label_to_value",
     # structural keys inside a scheme or an instance_display field
     "annotation_type", "name", "description", "type", "key", "label",
     "fields", "required", "value", "labels", "direction", "gap",
@@ -74,6 +99,10 @@ PROSE_IDENTIFIERS = {
     "consent", "instructions", "training", "annotation", "poststudy",
     # literals and example values
     "true", "false", "y", "n", "not_relevant", "json",
+    # what a pairwise scheme stores, alongside "A" and "B". A data value rather
+    # than a config key, and the reason a display_logic condition written
+    # against the label string never matches
+    "tie",
     # filenames and prose
     "config.yaml", "console.error", "text-content", "project.sqlite",
     # deliberately named as non-types; a separate test proves they are not
@@ -357,6 +386,14 @@ class TestEveryIdentifierInProseIsReal:
         vocab |= {f["format_name"] for f in export_registry.list_exporters()}
         from potato.importers import import_registry
         vocab |= set(import_registry.get_supported_formats())
+        # Validated survey instruments. `interviewing.md` and
+        # `phases-and-pages.md` name them so a researcher can be offered one by
+        # id, and an id that stops shipping has to fail here rather than send
+        # someone looking for a questionnaire that is gone. Only the hyphen-free
+        # ids reach this check -- `who-5` does not match the token pattern --
+        # which is why the registry rather than a list is the right source.
+        from potato.survey_instruments import get_registry as _instrument_registry
+        vocab |= set(_instrument_registry()["instruments"])
         # The pack's own filenames, so cross-references resolve against what
         # actually ships rather than against a list someone remembered to edit.
         vocab |= set(REFERENCES)

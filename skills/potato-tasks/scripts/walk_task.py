@@ -87,19 +87,94 @@ def _training_answers(config_path: str) -> dict:
             for item in (instances or []) if item.get("id") is not None}
 
 
+def _group_of(element, name: str) -> str:
+    """The set of inputs among which ticking one counts as answering.
+
+    Not the same rule for both input kinds, and getting it wrong dead-ends the
+    walk either way.
+
+    A **radio**'s group is its `name` attribute, because that is what makes
+    radios mutually exclusive in the browser. Grouping radios by scheme instead
+    breaks `multirate`, which renders one radio group per option row and shares
+    a scheme across all of them: three rows, one answer, and a required scheme
+    that never completes.
+
+    A **checkbox**'s group is its scheme, because a multiselect names every
+    option separately as `schema:::label`. Grouping those by name ticks every
+    box, which is not "the first option" and cannot pass a graded practice
+    question.
+    """
+    if (element.get_attribute("type") or "") == "radio":
+        return name or ""
+    return (name or "").split(":::", 1)[0]
+
+
 def _answer_as_told(page, answers: dict) -> int:
-    """Set exactly the answers given, by scheme name and label value."""
+    """Set exactly the answers given, by scheme name and label value.
+
+    Both field namings have to be tried. A radio's option is
+    `input[name=schema][value=label]`; a multiselect's is
+    `input[name=schema:::label]`, so the radio selector matches nothing on it
+    and a training round with a multiselect model answer never gets answered.
+    A list value ticks one box per label.
+    """
     touched = 0
     for name, value in answers.items():
-        selector = f'input[name="{name}"][value="{value}"]'
-        locator = page.locator(selector).first
+        for label in (value if isinstance(value, list) else [value]):
+            for selector in (f'input[name="{name}"][value="{label}"]',
+                             f'input[name="{name}:::{label}"]'):
+                locator = page.locator(selector).first
+                try:
+                    if locator.count():
+                        locator.check(force=True)
+                        touched += 1
+                        break
+                except Exception:
+                    pass
+    return touched
+
+
+def _click_or_label(page, element) -> bool:
+    """Tick an input, or the `<label for=...>` standing in for it. False if neither.
+
+    A styled radio group hides the real input and renders a label the annotator
+    clicks. `check(force=True)` on a `display: none` input raises rather than
+    ticking it, so the label is the only route.
+    """
+    if element.is_visible():
         try:
-            if locator.count():
-                locator.check(force=True)
-                touched += 1
+            element.check(force=True)
+            return True
         except Exception:
             pass
-    return touched
+    element_id = element.get_attribute("id")
+    if element_id:
+        label = page.query_selector(f'label[for="{element_id}"]')
+        if label and label.is_visible():
+            try:
+                label.click()
+                return True
+            except Exception:
+                pass
+    return False
+
+
+def _middle_value(element) -> str:
+    """A value inside the input's own min/max, as a string.
+
+    The midpoint rather than the minimum, because `min` is often 0 and a slider
+    left at 0 is indistinguishable from one nobody moved.
+    """
+    def _num(attr, fallback):
+        try:
+            return float(element.get_attribute(attr))
+        except (TypeError, ValueError):
+            return fallback
+    low, high = _num("min", 0.0), _num("max", 100.0)
+    if high < low:
+        low, high = high, low
+    value = low + (high - low) / 2
+    return str(int(value)) if value == int(value) else f"{value:.2f}"
 
 
 def _answer_everything(page) -> int:
@@ -116,31 +191,75 @@ def _answer_everything(page) -> int:
     # which it has to be, because a scheme behind `display_logic` only appears
     # after the question that gates it has been answered.
     answered_groups = {
-        element.get_attribute("name")
+        _group_of(element, element.get_attribute("name"))
         for element in page.query_selector_all("input:checked")
     }
 
     seen_groups = set(answered_groups)
     for element in page.query_selector_all("input[type=radio]"):
         name = element.get_attribute("name")
-        if not name or name in seen_groups or not element.is_visible():
+        group = _group_of(element, name)
+        if not name or group in seen_groups:
             continue
-        seen_groups.add(name)
+        # Not `is_visible()`. `semantic_differential` sets its radios to
+        # `display: none` and puts a styled `<label for=...>` over each one, so
+        # a visibility test skips every option of a scheme an annotator can
+        # answer with a click -- and if it is `required`, the walk dead-ends
+        # with the walker reporting nothing wrong. Take the label when the input
+        # itself cannot be clicked.
+        if not _click_or_label(page, element):
+            continue
+        seen_groups.add(group)
+        touched += 1
+
+    for element in page.query_selector_all("input[type=checkbox]"):
+        name = element.get_attribute("name") or ""
+        group = _group_of(element, name)
+        if name.startswith("span_label:::") or not element.is_visible():
+            continue          # span chips select a label, they do not answer
+        if group in seen_groups:
+            continue
+        seen_groups.add(group)
         try:
             element.check(force=True)
             touched += 1
         except Exception:
             pass
 
-    for element in page.query_selector_all("input[type=checkbox]"):
-        name = element.get_attribute("name") or ""
-        if name.startswith("span_label:::") or not element.is_visible():
-            continue          # span chips select a label, they do not answer
-        if name in seen_groups:
+    # Tile schemes. `pairwise`, `bws`, `ranking` and `triage` answer by clicking a
+    # div carrying `data-schema` and `data-value`, with a hidden input behind it,
+    # so there is no checkbox or radio for the passes above to find. Without this
+    # a required pairwise question dead-ends the walk with no explanation: the
+    # page simply does not advance and the server logs nothing.
+    for element in page.query_selector_all("[data-schema][data-value]"):
+        schema = element.get_attribute("data-schema") or ""
+        if not schema or schema in seen_groups or not element.is_visible():
             continue
-        seen_groups.add(name)
+        classes = element.get_attribute("class") or ""
+        if "tool-btn" in classes or "label-btn" in classes:
+            continue          # canvas toolbars, not answers
+        seen_groups.add(schema)
         try:
-            element.check(force=True)
+            element.click()
+            touched += 1
+        except Exception:
+            pass
+
+    # Numbers and sliders. `constant_sum` renders one number box per label and
+    # `vas`/`slider` render a range; both count as answered only when they hold
+    # a value, so a required one of either stops the walk otherwise. Nothing here
+    # tries to satisfy `constant_sum`'s total, which the widget does not enforce.
+    for element in page.query_selector_all(
+            "input[type=number].annotation-input, input[type=range].annotation-input"):
+        if not element.is_visible():
+            continue
+        if (element.input_value() or "").strip() and \
+                (element.get_attribute("type") or "") == "number":
+            continue
+        try:
+            element.fill(_middle_value(element))
+            element.dispatch_event("input")
+            element.dispatch_event("change")
             touched += 1
         except Exception:
             pass
@@ -149,6 +268,13 @@ def _answer_everything(page) -> int:
         for element in page.query_selector_all(selector):
             name = element.get_attribute("name") or ""
             if not element.is_visible() or name in ("email", "pass"):
+                continue
+            # Every input that is an answer is named `<scheme>:::<label>`. An
+            # unnamed text box belongs to the widget, not to the annotator --
+            # `hierarchical_multiselect` renders `input.hier-search-input` to
+            # filter its tree, and typing into it hides every option, so the
+            # walk then reported the scheme as one it could not answer.
+            if not name:
                 continue
             if (element.input_value() or "").strip():
                 continue
@@ -159,6 +285,23 @@ def _answer_everything(page) -> int:
                 pass
 
     return touched
+
+
+def _unanswered_message(page) -> str:
+    """What the page says is still unanswered, or "".
+
+    Potato names the blocking questions in `#required-fields-error`, by their
+    `description` text, but only after a forward attempt -- which by the time
+    this is called has happened four times. Reading it turns "stuck, could be
+    anything" into the actual question.
+    """
+    for selector in ("#required-fields-error", ".required-fields-error"):
+        element = page.query_selector(selector)
+        if element and element.is_visible():
+            text = " ".join((element.inner_text() or "").split())
+            if text:
+                return text if text.endswith(".") else text + "."
+    return ""
 
 
 def _settle(page) -> None:
@@ -270,7 +413,11 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                 # already have a selection, so it cannot overwrite it.
                 answered += _answer_as_told(page, training[instance_id])
             answered += _answer_everything(page)
-            page.wait_for_timeout(400)
+            # Long enough for a `display_logic` reveal to finish. The container
+            # animates its max-height over 300ms and the scheme inside is not
+            # clickable until it does, so at 400ms the second pass still saw a
+            # hidden question and the walk needed a whole extra step per item.
+            page.wait_for_timeout(1000)
             answered += _answer_everything(page)   # conditional schemes just shown
             report["steps"].append({
                 "step": step,
@@ -281,12 +428,46 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
 
             recent = [s["instance_id"] for s in report["steps"][-4:]]
             if len(recent) == 4 and len(set(recent)) == 1 and recent[0]:
+                # Which advice depends on whether the model answers were
+                # available. Telling someone to pass --config when they already
+                # did sends them to a fix they have applied and hides the real
+                # one, which is that the answer was submitted and graded wrong.
+                if recent[0] in training:
+                    hint = (f"Its model answer is {training[recent[0]]}. The "
+                            f"walker submitted that and training still refused "
+                            f"it, so the labels in training.data_file do not "
+                            f"match the labels in annotation_schemes, or a "
+                            f"required scheme on the page has no model answer.")
+                elif training:
+                    hint = (f"There is no model answer for {recent[0]} in "
+                            f"training.data_file. If this is a practice item, "
+                            f"add one; the walker cannot guess a graded answer.")
+                elif config_path is None:
+                    hint = ("If this is the practice round, the answer is "
+                            "graded and the walker does not know it -- pass "
+                            "--config so it can read training.data_file. "
+                            "Otherwise the item will not accept an answer.")
+                else:
+                    # --config was read and it declares no training, so a
+                    # graded answer cannot be what is blocking. Sending
+                    # someone back to --config here is the second-worst
+                    # outcome after saying nothing: it names a file the task
+                    # does not have. What is left is a required scheme the
+                    # walker could not fill.
+                    hint = ("The config names no training data, so this is "
+                            "not a graded answer. Something required on the "
+                            "page is unanswered: a scheme whose widget the "
+                            "walker cannot drive (a span, a waveform region, "
+                            "a canvas), or one whose options it answered only "
+                            "partly. Open the page and press Next -- the "
+                            "inline message names the question.")
+                blocking = _unanswered_message(page)
+                if blocking:
+                    hint = (f"The page says: {blocking} That message is the "
+                            f"server's own list of required schemes still "
+                            f"unanswered, so start there. " + hint)
                 report["problems"].append(
-                    f"Stuck on item {recent[0]} for four steps. If this is the "
-                    f"practice round, the answer is graded and the walker does "
-                    f"not know it -- pass --config so it can read "
-                    f"training.data_file. Otherwise the item will not accept an "
-                    f"answer.")
+                    f"Stuck on item {recent[0]} for four steps. {hint}")
                 report["reached_end"] = False
                 break
 
@@ -307,7 +488,13 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                 f"than that, or something is looping.")
 
         # Navigate back to the first item and check the answers came back.
-        if first_instance:
+        #
+        # Only when the walk actually moved. A walk stuck on item one never left
+        # it, so "navigated back and nothing was selected" is a second problem
+        # invented out of the first one -- and it points at storage, which is not
+        # where the fault is.
+        visited = {s["instance_id"] for s in report["steps"] if s["instance_id"]}
+        if first_instance and len(visited) > 1:
             where[0] = "revisit"
             go_to = page.query_selector("#go_to")
             if go_to:

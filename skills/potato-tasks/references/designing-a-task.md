@@ -53,10 +53,36 @@ phrasing of a request rarely names a format.
 | rate 1–5, agree/disagree | `likert` | Give every point a label, not just the ends |
 | how sure are they | `confidence` | Set `target_schema` to the scheme it qualifies, so the rating is attached to a specific judgment rather than floating |
 | mark the part of the text that… | `span` | Works as-is on `text_key`. Only needs `span_target` once you define `instance_display`, to say which field is the anchor |
-| which of these two is better | `pairwise` or `bws` | `bws` if there are 4+ candidates per item; it is far more efficient per judgment |
+| which of these two is better | `pairwise` or `bws` | `pairwise` compares two things **on one item**, from the field named by `items_key`. `bws` does not — see below |
 | put these in order | `ranking` | Expensive above ~7 items |
 | free text, a reason, a correction | `text` / `text_edit` | `text_edit` when they are correcting something that already exists. **`text` is a one-line `<input>` by default** — set `multiline: true` for anything phrased "in a sentence". No agreement metric applies to either; plan to read them |
 | a number, a proportion | `slider` / `number` / `constant_sum` | `constant_sum` when the parts must total something |
+| link two marked spans to each other | `span_link` | `coreference` if the links are equivalence classes rather than directed relations |
+
+**Both relational schemes hang off a `span` scheme**, named in `span_schema`, and
+neither works until spans exist on the page. Mark the mentions first; the widgets
+find them by click, so an item with no spans drawn gives you a panel whose buttons
+are all disabled and nothing to say why.
+
+`coreference` builds equivalence classes. Click a highlighted span, press *New
+Chain*, then click further spans and *Add to Chain*; the chains round-trip
+through the same `/api/links` endpoints `span_link` uses, so they survive
+navigation. `span_link` builds directed pairs instead: a list of `link_types`,
+each optionally narrowed by `allowed_source_labels` and `allowed_target_labels`,
+and picking a type first puts the widget into link mode, which then prompts
+"click a PERSON span / click a BODY span".
+
+Pick by what the relation is. Coreference is symmetric and transitive, so chains
+are the right primitive and `span_link` would make you record every pair.
+"speaks for", "employed by" and the rest are neither, so `span_link` is right and
+a chain would merge things that are not the same. If you do want chains out of
+`span_link`, a symmetric `{name: SAME_AS, directed: false}` type gets the pairs
+and the chains are their transitive closure, computed at export.
+
+Verified against Potato 2.8.2 (`v2.8.2-9-g19ce0041`). Both were unwired until
+then: the selection event the coreference manager waited for was never
+dispatched, and chains never reached the server. On anything earlier, check that
+clicking a span enables *New Chain* before you plan around it.
 
 ### Eleven types the table skips
 
@@ -85,6 +111,28 @@ All eleven have a working example under `examples/`, all render cleanly, and
 There are 61 types. `references/annotation-types.md` lists all of them with a
 worked example lifted from a config that really runs. Never invent a type name:
 `sentiment`, `classification` and `qa` are not types.
+
+**`bws` is a subsystem, not just a scheme.** It draws its four candidates from
+the whole dataset, not from a field on the row, so the tuples have to be
+generated for it by a top-level `bws_config` (or `ibws_config` for the adaptive
+version). Without one the scheme still renders -- four buttons labelled A, B, C
+and D with nothing in them -- and `validate --strict` passes, the boot log is
+clean, and `check_ui` reports the page as fine, because empty tiles are not a
+shape anything checks.
+
+```yaml
+bws_config:
+  tuple_size: 4
+  num_tuples: null            # auto from min_item_appearances
+  seed: 7
+  min_item_appearances: 4     # each item appears in >= N tuples
+  scoring: {method: counting} # counting | bradley_terry | plackett_luce
+```
+
+One row per candidate, `text_key` pointing at the candidate text; Potato replaces
+your instances with generated tuples, so the ids in the output are
+`bws_tuple_0001` and the export is scored rather than per-row. Plan the data as a
+pool, not as pre-built comparison sets.
 
 **When the label set is meant to be incomplete**, this table is the wrong tool.
 A researcher doing thematic analysis, grounded theory or any open coding starts

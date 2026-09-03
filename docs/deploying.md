@@ -43,6 +43,7 @@ Same rule as `potato start`: it does not return. Background it.
 potato deploy providers                  # what targets exist, which have credentials
 potato deploy check   config.yaml --provider render     # preflight, changes nothing
 potato deploy build   config.yaml --out ./bundle        # assemble, stop
+potato deploy up      config.yaml --provider render --dry-run  # the plan and the cost
 potato deploy up      config.yaml --provider render     # provision
 potato deploy status  config.yaml
 potato deploy logs    config.yaml -f
@@ -79,6 +80,137 @@ potato deploy up config.yaml --provider render --demo   # throwaway; silences th
 
 `--hf-token` works on **any** provider, not only HuggingFace: it is the generic
 "back the annotations up somewhere durable" flag.
+
+## Choosing a target
+
+The five differ on who can reach the task, whether the annotations survive a
+restart, and what it costs. The rest is provisioning detail.
+
+| Target | Reachable from | Annotations survive a restart | Cost | Also needs |
+|---|---|---|---|---|
+| `local` | `127.0.0.1` only | yes, in the mounted bundle | free | Docker installed and running |
+| `tunnel` | public, until the command stops | yes, local disk | free | a tunnel binary; ngrok also wants an account |
+| `render` (free) | public | **no**, and it stops after 15 minutes idle | free | a Render API key |
+| `render --plan starter --volume-gb 1` | public | yes, on the disk | $7/mo + $0.25/GB | a Render API key |
+| `huggingface` | public | **no** — only what reached the backup Dataset | free to run | a write token, **and a paid HF plan to create the Space** |
+| `digitalocean` | public | yes on the droplet; `--volume-gb` to outlive it | $18/mo default, $6 smallest | a read/write token, `pip install 'potato-annotation[deploy]'` |
+
+Two of those lines catch people out on their first deploy:
+
+- **A Docker Space needs a paid HuggingFace plan** (PRO personally, Team or
+  Enterprise for an org). Restarting an existing Space does not. A free account
+  also runs at most three Spaces, and one over the limit sits `PAUSED` and never
+  wakes for a visitor.
+- **The $6 DigitalOcean droplet is too small.** `s-1vcpu-1gb` gets a warning in
+  the plan: the image alone is ~840 MB and Potato's working set is
+  numpy/pandas/scipy. `s-2vcpu-2gb` at $18 is the default for that reason.
+
+Four questions decide it, and they are the researcher's to answer, not yours:
+
+| Ask | Because |
+|---|---|
+| How long does the study run? | An afternoon is `potato share`. Weeks of annotators is `deploy up`. |
+| Whose account and whose money? | Every public target except free Render bills someone. Do not create a billable resource on an assumption. |
+| Would losing the annotations end the study, or just cost a morning? | This is the whole ephemeral/durable choice, and it is much cheaper to answer now. |
+| Is anything in the data or the survey answers identifiable? | Decides whether a public URL with open sign-up is acceptable at all. |
+
+## Walking someone through a first deploy
+
+Six steps. The first three cost nothing and touch no provider, so run all three
+before asking anyone to make an account.
+
+**1. Find out what is already configured.**
+
+```bash
+potato deploy providers            # targets, and which have a credential
+potato deploy providers --verify   # ask each one whether the token really works
+```
+
+Credentials are found without being configured for Potato: a HuggingFace token in
+the `huggingface_hub` cache and a single-context `~/.config/doctl/config.yaml`
+are both picked up. Often the answer to "which provider" is "the one they are
+already signed in to".
+
+`--verify` matters because an expired, read-only or newline-terminated token
+looks exactly like a good one until `up` is several resources deep.
+
+**2. Get a token, if the chosen target needs one.**
+
+Nothing is ever written to disk — the token is resolved per invocation from the
+environment, so a leaked project directory is not a leaked cloud account.
+
+| Provider | Environment variable | Where the token comes from |
+|---|---|---|
+| `digitalocean` | `DIGITALOCEAN_TOKEN` | <https://cloud.digitalocean.com/account/api/tokens>, read **and** write scope |
+| `huggingface` | `HF_TOKEN` | <https://huggingface.co/settings/tokens>, write access |
+| `render` | `RENDER_API_KEY` | <https://dashboard.render.com/u/settings#api-keys> |
+| `tunnel` | `NGROK_AUTHTOKEN` | only for the ngrok backend; cloudflared quick tunnels need no account |
+| `local` | — | none |
+
+`POTATO_DEPLOY_TOKEN_<PROVIDER>` overrides all of them, and `--token` overrides
+that. `potato deploy up` without a token prints exactly this table for the one
+provider you asked for, so you can also just run it and read the error.
+
+**3. Run the preflight and the dry run.**
+
+```bash
+potato deploy check  config.yaml --provider render
+potato deploy up     config.yaml --provider render --dry-run
+```
+
+`check` reports what the deployment exposes (next section). `--dry-run` is the
+other half: it builds the bundle, then prints the provisioning steps, the URL the
+task will end up at, and **the monthly cost**, without credentials and without
+touching the provider.
+
+```
+5 step(s):
+   1. render.owners          verify the API key with GET /v1/owners
+   2. render.service         create a free web service from ghcr.io/davidjurgens/potato:latest
+   3. state.persist          record the service id before anything else can fail
+   4. wait.deploy            poll the deploy until it reports live
+   5. wait.http              poll the service URL until it answers
+
+Result URL: https://potato-full-study-skeleton.onrender.com
+Estimated cost: free
+WARNING: A free Render instance has no disk and stops after 15 minutes idle.
+         Everything written to it is lost when it stops, including annotations.
+WARNING: Nothing is configured to carry the data off the instance. Supply
+         --hf-token for a HuggingFace Dataset backup, choose --plan starter
+         --volume-gb 1, or pass --demo if the annotations are genuinely disposable.
+```
+
+Show the researcher this output before spending their money. It is the only
+place the cost, the URL and the durability warnings appear together, and it
+reaches no provider.
+
+Building the bundle writes it under `.potato/bundle/<provider>/<name>/` in the
+task directory. That is gitignored in Potato's own tree, but it is a real
+directory of copied project files, so a dry run against four providers leaves
+four copies behind.
+
+**4. Deploy.**
+
+```bash
+potato deploy up config.yaml --provider render --plan starter --volume-gb 1
+```
+
+It prints the plan again and asks for confirmation; `--yes` skips the prompt and
+is for scripts, not for the first time. `--force` proceeds despite preflight
+*errors* and should never be used against a public host.
+
+If it fails partway, the deployment is still recorded — `state.persist` is
+deliberately step three or five, before anything expensive can fail — so
+`potato deploy status`, `logs` and `destroy` all work on a half-built
+deployment. Do not retry by hand-deleting resources in the provider's console.
+
+**5. Prove it works**, with the steps under **After it is up** below. A bundle
+that omitted a side file fails on the host having worked locally, so the
+walk-it-as-an-annotator step is not optional just because it passed at home.
+
+**6. Hand it over.** The URL, who can sign in, where the annotations live, how to
+pull them, and how to take it down. Say which of these steps you actually ran and
+which you only prepared.
 
 ## The preflight
 
@@ -211,7 +343,11 @@ destroy is worse than a local server.
 
 Verified against potato-annotation 2.7.0: the subcommands and their flags, the
 provider list and credential detection, `check` output and exit codes for all
-five providers, the `debug` block, and what `build` includes and strips.
+five providers, the `debug` block, and what `build` includes and strips. The
+`--dry-run` plans, cost figures and provider warnings above are the real output
+of `potato deploy up --dry-run` for each target, which reaches no provider; the
+prices are the tables the planner prices from, not a quote from anyone's billing
+page.
 
 Not verified here: an actual `up` against a real provider, and therefore the
 provisioning, DNS, TLS and pull behaviour of a live host. Provisioning costs

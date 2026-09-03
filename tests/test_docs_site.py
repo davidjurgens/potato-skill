@@ -14,7 +14,7 @@ import re
 import pytest
 import yaml
 
-from skillpack import REFERENCES, ROOT, SCRIPTS
+from skillpack import REFERENCES, ROOT, SCRIPTS, pack_path
 
 DOCS = os.path.join(ROOT, "docs")
 
@@ -64,10 +64,20 @@ class TestTheReadmeCountsAreRight:
         assert match, "README no longer states how many references ship"
         assert int(match.group(1)) == len(REFERENCES)
 
+    WORDS = {4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight"}
+
     def test_the_helper_count(self):
-        words = {4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight"}
-        assert f"{words[len(SCRIPTS)]} helpers" in self._readme(), (
+        assert f"{self.WORDS[len(SCRIPTS)]} helpers" in self._readme(), (
             f"README does not say there are {len(SCRIPTS)} helpers")
+
+    def test_the_helper_count_in_the_skill(self):
+        """The README was pinned and SKILL.md was not, so adding check_ui.py left
+        the sentence an agent actually reads saying six."""
+        with open(pack_path("SKILL.md"), encoding="utf-8") as f:
+            skill = f.read()
+        expected = f"{self.WORDS[len(SCRIPTS)]} of the procedures below are scripts"
+        assert expected in skill, (
+            f"SKILL.md does not say there are {len(SCRIPTS)} helper scripts")
 
     def test_the_annotation_type_count(self):
         from potato.server_utils.schemas.registry import schema_registry

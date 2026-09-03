@@ -65,6 +65,20 @@ from potato.server_utils.displays.registry import display_registry
 [d for d in display_registry.list_displays() if d["name"] == "dialogue"]
 ```
 
+**`pairwise` sits side by side at its defaults** from Potato 2.8.2: `cell_width`
+defaults to `auto`, which splits the row evenly and subtracts each cell's share
+of the gap. Measured at 1280px, both cells 398px wide on the same line.
+
+Before that the default was a literal `50%` in a flex row with a 16px gap and
+`flex-wrap: wrap`, and two halves plus a gap never fit, so the second cell wrapped
+onto its own line at every width — a comparison display that never compared. On
+an older build, set it under half:
+
+```yaml
+- {key: summaries, type: pairwise, label: Two summaries,
+   display_options: {show_labels: true, cell_width: 48%}}
+```
+
 ### Geometry schemes need a display field for their media
 
 A geometry scheme (`image_annotation`, `spatial_annotation`, `region_caption`,
@@ -140,6 +154,115 @@ Nine more work on every type:
 | `turn_level`, `turn_binding`, `turn_label` | Bind the scheme to conversation turns |
 
 Everything else is type-specific and listed in `annotation-types.md`.
+
+### Quote `Yes` and `No` in a label list
+
+```yaml
+labels: [Yes, No]        # parses as [True, False]
+labels: ['Yes', 'No']    # what you meant
+```
+
+YAML reads `Yes`, `No`, `On`, `Off`, `True` and `False` — in any capitalisation —
+as booleans, so the most common label pair in annotation reaches Potato as two
+Python bools. The scheme then **does not render at all**: `identifier_utils`
+accepts a label that is a string or a dict and raises on anything else.
+
+`validate --strict` catches it from Potato 2.8.2 on, and names the cause:
+
+```
+annotation_schemes[0].labels[0] came through as the boolean True. YAML reads
+Yes/No, On/Off, Y/N or True/False in any capitalisation as a boolean [...]
+Quote it: labels: ["Yes", "No"].
+```
+
+On any earlier build `--strict` said `OK — no issues found` — it checked that
+`labels` was a list and never looked at the elements — and the scheme simply
+**did not render**, with one line in the boot log as the only signal:
+
+```
+[ERROR] potato.server_utils.schemas.identifier_utils: Failed to generate layout
+        for schema 'q1': Invalid label format: True
+```
+
+If that scheme was `required`, every `Next` after it failed with `400 /annotate`
+— an annotator stuck on item one with no visible question to answer.
+`grep "Invalid label format" server.log` after any edit to a label list, on a
+version whose validator you have not tested.
+
+Quoting is the fix and it costs nothing, so quote every short label. The dict
+form (`{name: 'No', key_value: '2'}`) is also safe, because the check that
+rejects a bool accepts a dict with a `name`.
+
+### A `select` answers itself
+
+```yaml
+- annotation_type: select
+  name: dominant_frame
+  description: Which single frame dominates?
+  labels: [Economic consequences, Fairness and equality, Public health, No dominant frame]
+```
+
+Potato emits no placeholder option, so the browser preselects the first one and
+`syncAnnotationsFromDOM` stores whatever a select currently holds. Measured on
+2.8.2: register, press Next three times touching nothing, and three items come
+back annotated `dominant_frame: Economic consequences`. `required: true` on a
+select is a no-op for the same reason -- a select always has a value, so the
+check that blocks Next is always satisfied.
+
+There is no config key that fixes this. Either put an explicit "not answered"
+option first and treat it as missing at analysis time:
+
+```yaml
+- annotation_type: select
+  name: dominant_frame
+  description: Which single frame dominates?
+  labels: ['— choose —', Economic consequences, Fairness and equality, No dominant frame]
+```
+
+or use a `radio`, which starts genuinely unanswered. Prefer the radio unless the
+list is long enough that a dropdown is the reason you picked `select`.
+
+The same guard the sliders get (`data-modified`) is two functions away in
+`annotation.js` and is not applied to selects, so this is worth re-testing on any
+version you did not test yourself: fresh user, three Nexts, read
+`instance_id_to_label_to_value`.
+
+### `constant_sum` shows a total it does not enforce
+
+`total_points: 100` draws a live "Allocated: 40 / 100 · Remaining: 60" counter,
+colours it, and lets the annotator press Next anyway. Even with
+`required: true`, requiredness means every box is non-empty -- not that they add
+up. The widget clamps upward, so no one can exceed the budget, and everyone can
+come in under it.
+
+Say so in the question text ("the four must total 100"), and check the sums at
+export rather than trusting the widget. `soft_label` has the same shape and the
+same gap.
+
+### A ranking loses its order when the annotator comes back
+
+`ranking` renders its `labels` already numbered 1..n in config order, and the
+inline script writes that order into the hidden input and marks it
+`data-modified` on every render. On a revisit the saved order does not reach the
+page, the default order is sitting in the input already flagged as the
+annotator's answer, and the next save overwrites the real ranking with the config
+default. Measured on 2.8.2: ranked, advanced, went back, and
+`instance_id_to_label_to_value` held the config order.
+
+It is not only the Previous button. A fresh tab landing on an item that was
+already ranked shows the config order too, so resuming a session does it as well,
+and there is no config key that turns off either route. Until it is fixed you
+cannot design around it; you can only detect it. Diff the exported order against
+the order in `labels:` -- an implausible number of annotators agreeing with the
+default is the symptom -- and if the ordering matters to the study, collect it
+some other way.
+
+`range_slider` has the milder version of this: it draws both thumbs at a default
+band the server does not have, so an annotator who agrees with what is on screen
+records nothing by agreeing. It does not overwrite anything, which is the part
+that makes `ranking` worth designing around. (`pairwise` used to pre-select its
+tie tile the same way; that is fixed as of 2.8.2, and its hidden input is empty
+until the annotator clicks.)
 
 ### Free text is one line unless you say otherwise
 
@@ -259,6 +382,40 @@ take `[min, max]`.
 
 `schema` must name a real scheme; a reference to a scheme that does not exist,
 or a cycle, fails validation.
+
+**`not_equals` is true on a gate nobody has answered yet.** An unanswered scheme
+reads as undefined, and undefined is not equal to anything, so a follow-up gated
+with `not_equals` is on screen from the moment the page loads -- which is the
+opposite of what the block was added for. Gate on the positive values with
+`equals`, or AND a `not_empty` condition in front:
+
+```yaml
+display_logic:
+  show_when:
+    - {schema: misleading, operator: not_empty}
+    - {schema: misleading, operator: not_equals, value: "No"}
+```
+
+**A tile scheme can be gated on, but check it on the page.** `pairwise`, `bws`,
+`ranking` and `triage` answer by clicking a tile and writing to a hidden input,
+which the gate reads through a different path from the one radios and checkboxes
+use. Measured on Potato 2.8.2: a `{schema: <triage>, operator: equals, value:
+accept}` gate hides its dependent at load, shows it on *accept* and hides it
+again on *reject*. Before 2.8.2 it fired in neither direction. If the version is
+not yours to choose, drive the gate once in a browser before you design a page
+around it.
+
+Two things to watch either way. A gate on a scheme inside a **phase page** takes
+the DOM fallback rather than the live answer map, and that path requires the
+widget to have marked its input `data-modified` -- `triage` does not. And what a
+tile scheme stores is not what it shows, so write the condition against the
+stored value (see below).
+
+**A tile scheme's stored value is not its label.** `pairwise` records `A`, `B` and
+`tie`; `labels:` and `tie_label:` are what the annotator reads, not what lands in
+the data. Written as `value: "Summary A"` a condition could never have matched
+even if the gate worked, and the same names are what you filter on at analysis
+time.
 
 A required **span** scheme is enforced server-side only: the client cannot see
 whether a span was drawn, so `Next` posts, the server answers

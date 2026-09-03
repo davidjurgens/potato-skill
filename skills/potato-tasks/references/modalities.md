@@ -21,7 +21,7 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | Video, mark moments or objects | *(none needed)* | `video_annotation` | Five modes, and `labels` is required in every one |
 | "Find the interval this sentence describes" | *(none needed)* | `temporal_grounding` | Reads `video_key`/`events_key`, **not** `source_field` |
 | Audio, judge the whole clip | `audio` | any classification scheme | Nothing special |
-| Audio, mark regions | *(none needed)* | `audio_annotation` | `mode` decides whether `labels` or `segment_schemes` is required |
+| Audio, mark regions | *(none needed)* | `audio_annotation` | Use `mode: label`. The two modes that ask questions per region do not render |
 | ASR/TTS output against a reference | *(none needed)* | `speech_transcript` | Its own key names: `audio_key`, `segments_key`, `turns_key` |
 | ELAN-style tiers over audio or video | *(none needed)* | `tiered_annotation` | `media_type` defaults to `audio` — set it for video |
 | A podcast or interview, turn by turn | `audio_dialogue` | spans, ratings, links | Per-turn playback is built in; it is a span target |
@@ -45,9 +45,11 @@ and picking the wrong one gives you an empty widget with nothing in the log.
 | `steps_key`, `agent_key` | the multi-agent and trajectory families |
 | `image_key`, `rows_key`, `cols_key` | `table_grid` |
 | `episode_field` | `episode_annotation` (alongside `source_field`) |
+| `items_key` | `pairwise` — the data field holding the list of things to compare |
 | `caption_field`, `expressions_field`, `predictions_field` | `grounding_eval` |
 | `video_path` | the `video` *scheme*, which is not the `video` display type |
 | `target_field` | `span` |
+| *(none — reads the item's `text_key`)* | `error_span`, and the rest of the dynamic family: `extractive_qa`, `text_edit`, `card_sort`, `conjoint` |
 | `span_schema` | `coreference`, `event_annotation`, `span_link` |
 
 Check before you write it:
@@ -104,6 +106,12 @@ annotation_schemes:
 canvas, and no error. The consequence is that the image renders twice, which is
 correct; `building-the-ui.md` has the CSS to hide the display copy.
 
+**Which is also why a practice round cannot show the image.** Phase pages do not
+render `instance_display`, so a geometry scheme on a `training` phase has no
+`<img>` and paints "Failed to load image" instead. `quality-control.md` has the
+detail and the two ways round it. Decide it before writing the training file,
+because the config validates and the server boots clean either way.
+
 **Deep zoom.** `viewer` and `tiles` switch to a tiled viewer for images too big
 to send whole. The viewer owns the transform and the canvas draws in image
 pixels; anything that recomputes the mapping itself will be wrong at every zoom
@@ -138,9 +146,13 @@ support opposite conclusions about a model that also produced nothing.
 `mode` defaults to `segment`. **`labels` is required in all five modes** — the
 generator raises without it. (It was declared optional in the registry until
 this pack was written, so `--strict` passed a config that could not render; it
-is required now.) `combined` additionally wants `segment_schemes`, a list of
-whole schemes asked once per segment. That is how you get "for each action,
-rate the quality" rather than one label per action.
+is required now.)
+
+`mode: combined` takes the same `segment_schemes` list as the audio widget and
+renders it the same way. It was unimplemented before Potato 2.8.2 -- the key
+reached the browser and nothing read it -- so check the version before planning a
+task around per-segment questions on video. "For each action, rate the quality" has to be a separate scheme
+over the whole clip, or a second pass.
 
 `video_fps` is what frame numbers are computed against. Wrong value, wrong frame
 indices in the export, and nothing complains.
@@ -160,6 +172,47 @@ required, and the requirement is conditional so `--strict` cannot see it:
 | `label` (default) | `labels` | Mark regions and label them |
 | `questions` | `segment_schemes` | Mark regions and answer questions about each |
 | `both` | `labels` **and** `segment_schemes` | Both |
+
+**`questions` and `both` need `segment_schemes`**, a list of whole schemes asked
+once per region. The validator requires the key for those two modes and checks
+each sub-scheme against its own type's rules, so a `likert` in there still needs
+`min_label` and `max_label`.
+
+```yaml
+- annotation_type: audio_annotation
+  name: interruptions
+  description: Mark each overlap, then answer for it.
+  source_field: clip
+  mode: questions
+  labels:
+    - {name: Clinician cuts in, key_value: '1'}
+    - {name: Patient cuts in, key_value: '2'}
+  segment_schemes:
+    - annotation_type: radio
+      name: who_started
+      description: Who started talking first at this overlap?
+      labels: [Clinician, Patient]
+```
+
+The server renders each sub-scheme once into a hidden `<template>` and the client
+clones it per region, so any annotation type works inside a region. The clones
+carry `data-segment-schema` instead of `schema`, and their ids are suffixed
+`__seg_<region id>` -- which is what keeps a region's answer from being read as a
+top-level answer for a scheme that does not exist.
+
+Regions land in `instance_id_to_label_to_value` under `<scheme>:::_data`, as a
+JSON string of `{id, start_time, end_time, label, annotations}` per region, with
+the per-region answers keyed by sub-scheme name inside `annotations`.
+
+Verified on Potato 2.8.2 (`v2.8.2-9-g19ce0041`); on earlier builds the panel said
+"Segment annotation questions will appear here" and every region saved an empty
+`annotations`. If you inherit an older checkout, put the per-region distinction in
+`labels` and ask everything else once for the whole clip.
+
+**The gesture is right-click drag, not drag.** A left-drag on the waveform moves
+the playhead, so a checker that drags the way it would on a canvas creates
+nothing and reports no error. `[` and `]` then Enter is the keyboard route. The
+widget's own Help panel says both; nothing else does.
 
 `waveform` defaults on, `spectrogram` defaults off; turning the spectrogram on
 is the right call for anything phonetic and costs render time on long files.
