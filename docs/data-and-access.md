@@ -43,8 +43,11 @@ content, not at a title.
 **Every other field in the row is available to the display layer** by name. A row
 with `outlet`, `headline` and `body` can render all three as separate
 `instance_display.fields` without any of them being `text_key`. Fields you do not
-display are still stored and still exported, which is how you keep a condition
-label out of the annotator's view without dropping it from the data.
+display are still stored, which is how you keep a condition label out of the
+annotator's view without dropping it from the data — but only `parquet` exports
+them. csv, tsv and jsonl carry `instance_id` and the answers and no item fields
+at all, so plan to hand the data file over with the export, or to use `parquet`.
+`getting-the-data-out.md` has the comparison.
 
 ### A directory instead of a list
 

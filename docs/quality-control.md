@@ -74,10 +74,9 @@ phases:
     type: annotation
 ```
 
-Define every phase you name in `order`. Naming one you do not define is not a
-no-op — if the annotator reaches it before `annotation`, every page of the study
-becomes a 500 behind a clean `--strict` and a boot log that says it skipped the
-phase. See `phases-and-pages.md`.
+Define every phase you name in `order`. Naming one you do not define is a
+`--strict` failure, and the phase is dropped from the order rather than silently
+half-present. See `phases-and-pages.md`.
 
 ### The training data file
 
@@ -155,7 +154,7 @@ attention_checks:
   enabled: true
   frequency: 3            # every third item; use probability OR frequency, never both
   items_file: data/attention.json
-  min_response_time: 8    # accepted, and currently does nothing — see below
+  min_response_time: 8    # a faster answer fails the check
   failure_handling:
     action: warn
 ```
@@ -163,12 +162,11 @@ attention_checks:
 `failure_handling` must be a dictionary despite the key reference typing it
 `string|object`. Setting both `frequency` and `probability` is a fatal error.
 
-**`min_response_time` is inert.** The check needs a client timestamp on the save
-request and `annotation.js` does not send one, so the branch never runs — driven
-with `min_response_time: 8` and answers submitted in under two seconds, the log
-has no fast-response line at all. Even reached, it only logs: pass and fail are
-decided by content alone. Do not count on it to catch clicking-through; that is
-what `/admin/api/suspicious_activity` and the behavioral analytics are for.
+`min_response_time` fails a check answered faster than the threshold, whatever
+the content was. Set it well under a plausible reading time — the point is to
+catch a straight-through click, not to punish someone who recognised the item —
+and remember it is one signal among several: `/admin/api/suspicious_activity`
+and the behavioral analytics see patterns a per-item threshold cannot.
 
 ### The attention item file
 
@@ -268,14 +266,10 @@ number:
   shape must be matched by a user shape of the same label, with no extras —
   boxing the whole image does not count as finding the object. Spans are stored
   elsewhere and I have not tested them; assume a gold span does not work.
-- **The accuracy denominator counts saves, not gold items.** Every save against a
-  gold item appends another result, so the number measures how much the annotator
-  fiddled. One gold item, four annotators: three quick clicks scored `total: 1`,
-  a box drag scored 2, four changes of mind scored **7**. Someone who revises a
-  correct answer twice reads as 1/3. Attention checks do not have this problem —
-  they are keyed by (user, item) and a re-save replaces the earlier result — so
-  read the attention numbers at face value and treat the gold fraction as a floor
-  until this is fixed.
+- **Both scores are keyed by (user, item)**, so re-saving an answer replaces the
+  earlier result rather than adding one. The denominator is the number of gold
+  items the annotator was served, and an annotator who changes their mind three
+  times still counts once.
 
 This is the one file in the pack with a good error message:
 `Gold standard item skipped, missing gold_label: {…}`, followed by
@@ -286,11 +280,21 @@ running, assume it is not.
 ### Where the results live
 
 Neither feature tells the annotator anything by default and neither writes a
-number into the output. Gold standards are deliberately silent. The loader reads
-`gold_standards.feedback.show_correct_answer` and `.show_explanation`
-(`quality_control.py:186`), but the validator rejects `gold_standards.feedback`
-as an unrecognized key, so that switch cannot pass `--strict` — I have not run a
-study with it on. Plan on the annotator never learning how they scored. The scores live on the admin API:
+number into the output. Gold standards are silent unless you ask otherwise:
+
+```yaml
+gold_standards:
+  feedback:
+    show_correct_answer: true
+    show_explanation: true
+```
+
+Both default to false, and both off means the annotator never learns how they
+scored. That is the right choice when the gold items are also the measurement,
+and the wrong one when they are meant to teach. I have not driven a study with
+the block on, so I am claiming only that the key is recognised and read, not
+what the annotator sees. The scores live on the
+admin API:
 
 ```bash
 curl -s -o /dev/null localhost:8000/admin          # makes the key file exist
@@ -300,20 +304,13 @@ curl -H "X-API-Key: $K" localhost:8000/admin/api/quality_control
 
 which reports pass/fail counts and per-user and per-item breakdowns for both.
 
-**Those results are held in memory and a restart erases them.** One annotator who
-had failed an attention check and missed a gold item read `pass_rate: 0.5` and
-`accuracy: 0.5` before a restart, and after it — with all sixteen of her
-annotations still on disk, gold and check items included — the same route
-reported zero checks, zero evaluations and an empty `by_user`, with
-`enabled: true`. That is indistinguishable from a study where nobody has failed
-anything. Blocked annotators are unblocked by the same restart.
-
-So on any study that will outlive a single server process: pull
-`/admin/api/quality_control` and keep it before you restart anything, and treat a
-zero on that route as "no record" rather than "no failures" unless you know the
-server has been up the whole time. The raw answers are always in
+Results are written to disk as they are recorded and read back at boot, so they
+survive a restart along with the block list. Pull that route at handover the way
+you would pull the export — it is the only place the pass rates are assembled,
+and it is not in the export. The raw answers are also in
 `annotation_output/<user>/user_state.json` under the check and gold item ids, so
-the scores can be recomputed by hand against the items files.
+the scores can be recomputed by hand against the items files if you ever need to
+show your working.
 
 ## Adjudication
 

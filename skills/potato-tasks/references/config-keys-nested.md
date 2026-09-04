@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 347 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 350 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -114,6 +114,7 @@ Insert items with a known answer to detect inattentive annotators
 | `enabled` | boolean |  | Turn attention checks on |
 | `failure_handling` | string|object |  | What to do when an annotator fails a check. A bare action name, or a mapping with warn/block thresholds and messages |
 | `frequency` | integer |  | Insert a check every N items |
+| `geometry_iou_tolerance` | number |  | Overlap a drawn answer must reach to count as correct, as a fraction |
 | `items_file` | string |  | File holding the attention-check items |
 | `min_response_time` | number |  | Responses faster than this many seconds count as a failure |
 | `probability` | number |  | Chance of inserting a check, as an alternative to frequency |
@@ -349,7 +350,9 @@ Items with known labels, used to score annotators
 | `accuracy` | number|object |  | Accuracy an annotator must hold to keep going. A bare fraction, or a mapping with `min_threshold` and `evaluation_count` |
 | `auto_promote` | boolean|object |  | Promote annotators who pass to the full task. A flag, or a mapping with `min_annotators` and `agreement_threshold` |
 | `enabled` | boolean |  | Turn gold standards on |
+| `feedback` | object |  | What an annotator is told after a gold item. A mapping with `show_correct_answer` and `show_explanation`; both off means silent scoring |
 | `frequency` | integer |  | Insert a gold item every N items |
+| `geometry_iou_tolerance` | number |  | Overlap a drawn answer must reach to count as correct, as a fraction |
 | `items_file` | string |  | File holding the gold items |
 | `mode` | string |  | How gold items are surfaced |
 

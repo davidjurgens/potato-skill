@@ -6,6 +6,34 @@ want to ask them Y" lives here. None of it is in the generated key reference:
 `potato validate --strict` does not check inside either of them. Every fact
 below was established by running the server and reading the startup log.
 
+## Which of these you actually need
+
+Start from none of them. **7 of Potato's 214 bundled examples declare a `phases`
+block at all**; the other 207 open on the first item. A phase is a page an
+annotator has to get through before doing any work, and every one you add costs
+attrition and setup time, so add them because someone asked or because the
+protocol requires it — not because a study "should" have them.
+
+| Phase | Add it when | Skip it when |
+|---|---|---|
+| `consent` | Real participants, real data, and an IRB or ethics protocol that requires recorded consent — or you are paying strangers on a crowd platform | Prototyping, pilots with colleagues, your own data, any run whose output is a screenshot. A consent form on a prototype is theatre, and it is the wrong wording anyway |
+| `instructions` | The rules do not fit in `annotation_instructions`, or annotators need worked examples before the first item | The task is one question with obvious labels. `annotation_instructions` renders on every page and is read more than a page nobody returns to |
+| `training` | Labels need calibrating, the budget is large enough that a bad annotator is expensive, or you want a pass/fail gate | Fewer than a few hundred items, or the annotators are the researchers. Training needs a graded item file per scheme, which is real work |
+| `prestudy` | You are screening — language, expertise, a qualification question that decides who continues | You already know who is annotating |
+| `poststudy` | Someone named a question they want answered at the end | Always, otherwise. **Do not add a post-study questionnaire nobody asked for.** It is the phase most often added on reflex, it is where the identifiable answers accumulate, and it makes the export two files instead of one (`getting-the-data-out.md`) |
+
+Two things follow that are easy to get backwards.
+
+**Consent is a protocol decision, not a config decision.** If the study needs
+consent, the wording comes from the approved protocol and you should be asking
+for it rather than drafting it — `asking-the-experimenter.md` treats it as one of
+the questions worth interrupting for. A placeholder consent page that ships is
+worse than no consent page, because it looks like the study has ethics coverage.
+
+**A phase you add for the pilot tends to stay.** Adding `poststudy` later is a
+config edit and a page file; removing one after annotators have answered it means
+you now hold survey responses you did not need. Default to adding phases late.
+
 ## The six phase types
 
 ```python
@@ -82,22 +110,21 @@ phases:
 
 Both work. Mapping form reads better once any phase has more than three keys.
 
-**Naming a phase in `order` without defining it takes the study down**, if the
-annotator would reach it before `annotation`. The log says otherwise:
+**Naming a phase in `order` without defining it fails `--strict`**, and is worth
+letting fail rather than downgrading:
 
 ```
-WARNING: Phase 'consent' in order but not defined in phases config, skipping
+OTHER WARNINGS:
+  - Phase 'consent' is listed in phases.order but no 'phases.consent' block
+    defines it. It will be dropped from the phase order.
+FAILED — 1 warning(s); --strict treats these as errors.
 ```
 
-It does not skip. The phase is dropped from the page map and left in the
-annotator's sequence, so the first request for it raises `KeyError` and every
-page — including `/` — is a 500. `validate --strict` passes the config and the
-boot is clean, so the first sign of it is a browser.
-
-An undefined phase *after* `annotation` is harmless: a study with
-`order: [annotation, poststudy]` and no `poststudy` block annotates all its items
-and reaches the completion page. It is only fatal in front of the annotation
-phase, which in practice means `consent`, `instructions` and `prestudy`.
+The phase is then genuinely dropped — the boot log says
+`dropping it from the phase order` and the study runs without it. So the failure
+mode is quiet rather than loud: a consent step you meant to have, and a study
+that consents nobody. `--strict` is the check that catches it, which is the
+argument for running `--strict` rather than plain `validate`.
 
 Define every phase you name. If you want a phase gone, take it out of `order`.
 

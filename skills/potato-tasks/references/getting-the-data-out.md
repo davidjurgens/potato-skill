@@ -68,7 +68,7 @@ reading the log. Check the name against the list below.
 
 ## Which format
 
-Twenty-nine are registered. `GET /admin/api/export/formats` lists them with
+30 formats are registered. `GET /admin/api/export/formats` lists them with
 descriptions against the running server; `potato preview` does not.
 
 | They want | Format |
@@ -82,6 +82,7 @@ descriptions against the running server; `potato preview` does not.
 | Phonetics or linguistic tiers | `textgrid`, `eaf` |
 | A ConvoKit corpus with the labels attached | `convokit` |
 | Their qualitative codebook and quotes | `codebook`, `quotation_report` |
+| To open it in NVivo, MAXQDA or ATLAS.ti | `qdpx` |
 | Agent or coding-agent evaluation data | `agent_eval`, `coding_eval` |
 | Preference pairs and SFT targets from corrections | `trajectory_correction` |
 | Per-frame embodied episode labels | `episode_jsonl` |
@@ -95,23 +96,74 @@ without that in mind can produce geometry that does not survive the conversion.
 ## The CSV columns
 
 Columns are derived from what was **stored** rather than from what the config
-declares. One row per annotator per item, with a column per scheme-and-label:
+declares. One row per annotator per item, with a column per scheme-and-*label*:
 
 ```
-instance_id,user_id,sentiment.positive
-i1,alice,positive
+instance_id,user_id,sentiment.Negative,sentiment.Positive,severity.Moderate,issues.Price
+r03,alice@x.com,Negative,,Moderate,Price
+r02,alice@x.com,,Positive,,
 ```
 
-Two consequences:
+That is one column per label an annotator actually chose, not one column per
+scheme. A three-label `radio` becomes three sparse columns and there is no
+`sentiment` column anywhere in the file, so the first thing anyone does with a
+Potato CSV is coalesce them. Warn whoever receives it: a researcher who opens
+it expecting one column per question reads the file as broken. Driven on
+six schemes and three annotators, 23 rows came out as 17 columns.
+
+Three consequences:
 
 - A scheme nobody answered has no column, so an empty export is evidence about
   the annotations rather than about the exporter.
+- A label nobody chose has no column either, so the column set is not stable
+  across two runs of the same study.
 - After a scheme is renamed mid-study, the columns carry the **old** name, and
   keep carrying it. See `after-annotators-start.md`.
 
-Item fields that were never displayed are still in the data and still exported,
-which is how a condition label stays out of the annotator's view without being
-lost.
+Spans arrive as one `<scheme>._spans` column holding a JSON array of
+`{schema, name, title, start, end, id, target_field}` objects. The character
+offsets are there; **the text they cover is not**, in any of csv, tsv or jsonl.
+If the analyst needs the marked words, they have to slice the source text
+themselves on `start`/`end`, which means they need the source text. See below
+for where that is and is not.
+
+**The item is not in the export.** csv, tsv and jsonl carry `instance_id`,
+`user_id` and the answers, and nothing else: not the annotated text, not the
+image URL, not the fields you never displayed. Verified on a study whose items
+carried `body`, `photo`, `sku` and `batch`. None of the four appears in any of
+the three. Whoever gets the CSV has labels keyed by `instance_id` and has to
+join back to the data file to find out what was labelled, so hand over the data
+file with it. `parquet` is the exception.
+
+### The parquet export
+
+`parquet` writes **three** files rather than one, and reshapes the annotations:
+
+| | `csv` / `tsv` / `jsonl` | `parquet` |
+|---|---|---|
+| Files | `annotations.<ext>` | `annotations.parquet`, `items.parquet`, `spans.parquet` |
+| The items | absent | `items.parquet`, every field, displayed or not |
+| A `radio` scheme | one sparse column per label used | one column holding the chosen label |
+| A `multiselect` | one column per label used | one list column |
+| Spans | JSON blob in `<scheme>._spans` | `spans.parquet`, one row per span |
+
+So the "keep a condition label out of the annotator's view without losing it"
+trick works, but only through `parquet` or by joining the data file back on
+`instance_id`.
+
+Two things `parquet` loses in exchange, both silently:
+
+- **A `likert` scheme declared with a `labels:` list exports as an all-null
+  column.** The exporter routes `likert` to its numeric path, and a labelled
+  likert is stored categorically, so every row comes back null. No error, no
+  warning; the column is there and empty. Measured: 23 of 23 rows null for a
+  scheme the CSV exported correctly. This is the shape `worked-example.md`
+  recommends, so check the column before you hand a parquet file over.
+- **Phase data never reaches it.** `export_include_phase_data: true` writes no
+  parquet file at all (see below).
+
+`spans.parquet` carries `label` and `text` columns that come out empty, for the
+same reason the CSV blob has no text.
 
 ## Consent and survey answers
 
@@ -125,6 +177,28 @@ exports unless you turn them on, and they are usually where the demographics and
 the free-text sit. That default is doing real work. Turning it on is a decision
 to move identifiable answers into a file people will pass around, so make it
 deliberately and say so in the handover.
+
+**They arrive as a second file, not as extra columns.** Turning the key on adds
+`phase_responses.csv` (or `.jsonl`) beside `annotations.csv`, long-format, one
+row per answer:
+
+```
+user_id,phase,page,sequence,schema,label_name,value
+alice@x.com,consent,consent,0,consent_agree,I agree,I agree
+alice@x.com,poststudy,poststudy,0,task_clarity,4,4
+alice@x.com,poststudy,poststudy,1,comments,text_box,alice poststudy comment
+```
+
+"Here is the CSV" is two files once this is on, and the second one is the one
+carrying the demographics. Name that file explicitly when you hand the study
+over; a filename nobody was told about is one that gets left behind.
+
+`parquet` writes no equivalent, so a parquet handover drops consent and survey
+answers whatever the key says.
+
+The admin API's response tells you which way it went: `num_phase_responses` and
+`num_phase_responses_excluded` are both in `stats`, and one of them is always
+zero.
 
 `export_include_annotation_changes` adds the revision trail: every answer an
 annotator moved off, with timestamps. Useful for studying how people decide,

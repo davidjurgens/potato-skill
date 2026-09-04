@@ -126,6 +126,36 @@ the salvage step returns whatever key-value pairs completed, so the renderer get
 a plausible dict of the wrong type and the tooltip reads "No rationales
 available" either way.
 
+## The model sees one field
+
+**Whatever `item_properties.text_key` points at is the entire prompt.** The AI
+path reads that one field off the item and sends it. No other field reaches the
+model, `instance_display` fields included. There is no way to send an image
+*and* its caption, and nothing warns you.
+
+That makes multimodal items a routing decision rather than a config detail.
+Driven against a live vision model on items carrying both a review (`body`) and
+a photograph (`photo`):
+
+| `text_key` | What the model got | Assistants offered |
+|---|---|---|
+| `body` | the review text; the photograph never left the server | Hint, Keyword, Rationale |
+| `photo` | the photograph, read correctly | Hint, Rationale |
+
+With `text_key: body` the model answered a sensible question about the wrong
+thing: the review, not the picture. The page looked identical either way. With
+`text_key: photo` it came back `{"hint": "The image shows a person using a
+laptop at a wooden table...", "suggestive_choice": "Outdoors"}`, and Keyword was
+correctly withheld, because keywords do not apply to an image.
+
+So: point `text_key` at whichever half the model is meant to judge, and accept
+that the annotator sees both while the model sees one. If the judgement genuinely
+needs both, the assistants cannot help with it, and the honest move is to say so
+rather than ship a hint that read half the item. Note the knock-on: `text_key`
+also decides plain-text rendering, span anchoring, training and search
+(`data-and-access.md`), so pointing it at an image URL to reach the vision path
+changes those too.
+
 ## Images have to be publicly reachable
 
 The AI path fetches the image itself, server-side, and refuses any URL resolving
@@ -219,6 +249,9 @@ reading the response body and the rendered DOM:
   reading the photograph correctly and suggesting a label
 - `api_key` being optional, in the validator and the endpoint, when `base_url` is
   set
+- `text_key` deciding what the model receives, both ways round, and the
+  capability filter dropping Keyword for an image item and keeping it for a text
+  one
 
 On 2.8.2 itself none of the three endpoint types worked against a local server:
 `vllm` sent a parameter vLLM ignores, `openai`'s correct answer was delivered to

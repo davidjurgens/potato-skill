@@ -123,7 +123,7 @@ cosmetic one.
 
 | Kind | Schemes | What it computes |
 |---|---|---|
-| nominal | `radio`, `multiselect` capped at 1 | percent agreement, Cohen's κ, Fleiss' κ, α |
+| nominal | `radio`, `multiselect` capped at 1 | pairwise Cohen's κ, Fleiss' κ, nominal α |
 | ordinal | `likert`, ordered scales | linear and quadratic weighted κ, Spearman ρ, ordinal α |
 | continuous | `slider`, `number`, `vas` | Pearson r, MAE, RMSE, interval α, ICC(2,k) |
 | multilabel | `multiselect` | mean Jaccard, MASI α |
@@ -163,14 +163,43 @@ Nothing is computed at boot, and nothing is linked from the annotation page.
 Agreement appears once items have more than one annotator.
 
 ```bash
-cat admin_api_key.txt        # generated into task_dir at first boot
+cat admin_api_key.txt        # written into task_dir on the first admin request
 curl -H "X-API-Key: $(cat admin_api_key.txt)" localhost:8000/admin/iaa
 ```
+
+The file does not exist at boot. It appears the first time anything asks for an
+admin route, so the honest sequence is to make one unauthenticated request, let
+it be refused, and then read the key the refusal caused to be written.
 
 `/admin/iaa` returns, per scheme, the `kind` it inferred and the metrics that
 follow from it, plus `n_overlap_items`. Confirming the `kind` matters more than
 the number: it is where you find out a rating you meant as ordinal is being
 scored as nominal.
+
+Driven with three annotators over eight items, the five kinds came back as:
+
+```
+sentiment   radio       nominal     alpha_nominal, fleiss_kappa, pairwise_cohen_kappa
+severity    likert      ordinal     alpha_ordinal, spearman_rho,
+                                    weighted_kappa_linear, weighted_kappa_quadratic
+issues      multiselect multilabel  alpha_masi, mean_jaccard
+confidence  slider      continuous  alpha_interval, icc_2_k, mae, pearson_r, rmse
+evidence    span        span        token_level_kappa, span_f1_exact,
+                                    span_f1_partial, krippendorff_alpha_u, gamma_mathet
+```
+
+Two things to read off that. **The `kind` follows the declared
+`annotation_type`, not the widget that rendered.** A `likert` given an explicit
+`labels:` list renders as a radio group — the boot log says "Complex labels
+detected, using radio layout" — and is still scored ordinal, which is what you
+wanted. And **a free-text scheme is absent from the report entirely** rather
+than present with empty metrics, so do not read a missing scheme as a failure.
+
+`n_items` is per scheme and counts only items with more than one annotator, so
+it is normally below `n_overlap_items`. A scheme that reports `n_annotators: 0`
+and all-null metrics has no item two people both answered — for spans that is
+easy to hit by accident, because one annotator forgetting to select the label
+leaves nothing to compare.
 
 Without the header, every admin JSON route answers
 `403 {"error":"Admin access required"}` — which reads like a broken config if you

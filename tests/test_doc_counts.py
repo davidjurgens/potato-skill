@@ -28,6 +28,7 @@ def _counts():
     from potato.server_utils.config_key_docs import iter_key_docs
     from potato.server_utils.config_module import KNOWN_CONFIG_KEYS
     from potato.server_utils.displays.registry import display_registry
+    from potato.export.registry import export_registry
     from potato.server_utils.examples_manifest import load_manifest
     from potato.server_utils.schemas.registry import schema_registry
 
@@ -55,6 +56,7 @@ def _counts():
                       if "phases" in (e.get("config_keys") or []))
 
     return {
+        "export_formats": len(export_registry.get_supported_formats()),
         "examples_with_phases": with_phases,
         "annotation_types": len(schema_registry.get_supported_types()),
         "display_types": len(display_registry.get_supported_types()),
@@ -97,6 +99,20 @@ CLAIMS = [
 
     ("references/interviewing.md",
      r"(\d+) of the example projects Potato ships use one", "examples_with_phases"),
+
+    # The export-format count went from 29 to 30 unnoticed because nothing
+    # pinned it. `getting-the-data-out.md` routes a researcher's request to a
+    # format name, so a format that appears without the routing table learning
+    # about it is a gap an author cannot see.
+    ("references/getting-the-data-out.md",
+     r"(\d+) formats are registered", "export_formats"),
+
+    # The argument for adding no phases by default is this ratio, so both
+    # halves of it have to stay true.
+    ("references/phases-and-pages.md",
+     r"\*\*(\d+) of Potato's \d+ bundled examples declare", "examples_with_phases"),
+    ("references/phases-and-pages.md",
+     r"\*\*\d+ of Potato's (\d+) bundled examples declare", "examples"),
 ]
 
 
