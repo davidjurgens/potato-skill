@@ -179,6 +179,30 @@ than a `multiselect` you plan to keep editing. The anti-patterns at the end of
 this file assume a fixed scheme and do not apply: in open coding, overlapping
 codes are the normal case and memos are deliberately uncountable prose.
 
+`qda_mode: {enabled: true}` is the whole switch. It turns on the memo sidebar and
+the codebook together, and with `codebook: {mode: open}` an annotator can add a
+code from the sidebar without a restart: the chip appears in the live span scheme
+straight away, a banner says how many codes have arrived since they labelled the
+item they are on, and a Review list offers the items they finished before the
+code existed. That last part is the reason to use the mode rather than a
+`multiselect` — in open coding the code you invent on item 40 is a question about
+items 1 to 39, and nothing else in Potato asks it.
+
+`/codebook` holds the code definitions, and in edit mode a whole document around
+them: preamble, general instructions, background, how codes are used downstream,
+each block with its own history and a revision counter. That is where the
+definitions that make a code reproducible belong. They are not in the config, so
+`potato codebook config.yaml` does not round-trip them, and once coding has
+started the project database is the source of truth.
+
+Offer `cases` and `sessions` in the same breath. `cases` makes the unit of
+analysis a participant rather than an excerpt (`key: participant_id`, with
+`attributes:` lifted onto the case for crosstabs), and the boot log says how many
+it detected. `sessions` groups the excerpts of one interview and puts a
+`session_level: true` scheme on `/sessions`: one answer per interview, which is
+where "how good was this interview" belongs instead of repeated on every
+passage.
+
 Agreement across two open-coded passes is not a κ. The codebooks differ, so
 compare coverage and code co-occurrence, and expect to reconcile the codebooks
 before any number means anything.

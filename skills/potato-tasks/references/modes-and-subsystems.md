@@ -163,8 +163,20 @@ annotation page, so tell the researcher they exist:
 | `/corpus` | `corpus_map` |
 | `/datasets` | `datasets` |
 | `/pocket` | `pocket` (phones auto-route here) |
+| `/adjudicate` | `adjudication` |
 | `/admin/review` | `review_workflow` |
+| `/admin/arena` | `arena` |
+| `/psychometrics/dashboard` | `psychometrics` |
+| `/truth_serum/dashboard` | `truth_serum` |
+| a MACE tab inside `/admin` | `mace` (`/admin/api/mace/overview` for the JSON) |
 | `/admin/...` | agreement, exports, progress — always present |
+
+**`/admin` is the only admin page a browser can open cold.** It presents a key
+box; every other `/admin/*` page and both dashboards answer
+`403 {"error":"Admin authentication required"}` until the key has been entered
+there once, so a deep link handed to a colleague looks broken. The dashboards
+also sit at their own prefixes rather than under `/admin`:
+`/admin/psychometrics` is a 404, `/psychometrics/dashboard` is the page.
 
 ## Scheme-level keys
 

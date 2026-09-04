@@ -386,8 +386,8 @@ the queue on disagreement rather than on reaching the annotator cap, so an item
 two of three annotators disagree about is adjudicable before the third arrives.
 Tell the adjudicator the URL; `/annotate` shows them the completion page instead.
 
-**The decisions are not in any export.** They are written to
-`annotation_output/adjudication/decisions.json`:
+Decisions are written to `annotation_output/adjudication/decisions.json` as they
+are made:
 
 ```json
 {"instance_id": "p01", "adjudicator_id": "adj@x.com",
@@ -396,16 +396,20 @@ Tell the adjudicator the URL; `/annotate` shows them the completion page instead
  "notes": "...", "error_taxonomy": [], "time_spent_ms": 39553}
 ```
 
-csv, jsonl and parquet carry the annotators' answers and nothing from this file,
-so a study run for the resolved labels exports the disagreements and leaves the
-resolution behind. Name that file in the handover
-beside the export, or read it and join on `instance_id` yourself.
+**They are not in `csv`, `jsonl` or `parquet`** — those carry the annotators'
+answers, so a study run for the resolved labels would export the disagreements
+and leave the resolution behind. Ask for the `adjudication` format, which writes
+`adjudicated.csv` (one row per instance and scheme, with `source`,
+`adjudicator_id`, `confidence` and a timestamp) beside
+`adjudication_log.jsonl` (the full decision record, notes and error taxonomy
+included). Request it explicitly: it is not in the default set, and
+`export_annotation_format` has to name it.
 
 Before you design a workflow around adjudication, **open `/adjudicate` on a real
 item and check that the schemes you care about have a control there.** The panel
-shows every scheme's annotator responses; the decision form does not necessarily
-offer an input for every one of them, and `label_decisions` records only what had
-an input.
+shows every scheme's annotator responses above a decision form; a composite
+scheme is decided by adopting one annotator's whole answer rather than by
+re-entering it, and `label_decisions` records only what had an input.
 
 ## `require_fully_annotated`
 

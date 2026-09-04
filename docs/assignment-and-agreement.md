@@ -134,16 +134,20 @@ cosmetic one.
 
 | Kind | Schemes | What it computes |
 |---|---|---|
-| nominal | `radio`, `multiselect` capped at 1 | pairwise Cohen's κ, Fleiss' κ, nominal α |
-| ordinal | `likert`, ordered scales | linear and quadratic weighted κ, Spearman ρ, ordinal α |
-| continuous | `slider`, `number`, `vas` | Pearson r, MAE, RMSE, interval α, ICC(2,k) |
-| multilabel | `multiselect` | mean Jaccard, MASI α |
-| matrix | `multirate`, `constant_sum`, `soft_label` | the ordinal or continuous measures per row, plus a pooled block over every (item, row) pair |
-| ranking | `ranking`, `bws` | Kendall's τ, Spearman footrule |
-| span | `span`, `error_span` | token-level κ, exact and partial span F1, Krippendorff's αU, γ |
+| nominal | `radio`, `select`, `triage`, `conjoint`, `multiselect` capped at 1 | pairwise Cohen's κ, Fleiss' κ, nominal α |
+| ordinal | `likert`, `confidence`, `vas`, `range_slider`, `semantic_differential` | linear and quadratic weighted κ, Spearman ρ, ordinal α |
+| continuous | `slider`, `number` | Pearson r, MAE, RMSE, interval α, ICC(2,k) |
+| multilabel | `multiselect`, `hierarchical_multiselect`, `card_sort` | mean Jaccard, MASI α |
+| matrix | `multirate`, `constant_sum`, `soft_label`, `bws` | the ordinal or continuous measures per row, plus a pooled block over every (item, row) pair |
+| ranking | `ranking` | Kendall's τ, Spearman footrule |
+| span | `span`, `error_span`, `coreference`, `span_link`, `event_annotation`, `extractive_qa`, `tree_annotation` | token-level κ, exact and partial span F1, Krippendorff's αU, γ |
 | geometry | boxes, polygons, points | matched IoU, detection F1, chance-corrected σ, ks, detection α |
 | | | *(the only way to score a geometry task against a known answer — `gold_label` cannot hold a box)* |
 | free text | `text`, `text_edit` | nothing |
+
+`pairwise` does not follow its type name. It renders three widgets and stores
+three shapes, so `mode: scale` is scored continuous, `mode: multi_dimension` as a
+matrix, and the binary default as nominal. Read the kind out of the report.
 
 Consequences worth stating to a researcher up front:
 
@@ -175,13 +179,25 @@ Nothing is computed at boot, and nothing is linked from the annotation page.
 
 **Agreement appears once an item reaches its full annotator cap**, not once it
 has two annotators. An item sitting at 2 of `num_annotators_per_item: 3` is not
-in the report at all, and the report does not say so: every schema comes back
-`n_annotators: 0` with null coefficients beside `n_overlap_items: 0`, which is
-also what a study with no annotations at all looks like. Measured on a six-item
-study: two annotators finished and everything was null, the third finished and
-the whole report populated. So read `n_overlap_items` first, and if it is zero,
-count how many annotators the items actually have before concluding anything
-about the data.
+scored. Measured on a six-item study: two annotators finished and every
+coefficient was null, the third finished and the whole report populated.
+
+The report tells you which of the two it is. Alongside `n_overlap_items` it
+returns `n_items_below_cap`, and an `items` block giving each item its cap, the
+annotators it has, and how many answered each scheme:
+
+```json
+{"n_overlap_items": 6, "n_items_below_cap": 0,
+ "items": {"p01": {"annotators": ["r1@x.com", "r2@x.com", "r3@x.com"], "cap": 3,
+                   "schemas": {"decision": {"n_annotators": 3},
+                               "topics": {"n_annotators": 2}}}}}
+```
+
+Read those two before the coefficients. A study waiting on its third annotator
+and a study nobody has touched both produce nulls, and `n_items_below_cap` is
+what separates them. The per-item `schemas` counts also show a scheme an
+annotator skipped, which is the usual reason one scheme is null while the rest
+of the report is fine.
 
 ```bash
 cat admin_api_key.txt        # written into task_dir on the first admin request

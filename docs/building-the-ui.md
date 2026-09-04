@@ -46,7 +46,7 @@ An unknown `type` fails validation with the valid list in the message.
 | `text` | Plain text |
 | `html` | Rich content (sanitized) |
 | `code` | Source with syntax highlighting |
-| `document` | DOCX, Markdown and similar |
+| `document` | DOCX, Markdown and similar — files, not a string field. See below |
 | `pdf` | PDF via PDF.js |
 | `spreadsheet` | Tables, annotated by row or cell |
 | `image` | Images, optionally zoomable |
@@ -113,6 +113,16 @@ an older build, set it under half:
 - {key: summaries, type: pairwise, label: Two summaries,
    display_options: {show_labels: true, cell_width: 48%}}
 ```
+
+**`document` expects a file that Potato ingested, not a field in your JSON.** The
+renderer reads `{rendered_html, metadata, text}` produced by the format pipeline
+(`data_directory`, `format_handling`). Point it at a plain string and that string
+is emitted as the field's HTML: Markdown is not rendered, `**Speaker:**` shows
+its asterisks, the content keeps the browser's default whitespace collapsing so
+paragraph breaks disappear, and `preserve_structure` and `show_outline` have
+nothing to act on — of the three, only `style_theme` reaches the DOM, as a
+`document-theme-<value>` class. It is a working span target either way. For a
+transcript you are shipping in a data file, `text` is the display you want.
 
 ### Geometry schemes need a display field for their media
 

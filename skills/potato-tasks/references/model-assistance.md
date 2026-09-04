@@ -232,6 +232,74 @@ wrong one for a study measuring how people use an assistant. Replace it with a
 `instance_id`. An unknown placeholder falls back to the default prompt with a
 warning rather than failing.
 
+## The blocks past `ai_support`
+
+`ai_support` puts a button beside a scheme. Three other blocks put a model in the
+loop at other points, and all three are configured by keys the documentation does
+not carry — `get_key_doc` returns the block summary and nothing under it. What
+follows is what I set and what the server then said it had.
+
+**`active_learning`** reorders the queue by what a classifier finds hard, and
+needs `assignment_strategy: active_learning` to have any effect on assignment.
+Its `classifier.name` and `vectorizer.name` are **fully qualified sklearn dotted
+paths**, not friendly names:
+
+```yaml
+assignment_strategy: active_learning
+active_learning:
+  enabled: true
+  schema_names: ["stance"]
+  min_instances_for_training: 5      # refuses to fit below this
+  update_frequency: 2                # refit every N new annotations
+  query_strategy: uncertainty
+  classifier: {name: sklearn.linear_model.LogisticRegression}
+  vectorizer: {name: sklearn.feature_extraction.text.TfidfVectorizer}
+  model_persistence: {enabled: true} # a dict, not a boolean
+```
+
+`{name: logistic}` passes `--strict`, because the validator checks only that the
+name is a string, and then falls back to LogisticRegression with an ERROR line in
+the log. The accepted values are the three classifiers above plus
+`sklearn.ensemble.RandomForestClassifier` and `sklearn.svm.SVC`, and
+`sklearn.feature_extraction.text.CountVectorizer` or `sentence-transformers` for
+the vectorizer. Watch the log for `Trained classifier for schema <name> with N
+instances, accuracy: ...` followed by `Reordered N instances` — that pair is the
+only evidence the feature is doing anything.
+
+**`icl_labeling`** builds few-shot prompts out of annotations you already have.
+Its sub-keys are **three levels deep**, and the block is one of those `--strict`
+does not check, so a flat guess validates clean and does nothing:
+
+```yaml
+icl_labeling:
+  enabled: true
+  example_selection:
+    min_agreement_threshold: 0.5
+    min_annotators_per_instance: 2   # the default, and the usual reason for zero
+    max_examples_per_schema: 6
+    refresh_interval_seconds: 60
+  llm_labeling:
+    trigger_threshold: 3
+    batch_size: 5
+    batch_interval_seconds: 90
+  verification: {enabled: true, sample_rate: 0.2}
+  persistence: {predictions_file: icl_predictions.json}
+```
+
+It needs **two annotators who agree** on an item before that item can become an
+example. On a one-annotator study it runs on schedule and reports `Refreshed
+high-confidence examples: 0 examples across 0 schemas` forever, which is also
+what a misspelled key looks like. Prove the keys landed by reading
+`example_refresh=` in the startup line back: it echoes
+`refresh_interval_seconds`, so if it still says 300 you are in the defaults.
+
+**`arena`** fans one prompt out to several models and keeps a leaderboard. Each
+entry is `endpoint_type` plus `model`, with optional `label`, `base_url` and
+`temperature`; the page is `/admin/arena` and it answers with per-model latency,
+an error field, and Elo, Bradley-Terry and win-rate-interval columns once
+somebody picks a winner. The same server can appear twice under different labels,
+which is the cheap way to compare decoding settings rather than models.
+
 ## Verifying one
 
 `validate --strict` will pass a config whose assistants never appear. Boot it and
@@ -296,6 +364,11 @@ reading the response body and the rendered DOM:
   `ui` keys, and a custom `system_prompt.template` reaching the model
 - `judge_alignment.inline` rendering a judge's suggestion beside the item, and
   `/admin/judge-alignment` reporting agreement against the human labels
+- `active_learning` training and reordering a twenty-item queue, and the dotted
+  sklearn paths above being the names it accepts
+- `icl_labeling` collecting examples once a second annotator agreed — 0 across 0
+  on one annotator, 6 across 2 schemas on two
+- `arena` running two models against one prompt and recording a preference
 
 On 2.8.2 itself none of the three endpoint types worked against a local server:
 `vllm` sent a parameter vLLM ignores, `openai`'s correct answer was delivered to

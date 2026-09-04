@@ -82,6 +82,13 @@ PROSE_IDENTIFIERS = {
     # two levels deep, so `breakpoints.mobile` resolves and `mobile` alone does
     # not; config_module.py's layout entry is where both are declared
     "mobile", "tablet",
+    # `display_options` accepted by the `document` display, named in prose in the
+    # note about what a string-valued document field does. The vocabulary is
+    # built from the config-key registry and the schema/display type names, and
+    # display_options live in neither -- they are enumerated only in the
+    # validator's own error message (config_module.py, the display_options
+    # branch), which is where these three came from
+    "preserve_structure", "show_outline", "style_theme",
     # `cell_width` is a pairwise_display option and `auto` is its default;
     # pairwise_display.py:28 and 54. `auto` is a bare word rather than a key,
     # so nothing in the registries claims it

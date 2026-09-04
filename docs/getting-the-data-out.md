@@ -79,7 +79,7 @@ reading the log. Check the name against the list below.
 
 ## Which format
 
-30 formats are registered. `GET /admin/api/export/formats` lists them with
+31 formats are registered. `GET /admin/api/export/formats` lists them with
 descriptions against the running server; `potato preview` does not.
 
 | They want | Format |
@@ -98,6 +98,7 @@ descriptions against the running server; `potato preview` does not.
 | Preference pairs and SFT targets from corrections | `trajectory_correction` |
 | Per-frame embodied episode labels | `episode_jsonl` |
 | How the text was typed, or how the boxes were drawn | `keystrokes`, `annotation_telemetry` |
+| The single resolved label per item, after adjudication | `adjudication` |
 | It published | `huggingface` (see `publish` in `modes-and-subsystems.md`) |
 
 The vision and linguistics formats are the reason to ask early: a researcher who
