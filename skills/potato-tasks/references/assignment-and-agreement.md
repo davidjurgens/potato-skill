@@ -176,16 +176,19 @@ follow from it, plus `n_overlap_items`. Confirming the `kind` matters more than
 the number: it is where you find out a rating you meant as ordinal is being
 scored as nominal.
 
-Driven with three annotators over eight items, the five kinds came back as:
+Driven over two studies, eight items each, the kinds came back as:
 
 ```
-sentiment   radio       nominal     alpha_nominal, fleiss_kappa, pairwise_cohen_kappa
-severity    likert      ordinal     alpha_ordinal, spearman_rho,
-                                    weighted_kappa_linear, weighted_kappa_quadratic
-issues      multiselect multilabel  alpha_masi, mean_jaccard
-confidence  slider      continuous  alpha_interval, icc_2_k, mae, pearson_r, rmse
-evidence    span        span        token_level_kappa, span_f1_exact,
-                                    span_f1_partial, krippendorff_alpha_u, gamma_mathet
+sentiment   radio            nominal     alpha_nominal, fleiss_kappa, pairwise_cohen_kappa
+severity    likert           ordinal     alpha_ordinal, spearman_rho,
+                                         weighted_kappa_linear, weighted_kappa_quadratic
+confidence  confidence       ordinal     the same four
+issues      multiselect      multilabel  alpha_masi, mean_jaccard
+rating      slider           continuous  alpha_interval, icc_2_k, mae, pearson_r, rmse
+evidence    span             span        token_level_kappa, span_f1_exact,
+                                         span_f1_partial, krippendorff_alpha_u, gamma_mathet
+boxes       image_annotation geometry    detection_f1, mean_agreement, mean_matched_iou,
+                                         mean_object_count_diff, detection_alpha
 ```
 
 Two things to read off that. **The `kind` follows the declared

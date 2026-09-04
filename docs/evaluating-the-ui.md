@@ -132,6 +132,30 @@ test this with a page refresh: browsers restore form state across refresh on
 their own, so a refresh-based check passes even when the server never stored
 anything.
 
+### Driving more than one annotator
+
+Three things about the browser rather than about Potato, each of which looks
+like a Potato bug the first time.
+
+**Log out between annotators.** `/register` and `/auth` are no-ops while a
+session exists — the server logs `User already logged in with username: X,
+redirecting to annotate` and answers 200, so the second annotator's work lands
+under the first one's name and the second user never appears in
+`annotation_output/`. Hit `/logout` first, every time.
+
+**Two servers on the same host share one session.** Cookies are not scoped by
+port, so logging into the study on 8001 logs you out of the one on 8000. Reach
+one of them on 127.0.0.1 and the other by name, and they stay separate.
+
+**CSS transitions do not run in a background tab.** A sidebar or a modal that
+slides in will report the class that opens it applied and its transform still
+at the closed value, which reads exactly like a broken stylesheet. Settle it before
+measuring:
+
+```js
+el.getAnimations().forEach(a => a.finish())
+```
+
 ## Changing the interface
 
 Reach for these in order. Stop at the first one that fixes it.

@@ -132,11 +132,14 @@ Three consequences:
   keep carrying it. See `after-annotators-start.md`.
 
 Spans arrive as one `<scheme>._spans` column holding a JSON array of
-`{schema, name, title, start, end, id, target_field}` objects. The character
-offsets are there; **the text they cover is not**, in any of csv, tsv or jsonl.
-If the analyst needs the marked words, they have to slice the source text
-themselves on `start`/`end`, which means they need the source text. See below
-for where that is and is not.
+`{schema, name, title, start, end, id, target_field, text}` objects — the
+offsets and the words they cover, sliced server-side, so the two cannot
+disagree:
+
+```
+[{"schema": "evidence", "name": "Evidence", "start": 23, "end": 39,
+  "target_field": "body", "text": "price I expected"}]
+```
 
 **The item is not in the export.** csv, tsv and jsonl carry `instance_id`,
 `user_id` and the answers, and nothing else: not the annotated text, not the
@@ -148,7 +151,8 @@ file with it. `parquet` is the exception.
 
 ### The parquet export
 
-`parquet` writes **three** files rather than one, and reshapes the annotations:
+`parquet` writes **several** files rather than one, and reshapes the
+annotations:
 
 | | `csv` / `tsv` / `jsonl` | `parquet` |
 |---|---|---|
@@ -158,23 +162,26 @@ file with it. `parquet` is the exception.
 | A `multiselect` | one column per label used | one list column |
 | Spans | JSON blob in `<scheme>._spans` | `spans.parquet`, one row per span |
 
+Both families add a `phase_responses` file when `export_include_phase_data` is
+on, so a parquet handover is four files against csv's two.
+
 So the "keep a condition label out of the annotator's view without losing it"
 trick works, but only through `parquet` or by joining the data file back on
 `instance_id`.
 
-Two things `parquet` loses in exchange, both silently:
+**Open the file before you hand it over.** A composite widget is one scheme
+holding several answers, and the two families lay it out differently. A
+`multirate` over three rows comes out of csv as `handling.Reproducibility`,
+`handling.Customer tone` and `handling.Urgency`, each holding the chosen rating:
 
-- **A `likert` scheme declared with a `labels:` list exports as an all-null
-  column.** The exporter routes `likert` to its numeric path, and a labelled
-  likert is stored categorically, so every row comes back null. No error, no
-  warning; the column is there and empty. Measured: 23 of 23 rows null for a
-  scheme the CSV exported correctly. This is the shape `worked-example.md`
-  recommends, so check the column before you hand a parquet file over.
-- **Phase data never reaches it.** `export_include_phase_data: true` writes no
-  parquet file at all (see below).
+```python
+import pandas as pd
+print(pd.read_parquet("annotations.parquet").head())
+```
 
-`spans.parquet` carries `label` and `text` columns that come out empty, for the
-same reason the CSV blob has no text.
+`head()` on the file you are about to send is the check. It costs a minute and
+it is the last point at which a column carrying the wrong thing is still cheap
+to fix.
 
 ## Consent and survey answers
 
@@ -203,9 +210,6 @@ alice@x.com,poststudy,poststudy,1,comments,text_box,alice poststudy comment
 "Here is the CSV" is two files once this is on, and the second one is the one
 carrying the demographics. Name that file explicitly when you hand the study
 over; a filename nobody was told about is one that gets left behind.
-
-`parquet` writes no equivalent, so a parquet handover drops consent and survey
-answers whatever the key says.
 
 The admin API's response tells you which way it went: `num_phase_responses` and
 `num_phase_responses_excluded` are both in `stats`, and one of them is always

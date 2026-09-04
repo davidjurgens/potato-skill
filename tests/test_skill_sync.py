@@ -77,6 +77,11 @@ PROSE_IDENTIFIERS = {
     # restoring and requiredness. Named where a warning is only actionable if
     # the reader can open the file
     "annotation.js",
+    # `layout.breakpoints` sub-keys, named bare in the table that says what
+    # each threshold does to a grouped form. KNOWN_CONFIG_KEYS records `layout`
+    # two levels deep, so `breakpoints.mobile` resolves and `mobile` alone does
+    # not; config_module.py's layout entry is where both are declared
+    "mobile", "tablet",
     # `cell_width` is a pairwise_display option and `auto` is its default;
     # pairwise_display.py:28 and 54. `auto` is a bare word rather than a key,
     # so nothing in the registries claims it

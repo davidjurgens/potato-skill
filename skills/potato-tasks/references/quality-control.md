@@ -301,6 +301,56 @@ and it is not in the export. The raw answers are also in
 the scores can be recomputed by hand against the items files if you ever need to
 show your working.
 
+## Seeding answers with `pre_annotation`
+
+Not quality control in the sense the rest of this file is — it is the same
+manager, and it is the block a researcher means by "we already have model
+labels, have people correct them".
+
+```yaml
+pre_annotation:
+  enabled: true
+  field: predictions          # the field on each item holding the labels
+  allow_modification: true
+  show_confidence: true
+  highlight_low_confidence: 0.7
+```
+
+The named field is a dict on the item, keyed by scheme name:
+
+```json
+{"id": "t01", "body": "The export button spins forever ...",
+ "predictions": {"category": "Bug"}}
+```
+
+A field that is not a dict is skipped with a warning naming the item; a scheme
+name that is not in the config is skipped silently. Seeds are applied only when
+the user has **no** annotation for that item yet, so a returning annotator sees
+their own answers rather than the model's.
+
+I ran this with plain labels. `show_confidence` and `highlight_low_confidence`
+need per-prediction confidences in the same field, and I did not supply any, so
+take those two keys as documented rather than driven.
+
+**A seed the annotator never looks at is saved as their answer.** Measured: an
+item seeded `category: Bug`, with the annotator answering only the other
+required scheme and pressing Next, stored
+`[{"schema": "category", "name": "Bug"}, "Bug"]` in their `user_state.json`. The
+export cannot distinguish it from a label they chose, because nothing records
+that it came from the model. Two consequences worth stating out loud to the
+researcher:
+
+- Agreement between two annotators over seeded items measures the seeds, not the
+  people. Seed one arm of the study or neither.
+- If the point is to measure whether people accept model labels, the thing you
+  need — did they change it — is in the behavioural log rather than the
+  annotations, or in `export_include_annotation_changes`.
+
+`display_logic` reads seeded answers at load: a scheme gated on
+`category equals Bug` is visible on first paint for an item seeded that way,
+and the behavioural log records
+`display_logic_change ... "reason": "Conditions met"`.
+
 ## Adjudication
 
 A queue where a named person resolves disagreements into one final label. Use it

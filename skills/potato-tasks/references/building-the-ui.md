@@ -518,41 +518,37 @@ outside 1–6, a non-string `layout.grid.gap`, a duplicate group id, an empty
 `layout.groups.schemas`, or a group naming a scheme that does not exist all fail
 at boot with a message naming the problem.
 
-Four things to know before using groups:
+Three things to know before using groups:
 
 - **`collapsed_default: true` is a decision to have the question skipped.** Use
   it only for questions most items genuinely do not need.
 - **A slider in a narrow column is unreadable.** The tick labels and the value
-  bubble collide. Give `range_slider`, `soft_label` and `semantic_differential`
-  a `columns: 2` span or more, or leave them full width. `slider` itself cannot
-  be widened — see the next point.
-- **Fifteen scheme types drop the per-scheme `layout` block on the floor.** The
-  attribute the grid reads, `data-grid-columns`, is emitted by the generator for
-  each type, and these sixteen never call it: `slider`, `image_annotation`,
-  `video_annotation`, `audio_annotation`, `spatial_annotation`,
-  `region_caption`, `tiered_annotation`, `episode_annotation`, `coreference`,
-  `event_annotation`, `span_link`, `multi_document_event`, `grounding_eval`,
-  `rollout_evaluation` and `context_attribution`. A
-  `layout: {columns: 3}` on any of them validates, boots clean, and renders as
-  `columns: 1`. Every media and geometry type is on that list, which is
-  unfortunate, because those are the ones that most want the width. Check it in
-  the browser rather than in the config:
+  bubble collide. Give `slider`, `range_slider`, `soft_label` and
+  `semantic_differential` a `columns: 2` span or more, or leave them full width.
+- **A grouped form goes to one column at `tablet`, not at `mobile`.** The two
+  breakpoints do different things to grouped and ungrouped questions, and the
+  grouped rule is the stricter one:
 
-  ```js
-  [...document.querySelectorAll('.annotation-form')]
-    .map(f => f.dataset.schemaName + ' -> ' + (f.dataset.gridColumns || 'MISSING'))
-  ```
+  | Viewport | Ungrouped | In a `layout.groups` group |
+  |---|---|---|
+  | above `tablet` | the configured grid | the configured grid |
+  | `mobile`+1 to `tablet` | spans of 3 or more halve to 2 | one column |
+  | at or below `mobile` | one column | one column |
 
-- **`layout.breakpoints` does not reach `layout.groups`.** The group container's
-  column count is fixed by a hardcoded `@media (max-width: 768px)` rule in
-  Potato's stylesheet, which sets it to a single column and which the
-  breakpoints you configure never override — they are injected for the
-  ungrouped containers only. So a grouped form is one column below 768px
-  whatever you set, and setting `breakpoints: {tablet: 400}` changes nothing.
-  Measured: with `grid.columns: 3` at a 500px viewport the group grid computed a
-  single 376px track; suppressing that one media rule produced the three
-  117px tracks the config asked for. If your annotators work in a narrow window
-  or a split screen, design for one column and treat the grid as a bonus.
+  So `breakpoints: {tablet: 768}` — the default — means a grouped form is a
+  single column in any window narrower than 768px, which is what a split screen
+  usually is. Measured on a three-column, three-group form: at a 640px viewport
+  with `tablet: 700` every group computed one track; the same page with
+  `tablet: 300` computed `164px 164px 164px`. If your annotators work narrow,
+  design for the column and treat the grid as a bonus.
+
+Check the spans on the page rather than in the config, because a mistyped
+`layout` block validates:
+
+```js
+[...document.querySelectorAll('.annotation-form')]
+  .map(f => f.dataset.schemaName + ' -> ' + (f.dataset.gridColumns || 'MISSING'))
+```
 
 ## Form density
 

@@ -101,12 +101,12 @@ agent traces are their own family, in `agent-traces.md`.
 | They said | Reach for |
 |---|---|
 | "suggest a label", "pre-fill and let them correct" | `ai_support` — see `model-assistance.md`, which is where the keys actually live |
-| "label everything with a model first" | `llm_labeling`, or `pre_annotation` for seeded answers |
+| "label everything with a model first" | `pre_annotation` for labels you already have; `icl_labeling` for a model that labels as the study runs |
 | "use the labels we already have as examples" | `icl_labeling` |
 | "show me where the model is unsure" | `active_learning`, `llm_confidence` assignment |
 | "does the judge agree with our humans" | `judge_alignment`, `judge_calibration` |
 | "compare two models' answers" | `arena`, or a `pairwise` / `bws` scheme |
-| "let them ask a model while annotating" | `chat_support` (same endpoint config as `ai_support`) |
+| "let them ask a model while annotating" | `chat_support` — a sidebar, not per-scheme buttons; `model-assistance.md` |
 | "judge the agent while it runs" | `live_agent`, `live_coding_agent`, `agent_proxy` |
 | "we have traces coming out of production" | `trace_ingestion` (`/api/traces/*`), `automation`, `triage` |
 

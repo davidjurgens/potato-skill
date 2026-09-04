@@ -115,35 +115,38 @@ the salvage step returns whatever key-value pairs completed, so the renderer get
 a plausible dict of the wrong type and the tooltip reads "No rationales
 available" either way.
 
-## The model sees one field
+## Which field the model gets
 
-**Whatever `item_properties.text_key` points at is the entire prompt.** The AI
-path reads that one field off the item and sends it. No other field reaches the
-model, `instance_display` fields included. There is no way to send an image
-*and* its caption, and nothing warns you.
+Two keys decide, and only one of them is the obvious one.
 
-That makes multimodal items a routing decision rather than a config detail.
-Driven against a live vision model on items carrying both a review (`body`) and
-a photograph (`photo`):
+`item_properties.text_key` names the field that goes to the model on the text
+path. It is the same key that decides plain-text rendering, span anchoring,
+training and search (`data-and-access.md`), so it is not free to point somewhere
+else just to change what the assistants read.
 
-| `text_key` | What the model got | Assistants offered |
-|---|---|---|
-| `body` | the review text; the photograph never left the server | Hint, Keyword, Rationale |
-| `photo` | the photograph, read correctly | Hint, Rationale |
+`ai_support.image_key` names the field holding the picture, for an item that
+carries both. `item_properties.image_key` is the same key one level up, and
+`ai_support.image_key` wins:
 
-With `text_key: body` the model answered a sensible question about the wrong
-thing: the review, not the picture. The page looked identical either way. With
-`text_key: photo` it came back `{"hint": "The image shows a person using a
-laptop at a wooden table...", "suggestive_choice": "Outdoors"}`, and Keyword was
-correctly withheld, because keywords do not apply to an image.
+```yaml
+item_properties:
+  id_key: id
+  text_key: body                  # the ticket text
+ai_support:
+  enabled: true
+  endpoint_type: openai_vision
+  image_key: screenshot           # the field holding the image URL
+```
 
-So: point `text_key` at whichever half the model is meant to judge, and accept
-that the annotator sees both while the model sees one. If the judgement genuinely
-needs both, the assistants cannot help with it, and the honest move is to say so
-rather than ship a hint that read half the item. Note the knock-on: `text_key`
-also decides plain-text rendering, span anchoring, training and search
-(`data-and-access.md`), so pointing it at an image URL to reach the vision path
-changes those too.
+Without it, a vision endpoint on a text-keyed item never receives an image. The
+endpoint still connects, the buttons still render and the model still answers,
+so nothing on the page or in the log tells you which half of the item it read.
+
+**Read the response body to find out what it was given.** The tooltip cannot
+tell you, and a model answering about the wrong half of the item is fluent
+about it — the hint reads like a hint, and the label it suggests is highlighted
+in the form either way. One `/api/get_ai_suggestion` call on one multimodal
+item settles which field reached the model; nothing in the config does.
 
 ## Images have to be publicly reachable
 
@@ -182,6 +185,50 @@ annotation type does not exist in the prompts.
 
 `ai_support.ai_config.model_module` and `annotation_path` override the schemas
 and the prompt files respectively, if the defaults do not fit the study.
+
+## Letting them ask the model instead
+
+`chat_support` is a separate block with the same endpoint shape, and it puts a
+sidebar beside the form rather than buttons beside each scheme. Reach for it
+when the researcher says "let them ask a model while annotating" — the
+assistants answer one question about one scheme, the chat answers whatever the
+annotator types.
+
+```yaml
+chat_support:
+  enabled: true
+  endpoint_type: openai
+  ai_config:
+    base_url: "http://your-server:8001/v1"
+    model: "google/gemma-4-12B-it-qat-w4a16-ct"
+    temperature: 0.3
+    max_tokens: 400
+  ui:
+    title: Ask the model
+    sidebar_width: 420
+    max_history_per_instance: 50
+```
+
+`endpoint_type` and `ai_config` sit at the same level as they do under
+`ai_support`, and `include.all` is not involved: the sidebar renders whenever
+the block is enabled. The boot log's line is
+`Chat endpoint initialized: <endpoint_type>`.
+
+**It is given far more than the assistants are.** The default prompt carries the
+task name, the task description, every scheme's name and its labels, and the
+item's `text_key` field. Asked what it had been given, the model listed all
+eight scheme names in the study. It is *not* given the image, on any endpoint
+type. On a task whose item is a picture, the chat only ever sees the text field
+beside it.
+
+**The default prompt refuses to name a label.** Its closing line is an
+instruction not to tell the annotator which label to choose, only to help them
+reason. That is the right default for a study measuring human judgement and the
+wrong one for a study measuring how people use an assistant. Replace it with a
+`system_prompt` block holding a `template` string, which is `str.format`ed with
+`task_name`, `task_description`, `annotation_labels`, `instance_text` and
+`instance_id`. An unknown placeholder falls back to the default prompt with a
+warning rather than failing.
 
 ## Verifying one
 
@@ -241,6 +288,12 @@ reading the response body and the rendered DOM:
 - `text_key` deciding what the model receives, both ways round, and the
   capability filter dropping Keyword for an image item and keeping it for a text
   one
+- `ai_support.image_key` resolving the picture on an item that carries text and
+  an image, and the answer changing when it is set
+- `chat_support` end to end against the same server: the sidebar, a reply, the
+  `ui` keys, and a custom `system_prompt.template` reaching the model
+- `judge_alignment.inline` rendering a judge's suggestion beside the item, and
+  `/admin/judge-alignment` reporting agreement against the human labels
 
 On 2.8.2 itself none of the three endpoint types worked against a local server:
 `vllm` sent a parameter vLLM ignores, `openai`'s correct answer was delivered to
@@ -251,6 +304,10 @@ available" — so if you are on 2.8.2 or earlier, read the response body before 
 conclude anything about your config.
 
 Not run, and not claimed: every commercial provider; `ollama` and the rest of the
-endpoint list; `chat_support`, `llm_labeling`, `icl_labeling`, `active_learning`,
-`judge_alignment`, `judge_calibration`, `arena` and `solo_mode`, all of which
-take the same endpoint config and so inherit whatever is true of it above.
+endpoint list; `icl_labeling`, `judge_calibration`, `arena` and `solo_mode`, all
+of which take the same endpoint config and so inherit whatever is true of it
+above. `active_learning` starts its training thread and logs
+`Active learning manager initialized (query_strategy=..., ...)` on
+`enabled: true` alone, without `assignment_strategy: active_learning`; whether
+the reordered pool is then served is the strategy's decision, and I did not
+annotate far enough to watch it retrain.

@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 350 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 352 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -49,6 +49,7 @@ Model-backed label suggestions shown alongside each item
 | `cache_config` | object |  | Disk cache and prefetch for model replies, so an annotator does not wait for a generation the study has already paid for |
 | `enabled` | boolean | `False` | Turn AI assistance on. Without an endpoint that starts, the boot log says so and no assistant appears |
 | `endpoint_type` | string | `openai` | Which backend to talk to: openai, openai_vision, anthropic, anthropic_vision, gemini, huggingface, ollama, ollama_vision, openrouter, vllm, yolo, sam, sam3 |
+| `image_key` | string |  | Item field holding the image, when the item also carries text. Without it a vision endpoint only ever sees `item_properties.text_key` |
 
 ## `analytics`
 
@@ -376,6 +377,7 @@ Maps the fields of your data file onto the roles Potato needs: which field is th
 |---|---|---|---|
 | `category_key` | string |  | Field holding a category label, used by category-based assignment |
 | `id_key` | string |  | Field holding each item's unique identifier |
+| `image_key` | string |  | Item field holding the image, the counterpart of `text_key`. `ai_support.image_key` overrides it |
 | `kwargs` | object |  | Extra per-item fields to carry through to the display layer |
 | `text_key` | string |  | Field holding the text shown to the annotator |
 
