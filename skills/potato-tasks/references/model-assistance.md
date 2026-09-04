@@ -138,9 +138,11 @@ ai_support:
   image_key: screenshot           # the field holding the image URL
 ```
 
-Without it, a vision endpoint on a text-keyed item never receives an image. The
-endpoint still connects, the buttons still render and the model still answers,
-so nothing on the page or in the log tells you which half of the item it read.
+With both keys set the model receives both: the picture, and the text field
+named by `text_key`, in the same request. Without `image_key` a vision endpoint
+on a text-keyed item never receives an image, and nothing says so — the endpoint
+connects, the buttons render and the model answers about the half it was
+given.
 
 **Read the response body to find out what it was given.** The tooltip cannot
 tell you, and a model answering about the wrong half of the item is fluent

@@ -170,9 +170,20 @@ trick works, but only through `parquet` or by joining the data file back on
 `instance_id`.
 
 **Open the file before you hand it over.** A composite widget is one scheme
-holding several answers, and the two families lay it out differently. A
-`multirate` over three rows comes out of csv as `handling.Reproducibility`,
-`handling.Customer tone` and `handling.Urgency`, each holding the chosen rating:
+holding several answers, and the column it produces depends on how the widget
+stored them. Both families agree, and the shape is worth knowing before the
+analyst asks:
+
+| Scheme | Stored as | Columns |
+|---|---|---|
+| `multirate`, `constant_sum`, `soft_label` | one entry per row or option | `reasons.Population`, `reasons.Intervention`, … |
+| `hierarchical_multiselect` | one entry, comma-joined | `topics.selected_labels` holding `Annotation,People,Experts` |
+| `ranking` | one entry, comma-joined in rank order | `priority.rank_order` holding `Cost,Agreement,Accuracy` |
+| `image_annotation` and the other geometry types | one entry, a JSON blob | `uibox._data` |
+
+The joined ones need splitting before anything can be counted. The hierarchical
+list also carries every ancestor of each leaf an annotator ticked, so a count of
+`Annotation` includes everyone who chose something inside it.
 
 ```python
 import pandas as pd

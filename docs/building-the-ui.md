@@ -536,25 +536,28 @@ Three things to know before using groups:
 - **A slider in a narrow column is unreadable.** The tick labels and the value
   bubble collide. Give `slider`, `range_slider`, `soft_label` and
   `semantic_differential` a `columns: 2` span or more, or leave them full width.
-- **A grouped form goes to one column at `tablet`, not at `mobile`.** The two
-  breakpoints do different things to grouped and ungrouped questions, and the
-  grouped rule is the stricter one:
+- **A grouped form goes to one column at `tablet`, not at `mobile`.** The
+  container's column count follows the `tablet` threshold, so
+  `breakpoints: {tablet: 768}` — the default — means a grouped form is a single
+  column in any window narrower than 768px, which is what a split screen usually
+  is. Measured on a three-column, three-group form: at a 640px viewport with
+  `tablet: 700` every group computed one track; the same page with `tablet: 300`
+  computed `164px 164px 164px`. An ungrouped form holds its grid down to
+  `mobile`. If your annotators work narrow, design for the column and treat the
+  grid as a bonus.
 
-  | Viewport | Ungrouped | In a `layout.groups` group |
-  |---|---|---|
-  | above `tablet` | the configured grid | the configured grid |
-  | `mobile`+1 to `tablet` | spans of 3 or more halve to 2 | one column |
-  | at or below `mobile` | one column | one column |
+  Per-scheme spans are reduced separately from the container, at widths that are
+  not all yours to set, so read the computed span rather than the config when the
+  window is not wide:
 
-  So `breakpoints: {tablet: 768}` — the default — means a grouped form is a
-  single column in any window narrower than 768px, which is what a split screen
-  usually is. Measured on a three-column, three-group form: at a 640px viewport
-  with `tablet: 700` every group computed one track; the same page with
-  `tablet: 300` computed `164px 164px 164px`. If your annotators work narrow,
-  design for the column and treat the grid as a bonus.
+  ```js
+  [...document.querySelectorAll('.annotation-form')]
+    .map(f => f.dataset.schemaName + ' ' + f.dataset.gridColumns
+              + ' -> ' + getComputedStyle(f).gridColumn)
+  ```
 
-Check the spans on the page rather than in the config, because a mistyped
-`layout` block validates:
+A mistyped `layout` block validates, so confirm the attribute exists at all
+before debugging the width:
 
 ```js
 [...document.querySelectorAll('.annotation-form')]

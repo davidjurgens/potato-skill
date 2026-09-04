@@ -378,6 +378,35 @@ adjudication:
 outright. `agreement_threshold` is the other recognized key; `mode`, `strategy`,
 `queue`, `auto_resolve` and `adjudicators` are all rejected.
 
+A named adjudicator works at **`/adjudicate`**, which is not linked from the
+annotation page: a queue of items that fell below the threshold, each showing its
+agreement percentage and every annotator's answer per scheme, plus a decision
+form with confidence, an error taxonomy and a guideline-update flag. Items enter
+the queue on disagreement rather than on reaching the annotator cap, so an item
+two of three annotators disagree about is adjudicable before the third arrives.
+Tell the adjudicator the URL; `/annotate` shows them the completion page instead.
+
+**The decisions are not in any export.** They are written to
+`annotation_output/adjudication/decisions.json`:
+
+```json
+{"instance_id": "p01", "adjudicator_id": "adj@x.com",
+ "label_decisions": {"decision": "Include", "quality": 3},
+ "source": {"decision": "adjudicator"}, "confidence": "medium",
+ "notes": "...", "error_taxonomy": [], "time_spent_ms": 39553}
+```
+
+csv, jsonl and parquet carry the annotators' answers and nothing from this file,
+so a study run for the resolved labels exports the disagreements and leaves the
+resolution behind. Name that file in the handover
+beside the export, or read it and join on `instance_id` yourself.
+
+Before you design a workflow around adjudication, **open `/adjudicate` on a real
+item and check that the schemes you care about have a control there.** The panel
+shows every scheme's annotator responses; the decision form does not necessarily
+offer an input for every one of them, and `label_decisions` records only what had
+an input.
+
 ## `require_fully_annotated`
 
 ```yaml

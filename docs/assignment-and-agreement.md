@@ -138,6 +138,7 @@ cosmetic one.
 | ordinal | `likert`, ordered scales | linear and quadratic weighted κ, Spearman ρ, ordinal α |
 | continuous | `slider`, `number`, `vas` | Pearson r, MAE, RMSE, interval α, ICC(2,k) |
 | multilabel | `multiselect` | mean Jaccard, MASI α |
+| matrix | `multirate`, `constant_sum`, `soft_label` | the ordinal or continuous measures per row, plus a pooled block over every (item, row) pair |
 | ranking | `ranking`, `bws` | Kendall's τ, Spearman footrule |
 | span | `span`, `error_span` | token-level κ, exact and partial span F1, Krippendorff's αU, γ |
 | geometry | boxes, polygons, points | matched IoU, detection F1, chance-corrected σ, ks, detection α |
@@ -171,7 +172,16 @@ measures follow from the schema kinds; there is nothing to select.
 ### Reading the agreement report
 
 Nothing is computed at boot, and nothing is linked from the annotation page.
-Agreement appears once items have more than one annotator.
+
+**Agreement appears once an item reaches its full annotator cap**, not once it
+has two annotators. An item sitting at 2 of `num_annotators_per_item: 3` is not
+in the report at all, and the report does not say so: every schema comes back
+`n_annotators: 0` with null coefficients beside `n_overlap_items: 0`, which is
+also what a study with no annotations at all looks like. Measured on a six-item
+study: two annotators finished and everything was null, the third finished and
+the whole report populated. So read `n_overlap_items` first, and if it is zero,
+count how many annotators the items actually have before concluding anything
+about the data.
 
 ```bash
 cat admin_api_key.txt        # written into task_dir on the first admin request
@@ -196,11 +206,19 @@ severity    likert           ordinal     alpha_ordinal, spearman_rho,
 confidence  confidence       ordinal     the same four
 issues      multiselect      multilabel  alpha_masi, mean_jaccard
 rating      slider           continuous  alpha_interval, icc_2_k, mae, pearson_r, rmse
+reasons     constant_sum     matrix      one block per row, plus `pooled` and `n_rows`
+design      soft_label       matrix      the same
 evidence    span             span        token_level_kappa, span_f1_exact,
                                          span_f1_partial, krippendorff_alpha_u, gamma_mathet
 boxes       image_annotation geometry    detection_f1, mean_agreement, mean_matched_iou,
                                          mean_object_count_diff, detection_alpha
 ```
+
+A `matrix` schema is scored twice over: once per sub-question, and once pooled
+over every (item, row) pair. Read the per-row block. A rating grid usually has
+one row everybody agrees on and one that carries the disagreement, and pooling
+averages the two together. On a three-row `constant_sum` over six items and
+three annotators, per-row interval α ran 0.86 to 1.0 against a pooled 0.94.
 
 Two things to read off that. **The `kind` follows the declared
 `annotation_type`, not the widget that rendered.** A `likert` given an explicit

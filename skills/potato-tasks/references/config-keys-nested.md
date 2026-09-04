@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 352 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 353 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -218,6 +218,14 @@ Route items to annotators by the item's category, optionally gated on a qualific
 | `enabled` | boolean | `False` | Turn category routing on. Also gates the qualification scoring that runs when someone finishes training |
 | `fallback` | string | `uncategorized` | What an annotator with no matching qualification is given |
 | `qualification` | object |  | How training performance becomes a per-category qualification: `source` (training, prestudy or both), `threshold` (0-1, default 0.7) and `min_questions` (default 1) |
+
+## `chat_support`
+
+In-task chat with a model
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `system_prompt` | object |  | Overrides what the chat assistant is told. Takes a `template` string, which may interpolate `task_name`, `task_description`, `annotation_labels`, `instance_text` and `instance_id`. The default carries all of those and instructs the model not to name a label |
 
 ## `codebook`
 
@@ -755,7 +763,6 @@ Post task events to external URLs as they happen
 - `instance_reclaim.*`
 - `keyword_highlight_settings.*`
 - `live_agent.*`
-- `llm_labeling.*`
 - `mturk.*`
 - `partial_loading.*`
 - `per_annotator_quota.*`

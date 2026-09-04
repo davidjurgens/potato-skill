@@ -365,8 +365,8 @@ config does not already declare. `radio`, `multiselect` and `select` only.
 ## Prefilled answers
 
 `pre_annotation` seeds answers into the form; `ai_support` offers a model's
-suggestion; `llm_labeling` labels the corpus first. `modes-and-subsystems.md`
-routes to all three as features. The design question they raise is separate:
+suggestion; `icl_labeling` labels the corpus as the study runs.
+`modes-and-subsystems.md` routes to all three as features. The design question they raise is separate:
 **an annotator shown a suggestion agrees with it more often than one who is
 not.**
 

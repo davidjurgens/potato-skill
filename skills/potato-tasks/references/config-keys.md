@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 157 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 156 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -15,7 +15,6 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `ai_support` | object |  |  | Model-backed label suggestions shown alongside each item |
 | `chat_support` | object |  |  | In-task chat with a model |
 | `icl_labeling` | object |  |  | In-context-learning labeler that builds few-shot prompts from high-confidence annotations already collected |
-| `llm_labeling` | object |  |  | Bulk labeling by a model |
 
 ## Advanced Features
 

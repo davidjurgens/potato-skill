@@ -176,7 +176,7 @@ have missed something.
 |---|---|---|
 | Answers more precise than a rating scale | The answer | `soft_label`, `range_slider`, `semantic_differential`, `constant_sum`, `confidence` |
 | Know which annotators are reliable | Trust | `mace`, `psychometrics`, `agreement_metrics` |
-| A model helping out | Model help | `ai_support`, `llm_labeling`, `icl_labeling`, `chat_support`, `active_learning` |
+| A model helping out | Model help | `ai_support`, `pre_annotation`, `icl_labeling`, `chat_support`, `active_learning` |
 | Different people see different items | People | `batch_assignment` with `scheme_sets`, `category_assignment` |
 
 **2. Anything about the corpus, or what happens afterwards?**
