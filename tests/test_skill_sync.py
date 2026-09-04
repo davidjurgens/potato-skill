@@ -64,6 +64,11 @@ PROSE_IDENTIFIERS = {
     # inside a scheme entry, which is past where any registry describes a
     # config; they are read in span_link.py:78-79
     "allowed_source_labels", "allowed_target_labels",
+    # `ai_support.endpoint_type`, named bare because it is the one key the
+    # subsystem refuses to start without and the error message quotes it that
+    # way. KNOWN_CONFIG_KEYS records `ai_support` as an opaque block, so no
+    # sub-key of it resolves; ai_endpoint.py:664 is the check that raises
+    "endpoint_type",
     # the module that rejects a non-string label. Named in the warning about
     # YAML booleans because its message is what the boot log prints, and a
     # reader grepping for it needs the real module name

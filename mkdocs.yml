@@ -24,6 +24,7 @@ nav:
       - Attention Checks and Gold Standards: quality-control.md
       - Assignment and Agreement: assignment-and-agreement.md
       - Modes and Subsystems: modes-and-subsystems.md
+      - Model Assistance From a Self-Hosted Endpoint: model-assistance.md
   - Data:
       - Data Files and Admin Access: data-and-access.md
       - Importing Existing Annotations, Transcripts and Corpora: importing-existing-work.md

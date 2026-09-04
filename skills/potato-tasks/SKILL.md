@@ -656,6 +656,7 @@ Three that decide whether a deployment is safe to hand over:
 | `quality-control.md` | Training, attention checks, gold standards, adjudication, side-file formats |
 | `assignment-and-agreement.md` | Quotas, ordering, and which metric each schema kind gets |
 | `modes-and-subsystems.md` | The rest of Potato, routed from what the researcher said |
+| `model-assistance.md` | `ai_support` against a self-hosted LLM: where the keys go, which `endpoint_type` works |
 | `interrogating-potato.md` | Recovering an undocumented block from the validator and the boot log |
 | `data-and-access.md` | Where items come from, output files, login, serving |
 | `getting-the-data-out.md` | The 29 export formats, what the CSV holds, phase data |

@@ -347,6 +347,10 @@ MIRRORED_REFERENCES = {
         "Images, Video, Audio and 3D",
         "Routing a medium to its display type, its scheme, and its quirks.",
     ),
+    "model-assistance.md": (
+        "Model Assistance From a Self-Hosted Endpoint",
+        "Pointing `ai_support` at your own vLLM or other OpenAI-compatible server.",
+    ),
     "agent-traces.md": (
         "Agent Traces and Agent Evaluation",
         "The trace displays, the twenty evaluation schemes, and how they bind.",
