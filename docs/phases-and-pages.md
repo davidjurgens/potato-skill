@@ -93,11 +93,24 @@ phases:
 
 Both work. Mapping form reads better once any phase has more than three keys.
 
-**Naming a phase in `order` without defining it does nothing**, quietly:
+**Naming a phase in `order` without defining it takes the study down**, if the
+annotator would reach it before `annotation`. The log says otherwise:
 
 ```
-WARNING: Phase 'training' in order but not defined in phases config, skipping
+WARNING: Phase 'consent' in order but not defined in phases config, skipping
 ```
+
+It does not skip. The phase is dropped from the page map and left in the
+annotator's sequence, so the first request for it raises `KeyError` and every
+page — including `/` — is a 500. `validate --strict` passes the config and the
+boot is clean, so the first sign of it is a browser.
+
+An undefined phase *after* `annotation` is harmless: a study with
+`order: [annotation, poststudy]` and no `poststudy` block annotates all its items
+and reaches the completion page. It is only fatal in front of the annotation
+phase, which in practice means `consent`, `instructions` and `prestudy`.
+
+Define every phase you name. If you want a phase gone, take it out of `order`.
 
 The annotator never sees it and the config still validates. If a phase you
 configured is not appearing, this is the first line to grep for.

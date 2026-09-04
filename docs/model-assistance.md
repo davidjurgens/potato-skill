@@ -17,10 +17,10 @@ that at a server you run yourself: vLLM, SGLang, LM Studio, llama.cpp, anything
 speaking the OpenAI chat API. Commercial providers use the same keys and are not
 covered here, because I have not run one.
 
-Read the last section before you promise a researcher any of this. On Potato
-2.8.2-12 the feature is partly broken against a local server, and the failure is
-silent in the direction that matters: the model answers, the tokens are spent,
-and the annotator is shown "No hint available".
+The three endpoint types I drove against a live server all work. What is left to
+get wrong is the config: the keys sit one level deeper than they read, and the
+switch that decides whether any button appears is off by default and warns about
+nothing.
 
 ## Where the keys go
 
@@ -33,7 +33,6 @@ ai_support:
   ai_config:
     base_url: "http://your-server:8001/v1"
     model: "google/gemma-4-12B-it-qat-w4a16-ct"
-    max_tokens: 800
     temperature: 0.1
     include:
       all: true
@@ -46,19 +45,18 @@ own default host. `validate --strict` catches that one:
 
 ```
 Unrecognized config key 'ai_support.base_url'. This key will be ignored.
-Unrecognized config key 'ai_support.model'. This key will be ignored.
 ```
 
 **`include.all` is off by default and nothing warns you.** Without it the config
-validates clean, the endpoint connects, the boot log says AI support started, and
-the page renders `<div class="ai-help none">` with no buttons in it. This is the
-single most likely reason a correctly-configured `ai_support` shows nothing.
-`ai_config.include.special_include` is the per-page, per-scheme alternative,
-keyed by instance index then scheme index.
+validates clean — `OK — no issues found` — the endpoint connects, the boot log
+says the endpoint is ready, and the page renders `<div class="ai-help none">`
+with no buttons in it. This is the single most likely reason a correctly
+configured `ai_support` shows nothing. `ai_config.include.special_include` is the
+per-page, per-scheme alternative, keyed page number then annotation id.
 
-None of these three appear in `config-keys-nested.md`, because Potato's key
-documentation records `ai_support` as an object and stops. Read them off
-`ai_cache.py:160-180` if you need to check me.
+`config-keys-nested.md` documents these, `include.all` included. Setting
+`base_url` makes `api_key` optional, on the validator as well as in the endpoint,
+so a local server needs no placeholder key.
 
 ### Keeping the endpoint out of the config
 
@@ -73,75 +71,60 @@ is lifted out to sit beside it:
 endpoint_type: openai_vision
 base_url: "http://your-server:8001/v1"
 model: "google/gemma-4-12B-it-qat-w4a16-ct"
-max_tokens: 800
 ```
 
 Give that file its own `ai_config:` block and you get `ai_config.ai_config`,
 every real setting is invisible, and the boot log complains about a missing API
 key, which points at the wrong key entirely.
 
-If the named file does not exist, Potato warns, sets `enabled: false`, and
-carries on. `validate --strict` reports `OK with 1 warning(s)` and exits 0, so a
-study whose whole point is model assistance can pass its checks with the model
-switched off. `examples/image/image-vllm-rationale/` ships in exactly that state.
-Grep the boot log for the endpoint's own initialization line rather than
-trusting the exit code.
+If the named file does not exist, Potato warns and sets `enabled: false`.
+`validate --strict` fails on that warning, so the check catches a study whose
+whole point is model assistance running with the model switched off. Ship an
+`ai-config.yaml.example` beside the config for whoever clones it, as
+`examples/image/image-vllm-rationale/` does.
 
 ## Which endpoint_type to use
 
-Not the obvious one. Measured against a live vLLM 0.24.0 serving a 12B
-text+vision model, driving every assistant button in a browser and reading the
-response body:
+`endpoint_type: vllm` for a vLLM server, `openai` for anything else
+OpenAI-compatible, `openai_vision` if items include images. Driven against a live
+vLLM 0.24.0 serving a 12B text+vision model, clicking every assistant in a
+browser and reading the response body:
 
-| `endpoint_type` | Text | Images | What happens |
+| `endpoint_type` | Text | Images | Constrains the output with |
 |---|---|---|---|
-| `vllm` | no | none | Sends `guided_json`, which current vLLM ignores. The model returns prose, and all three assistants render "No hint available" or log a format error |
-| `openai` | no | none | Gets structured output right, then returns a `str`; `routes.py:2132` treats a string return as an error and the browser is handed `{"error": "<the correct answer>"}` |
-| `openai_vision` | partly | yes | The only one that reaches a local server and renders. See below |
+| `vllm` | yes | no | `response_format: json_schema` |
+| `openai` | yes | no | `response_format: json_schema` |
+| `openai_vision` | yes | yes | `json_schema`, falling back to `json_object` then nothing if the server refuses |
 
-So `endpoint_type: vllm` is the wrong choice for a vLLM server. Use
-`openai_vision`. It is named for its capability, not for its backend, and its
-docstring is explicit that `base_url` is there for vLLM, SGLang, LM Studio,
-llama.cpp and LiteLLM. Setting `base_url` also makes `api_key` optional, and it
-appends `/v1` if you leave it off.
+All three returned correctly shaped JSON for all three assistants, and
+`suggestive_choice` highlighted the label in the form.
 
-Two things to know before you rely on it:
+`openai_vision` is named for its capability, not its backend: its docstring is
+explicit that `base_url` is there for vLLM, SGLang, LM Studio, llama.cpp and
+LiteLLM, and it appends `/v1` if you leave it off. Pick it whenever any item is
+an image, because it is the only one of the three that sends one.
 
-**It ignores the output schema.** It asks for `{"type": "json_object"}` and never
-sends the JSON schema it was handed, so the model returns *some* JSON of *some*
-shape. Rationale came back correctly on every run I made; Hint came back nested
-one level deeper than the renderer reads and displayed "No hint available".
-Nothing in the request makes either outcome reproducible. The model is following
-the prompt, not a constraint.
+The full list is `openai`, `openai_vision`, `anthropic`, `anthropic_vision`,
+`gemini`, `huggingface`, `ollama`, `ollama_vision`, `openrouter`, `vllm`, plus
+`yolo`, `sam` and `sam3` for detection and segmentation. I have run three of
+them.
 
-**It hides the Keyword button on text.** Its capability declaration sets
-`keyword_extraction: false` with a comment about images, and the flag is not
-conditioned on the item, so Keyword is absent from a text-only task too.
+## max_tokens
 
-`endpoint_type: openai` with `api_key: "EMPTY"` is worth knowing about for a
-different reason: the answers it produces are schema-correct, so if you are
-reading `annotation_output` rather than the page — or if the string-return bug is
-fixed by the time you read this — it is the one whose structured output is
-actually constrained.
+Defaults to 800, which covers the multi-label formats. Rationale and Keyword both
+produce one entry per label, so a three-label scheme runs 300-500 tokens; the old
+default of 100 cut them off mid-object. If you lower it, or a scheme has many
+labels, the log says so:
 
-If you have `ollama` available, its endpoint is the only one that both constrains
-the output (native `format=<schema>`) and parses it back to a dict. I have not
-run it; that is from reading `ollama_endpoint.py:84-124`, not from a browser.
+```
+The model hit max_tokens (100) before finishing this response, so the reply is
+cut off and may parse into the wrong shape. Raise ai_config.max_tokens.
+```
 
-## max_tokens defaults to 100
-
-Too small for two of the three assistants. Rationale and Keyword both produce one
-entry per label, so a three-label scheme needs roughly 300-500 tokens and gets cut
-off mid-object at the default. The salvage path then extracts whatever key-value
-pairs completed, which yields a dict of the wrong shape rather than an error, and
-the tooltip reads "No rationales available".
-
-Set it explicitly. 800 was comfortable for a three-label radio scheme with a
-12B model; the bundled image example uses 500.
-
-This shares its symptom with a genuinely broken endpoint, which makes it
-expensive to diagnose in the wrong order. Check `max_tokens` first; it is one
-line to rule out, and the endpoint is not.
+Worth knowing because truncation and a genuinely broken endpoint share a symptom:
+the salvage step returns whatever key-value pairs completed, so the renderer gets
+a plausible dict of the wrong type and the tooltip reads "No rationales
+available" either way.
 
 ## Images have to be publicly reachable
 
@@ -164,35 +147,34 @@ your own object store is read as text and the vision path never runs.
 
 Three, for text schemes, each with its own expected output shape:
 
-| Button | Produces | Also does |
+| Button | Produces | Where it lands |
 |---|---|---|
-| Hint | Guidance that avoids naming the answer | Returns `suggestive_choice`, which highlights that label in the form |
-| Keyword | Per-label keywords | Highlights the matching spans in the item text |
-| Rationale | One argument per label, for and against | — |
+| Hint | Guidance that avoids naming the answer | A tooltip, plus `suggestive_choice` highlighting that label in the form |
+| Keyword | Per-label keywords | Overlays on the item text, labelled — not the tooltip, which stays empty |
+| Rationale | One argument per label, for and against | A tooltip |
 
 Which appear is filtered per item by what the endpoint declares it can do, so an
-image item correctly drops Keyword. The prompts are per annotation type and live
-in `potato/ai/prompt/*.json`, one file per type — `radio`, `likert`,
-`multiselect`, `select`, `slider`, `number`, `span`, `text`, plus the image and
-video ones. A scheme whose type has no file there gets no assistants and the
-tooltip says the annotation type does not exist in the prompts.
+image item correctly drops Keyword while a text item keeps it, on the vision
+endpoints too. The prompts are per annotation type and live in
+`potato/ai/prompt/*.json`, one file per type — `radio`, `likert`, `multiselect`,
+`select`, `slider`, `number`, `span`, `text`, plus the image and video ones. A
+scheme whose type has no file there gets no assistants and the tooltip says the
+annotation type does not exist in the prompts.
 
 `ai_support.ai_config.model_module` and `annotation_path` override the schemas
 and the prompt files respectively, if the defaults do not fit the study.
 
 ## Verifying one
 
-`validate --strict` will pass a config whose AI support is off. Boot it and drive
-it instead:
+`validate --strict` will pass a config whose assistants never appear. Boot it and
+drive it instead:
 
-1. **Read the boot log for the endpoint's own line**, not for "AI support
-   initialized successfully", which is printed even after the endpoint failed
-   to construct. What you want is the client line naming your host, and the
-   vision line agreeing with what you configured:
+1. **Read the boot log for the endpoint's own line.** What you want names the
+   class that was actually constructed, and agrees with what you configured:
 
    ```
    OpenAI Vision client initialized with model: <model> at http://<host>/v1
-   AI endpoint supports vision: True
+   AI endpoint ready (OpenAIVisionEndpoint), vision: True
    ```
 
 2. **Confirm the buttons exist.** No buttons means `include.all`, nine times out
@@ -200,16 +182,17 @@ it instead:
    none.
 
 3. **Click one and read the network response**, not the tooltip. The tooltip says
-   "No hint available" for a truncated answer, a wrongly-shaped answer, an
-   unconstrained answer and a real failure alike. `/api/get_ai_suggestion` shows
-   you which:
+   "No hint available" for a truncated answer, a wrongly-shaped answer and a real
+   failure alike. `/api/get_ai_suggestion` shows you which:
 
    ```
    {"hint":"...","suggestive_choice":"negative"}   rendered
    {"response":"### Annotation Guidance..."}       unconstrained; nothing renders
-   {"error":"{\"hint\": ...}"}                     the string-return bug
    {"label":...,"reasoning":...}                   truncated: raise max_tokens
    ```
+
+   For Keyword, look at the item text rather than the tooltip: it draws
+   `.ai-keyword-overlay` spans titled `<label>: "<keyword>"`.
 
 4. **Check the cost surface if the study is long.** `ai_budget.cap_usd` refuses a
    run projected to cross it, and `/admin/api/ai-cost` reports spend. Both are
@@ -217,31 +200,35 @@ it instead:
    than money.
 
 `cache_config.disk_cache` is worth turning on for anything with more than a few
-dozen items: without it, the same item re-queries the model on every page view. `cache_config.prefetch.warm_up_page_count` generates ahead so the
-first annotator is not waiting on the first token.
+dozen items: without it, the same item re-queries the model on every page view.
+`cache_config.prefetch.warm_up_page_count` generates ahead so the first annotator
+is not waiting on the first token.
 
 ## What I have and have not verified
 
-Run against potato-annotation 2.8.2-12 and a vLLM 0.24.0 server on a 12B
-text+vision model, in headless Chromium, reading the response body and the
-rendered DOM:
+Run against a Potato checkout at v2.8.2 plus the endpoint fixes that followed it,
+and a vLLM 0.24.0 server on a 12B text+vision model, in headless Chromium,
+reading the response body and the rendered DOM:
 
 - the `ai_config` nesting, and what `--strict` says when you get it wrong
 - `include.all` deciding whether any button exists
-- `ai_config_file` merging flat, and a missing one disabling AI behind a passing
-  `--strict`
-- all three text assistants on `vllm`, `openai` and `openai_vision`
-- Hint and Rationale on an `image_annotation` task through `openai_vision`,
-  including the model reading the photograph correctly and suggesting a label
-- `max_tokens` at 100 truncating, and 800 not
-- Keyword being filtered out for image items, and for text items on
-  `openai_vision`
+- `ai_config_file` merging flat, and a missing one failing `--strict`
+- all three text assistants on `vllm`, `openai` and `openai_vision`, including
+  the keyword overlays
+- Hint on an `image_annotation` task through `openai_vision`, including the model
+  reading the photograph correctly and suggesting a label
+- `api_key` being optional, in the validator and the endpoint, when `base_url` is
+  set
+
+On 2.8.2 itself none of the three endpoint types worked against a local server:
+`vllm` sent a parameter vLLM ignores, `openai`'s correct answer was delivered to
+the browser labelled as an error, `openai_vision` never sent the schema, and the
+100-token default truncated two of the three assistants. All four fail the same
+way — the model answers, the tokens are spent, and the annotator reads "No hint
+available" — so if you are on 2.8.2 or earlier, read the response body before you
+conclude anything about your config.
 
 Not run, and not claimed: every commercial provider; `ollama` and the rest of the
 endpoint list; `chat_support`, `llm_labeling`, `icl_labeling`, `active_learning`,
 `judge_alignment`, `judge_calibration`, `arena` and `solo_mode`, all of which
 take the same endpoint config and so inherit whatever is true of it above.
-`judge_alignment` and `judge_calibration` in particular call the endpoint the
-same way `ai_support` does; on a `vllm` endpoint the verdict comes back as prose
-and the judge reads an empty label, which I checked directly against the endpoint
-but not through a running study.

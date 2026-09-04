@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 320 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 347 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -15,6 +15,40 @@ Cost estimate and spend cap for AI actions. The complaint about commercial platf
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `cap_usd` | number |  | Dollar ceiling for this project's AI spend. A run projected to cross it is refused BEFORE it starts, so it cannot leave a part-labelled dataset and a bill for it |
+
+## `ai_support`
+
+Model-backed label suggestions shown alongside each item
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `ai_config` | object |  | Everything about the model itself: model, base_url, api_key, max_tokens, temperature, timeout, include. One level deeper than the obvious guess — ai_support.model is not read |
+| `ai_config.api_base` | string |  | Older spelling of base_url, accepted by the openai_vision endpoint |
+| `ai_config.api_key` | string |  | Key for a commercial endpoint. Not needed when base_url points at a self-hosted server; openai and openai_vision also read OPENAI_API_KEY from the environment |
+| `ai_config.base_url` | string |  | An OpenAI-compatible server to use instead of the vendor's: vLLM, SGLang, LM Studio, llama.cpp, LiteLLM. Setting it also makes api_key optional, because self-hosted servers do not have one |
+| `ai_config.classes` | array |  | Detection classes to keep, by name. Anything else the detector finds is dropped (yolo) |
+| `ai_config.confidence_threshold` | number |  | Lowest detection score kept |
+| `ai_config.custom_classes` | array |  | Open-vocabulary class names for a detector that accepts them, instead of its trained label set |
+| `ai_config.default_video_fps` | number |  | Frame rate assumed when a video does not declare one |
+| `ai_config.detail` | string | `auto` | How much of the image the model is charged for: low, high or auto (openai_vision) |
+| `ai_config.device` | string |  | Where a local model runs: cpu, cuda, mps |
+| `ai_config.enabled` | boolean | `True` | Read by the visual endpoints as a per-endpoint off switch, leaving the rest of ai_support in place |
+| `ai_config.include` | object |  | Which schemes get assistants. Off by default: without it every assistant button is absent and the page renders an empty ai-help div |
+| `ai_config.include.all` | boolean | `False` | Show assistants on every scheme. This is the switch most authors want, and nothing warns when it is missing |
+| `ai_config.include.special_include` | object |  | Per-page, per-scheme assistant list, keyed page number -> annotation id -> list of assistant names. Use instead of include.all to show assistants on some schemes only |
+| `ai_config.iou_threshold` | number |  | Overlap above which two detections are treated as the same object |
+| `ai_config.json_mode` | boolean | `True` | Ask the server to constrain output to JSON. Servers without constrained decoding reject it; the endpoint notices and retries without, so this rarely needs setting (openai_vision) |
+| `ai_config.max_frames` | integer |  | Most frames sampled from a video for one request |
+| `ai_config.max_image_size` | integer |  | Longest edge, in pixels, an image is downscaled to before it is sent |
+| `ai_config.max_tokens` | integer | `800` | Cap on the reply. The multi-label formats (a rationale or a keyword set for every label) need several hundred; below that the reply is cut off and the assistant renders empty |
+| `ai_config.model` | string |  | Model name as the backend spells it |
+| `ai_config.temperature` | number | `0.1` | Sampling temperature, 0 to 2 |
+| `ai_config.think` | boolean | `False` | Let a reasoning model emit its thinking block. Off keeps the reply to the answer (vllm) |
+| `ai_config.timeout` | integer | `30` | Seconds to wait for the model |
+| `ai_config_file` | string |  | Path to a separate YAML file holding the endpoint settings, so keys stay out of the repo. Its keys are merged FLAT into ai_config, so the file holds model/base_url/api_key directly — a nested ai_config: block inside it becomes ai_config.ai_config and is ignored. endpoint_type is the one key lifted to the ai_support level. A missing file disables AI support with a warning, which `validate --strict` treats as an error |
+| `cache_config` | object |  | Disk cache and prefetch for model replies, so an annotator does not wait for a generation the study has already paid for |
+| `enabled` | boolean | `False` | Turn AI assistance on. Without an endpoint that starts, the boot log says so and no assistant appears |
+| `endpoint_type` | string | `openai` | Which backend to talk to: openai, openai_vision, anthropic, anthropic_vision, gemini, huggingface, ollama, ollama_vision, openrouter, vllm, yolo, sam, sam3 |
 
 ## `analytics`
 
