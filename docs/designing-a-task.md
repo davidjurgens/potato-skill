@@ -150,32 +150,35 @@ pool, not as pre-built comparison sets.
 a glance-correct default and collects nothing, and `validate --strict` passes on
 all three.
 
-`conjoint` needs `attributes` even when the profiles come from the data.
-`profiles_field` fills cells; `attributes` is what creates them, one row per
-declared attribute. With `profiles_field` alone you get three cards reading
-"Option 1 / Choose this" and no attributes at all, over data that is sitting
-right there in the row. Declare the attribute names to match the keys in your
-profiles; the levels are only used when Potato generates profiles itself.
+`region_caption` and `grounding_eval` need an `image_annotation` scheme beside
+them. Neither draws: one owns the description attached to a region, the other
+the phrase-to-region binding. Alone, `region_caption` shows "Draw a region on
+the image, then describe it" over a list that can never fill, and
+`grounding_eval` offers *Not present in the image* as the only answer an
+annotator can give — a grounding study where every phrase is absent.
+`modalities.md` has the config.
 
-`event_annotation` builds on a `span` scheme, and every label it names has to
-exist in that scheme: each event type's `trigger_labels`, and the `entity_types`
-on each argument. Miss one and the flow cannot start — the trigger click is
-rejected in silence and *Create Event* never enables. The order is also
-particular: pick the event type, click a span to make it the trigger, click a
-*role*, then click the span that fills it. Clicking a span before a role does
-nothing at all. Its arc drawing is a separate matter: on 2.8.2-10 the arcs render
-into the legacy `#instance-text` container, which `instance_display` sets to
-`display:none`, so "Show event arcs above text" works only on a config with no
-`instance_display`. The annotation itself is unaffected.
+`multi_document_event` needs a top-level `event_template:` block with
+`enabled: true`. The `slots:` on the scheme itself are not enough: without the
+block the widget draws "No events yet. Create one to begin", and *+ New event*
+404s against `/corpus/api/event` for the rest of the session with nothing on
+screen to say so. Also check where its answers go before you build on it — they
+are not in `user_state.json`; see `getting-the-data-out.md`.
 
-`tree_annotation` does not store anything on 2.8.2-10, so do not build a study on
-it yet. Both its hidden inputs sit outside any form and carry no
-`annotation-input` class, so nothing collects them: the path an annotator clicks
-shows on screen, and `instance_id_to_label_to_value` stays empty. Its
-`node_scheme` renders no control either — the panel says "Node annotation type:
-likert" over an empty box. If a researcher wants per-node ratings on a branching
-conversation, use the `conversation_tree` display for reading plus ordinary
-schemes beside it, and check the export before promising the path data.
+`spatial_annotation` needs its cloud path rendered on the page, in a display
+field with no `label:`, or as the item's `text_key`. `source_field` alone gives
+you an empty viewer and a message pointing at `item_properties`.
+`modalities.md` has the three cases side by side.
+
+**`conjoint`, `event_annotation` and `tree_annotation`: fixed in 2.8.2-11.**
+They were the three that needed a second thing in the previous release, and all
+three now work as the reference describes: `conjoint` builds its attribute rows
+from the profiles' own keys with no `attributes:` declared, `tree_annotation`
+stores both node ratings and the selected path (`thread:::node_annotations` came
+back as `{"a1":{"thread_node":"4"}}`) and renders any annotation type inside a
+node, and `event_annotation` draws its arcs in a container that is 80px tall
+under `instance_display` rather than 0. On an older checkout, assume all three
+are broken and read the note in `building-the-ui.md`.
 
 **When the label set is meant to be incomplete**, this table is the wrong tool.
 A researcher doing thematic analysis, grounded theory or any open coding starts

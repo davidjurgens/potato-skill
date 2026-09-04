@@ -27,13 +27,19 @@ What it reports per page:
   * choice widgets whose candidate list rendered empty behind live buttons
   * schemes writing to a hidden input that nothing collects, so the answer looks
     stored on the page and never reaches `user_state.json`
+  * schemes that rendered a heading and no control at all, which is what
+    `region_caption` and `grounding_eval` do without the `image_annotation`
+    scheme they hang off
+  * what the widgets say about themselves -- a status line reading "No point
+    cloud for this item" is in the DOM and nowhere else
   * anything wider than the viewport, which makes the page scroll sideways
   * console errors and failed requests, minus Potato's known phase-page noise
 
-Detection of a rendered scheme relies on the `data-schema-name` marker on the
-form Potato generates. Most scheme types emit it and some do not, so a scheme
-reported as undetected is a prompt to look at the screenshot rather than a
-finding on its own. Everything else here is measured from the live layout.
+Detection of a rendered scheme looks for three markers -- `.annotation-form`,
+`data-schema-name` and `data-schema` -- because three conventions are in use.
+Some scheme types still emit none of them, so a scheme reported as undetected is
+a prompt to look at the screenshot rather than a finding on its own. Everything
+else here is measured from the live layout.
 
 Walking from the landing page reaches whatever the first `--max-steps` pages
 are, which on a real corpus is all annotation and never the survey at the end.
@@ -136,19 +142,46 @@ INSPECT_JS = r"""
 () => {
   const vh = window.innerHeight;
   const docEl = document.documentElement;
-  // `.annotation-form` rather than `form.annotation-form`: `coreference` and
-  // `span_link` render a `div` carrying that class and an `id` but no
-  // `data-schema-name`, so a form-tag selector missed both and reported them as
-  // declared-but-not-detected on every page of a task where they were working.
-  const forms = [...document.querySelectorAll(
-      '.annotation-form, [data-schema-name]')].map(el => {
+  // Three markers, because three conventions are in use. `.annotation-form`
+  // rather than `form.annotation-form`: `coreference` and `span_link` render a
+  // `div` carrying that class and an `id` but no `data-schema-name`, so a
+  // form-tag selector missed both and reported them as declared-but-not-detected
+  // on every page of a task where they were working. `[data-schema]` catches the
+  // newer widgets that render a plain container instead of a form --
+  // `region_caption`, `grounding_eval`, `episode_annotation`,
+  // `spatial_annotation`, `rollout_evaluation` -- which were also reported as
+  // undetected while rendering fine.
+  const markers = [...document.querySelectorAll(
+      '.annotation-form, [data-schema-name], [data-schema]')];
+  // One entry per scheme: several nested elements can carry the same marker
+  // (`grounding_eval` puts `data-schema` on its container and again inside),
+  // and reporting the same name three times in the below-the-fold list reads
+  // as three problems.
+  const seen = new Set();
+  const forms = markers.filter(el => {
+    const key = el.getAttribute('data-schema-name')
+                || el.getAttribute('data-schema') || el.id;
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(el => {
     const r = el.getBoundingClientRect();
     const style = getComputedStyle(el);
+    const controls = el.querySelectorAll(
+        'input:not([type=hidden]), select, textarea, button, [role=button],'
+        + ' canvas, [contenteditable=true]').length;
     return {
-      name: el.getAttribute('data-schema-name') || el.id || null,
+      name: el.getAttribute('data-schema-name') || el.getAttribute('data-schema')
+            || el.id || null,
       type: el.getAttribute('data-annotation-type') || null,
       top: Math.round(r.top + window.scrollY),
       height: Math.round(r.height),
+      // A scheme that renders its heading and help text and offers nothing to
+      // click or type is the shape `region_caption` and `grounding_eval` take
+      // when the `image_annotation` scheme they hang off is missing: it looks
+      // like a question and can never be answered.
+      controls: controls,
       hidden: style.display === 'none' || style.visibility === 'hidden'
               || r.width === 0 && r.height === 0,
     };
@@ -260,14 +293,15 @@ INSPECT_JS = r"""
   // syncAnnotationsFromDOM reads; a hidden `<scheme>:::<field>` input without it
   // is written by the widget, shown back to the annotator, and never sent. The
   // page looks completely normal, and `user_state.json` stays empty for that
-  // scheme however long the study runs. `tree_annotation` is in this state on
-  // 2.8.2-10: its two inputs sit outside any form and carry no class at all.
+  // scheme however long the study runs. `tree_annotation` was in this state on
+  // 2.8.2-10 and `multi_document_event` still is on 2.8.2-11: its memberships
+  // input sits outside any form and carries no class, so the only per-annotator
+  // record of which event a document belongs to is never sent.
   // Four schemes are exempt because they persist through their own endpoints
   // into their own stores -- `instance_id_to_span_to_value`,
   // `..._to_link_to_value`, `..._to_event_to_value` -- and their hidden input is
   // a mirror rather than the thing that is read.
-  const SIDE_STORED = ['span', 'coreference', 'span_link', 'event_annotation',
-                       'multi_document_event'];
+  const SIDE_STORED = ['span', 'coreference', 'span_link', 'event_annotation'];
   const uncollected = [...document.querySelectorAll('input[type="hidden"]')]
     .filter(el => (el.name || '').includes(':::')
                   && !el.classList.contains('annotation-input'))
@@ -279,6 +313,33 @@ INSPECT_JS = r"""
              || (el.name || '').split(':::')[0];
     })
     .filter(Boolean);
+
+  // What the widgets themselves say went wrong. Several of them report a
+  // failure in a status line on the page and nowhere else -- the point-cloud
+  // viewer's "No point cloud for this item", a reasoning step's "missing
+  // image" -- so it is in the DOM, not the console, and a screenshot of the
+  // top of the page does not show it. The labelling badge says "Not labeled"
+  // on every unanswered item and is not a problem.
+  // "Press Next again to continue anyway" is the warn-once nudge several
+  // widgets use for an incomplete answer. It is the widget working, not
+  // failing, and this checker triggers it by pressing Next.
+  const BENIGN = /^(not labeled|unlabeled|no annotations yet|no path selected)|press next again/i;
+  const complaints = [...document.querySelectorAll(
+      '[class*="status"], [class*="error"], [role="alert"], [class*="missing"]')]
+    .filter(el => el.offsetParent !== null)
+    .map(el => (el.innerText || '').replace(/\s+/g, ' ').trim())
+    .filter(t => t && t.length < 240 && !BENIGN.test(t)
+                 && /\b(no|not|failed|could not|cannot|empty|missing|unavailable)\b/i.test(t))
+    .filter((t, i, all) => all.indexOf(t) === i)
+    .slice(0, 3);
+
+  // Is there a drawing surface on this page at all? `region_caption` and
+  // `grounding_eval` are legitimately empty until the annotator draws the first
+  // region, so "no controls" only means something when there is no canvas for
+  // them to hang off.
+  const drawing_surface = document.querySelectorAll(
+      '.image-annotation-container, canvas.annotation-canvas,'
+      + ' [data-annotation-type="image_annotation"]').length > 0;
 
   const media = [...document.querySelectorAll('video, audio')].map(el => ({
     tag: el.tagName.toLowerCase(),
@@ -295,6 +356,8 @@ INSPECT_JS = r"""
                    ? '.' + el.className.trim().split(/\s+/)[0] : '')));
 
   return {
+    complaints: complaints,
+    drawing_surface: drawing_surface,
     viewport_height: vh,
     page_height: Math.round(docEl.scrollHeight),
     // `#instance_id` is on every page including the phase pages; only the
@@ -389,6 +452,25 @@ def _page_problems(measured: dict, declared: list) -> list:
                 f"scheme did not render, it is behind display_logic that the "
                 f"initial state does not satisfy, or its type does not emit the "
                 f"marker this checks. Look at the screenshot.")
+
+    # A scheme with nothing to click. `region_caption` and `grounding_eval`
+    # without the `image_annotation` scheme they hang off are the case this was
+    # written for: legend, help text, and no way to answer, on a config that
+    # validates clean.
+    inert = sorted({form["name"] for form in measured["forms"]
+                    if form["name"] and not form["hidden"]
+                    and form.get("controls") == 0
+                    and form["name"] in {s["name"] for s in declared}}
+                   ) if not measured.get("drawing_surface") else []
+    if inert:
+        problems.append(
+            f"nothing to answer with: {', '.join(inert)} rendered a heading and "
+            f"no control at all. Either the scheme needs a second scheme beside "
+            f"it -- `region_caption` and `grounding_eval` need "
+            f"`image_annotation` -- or its data did not arrive.")
+
+    for complaint in measured.get("complaints", []):
+        problems.append(f"a widget says so itself: \"{complaint}\"")
 
     below = [f"{form['name'] or form['type'] or '?'} (at {form['top']}px)"
              for form in measured["forms"]

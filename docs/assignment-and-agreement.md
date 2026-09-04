@@ -77,6 +77,24 @@ for f in glob.glob("annotation_output/*/user_state.json"):
 print(sorted(c.items()))          # every real item should hit num_annotators_per_item
 ```
 
+## More annotators than work
+
+`num_annotators_per_item` times the item count is a hard ceiling on how much
+work exists. Once it is used up, the next person to register lands on:
+
+> **Thank You!**
+> You have completed the annotation task and your responses are saved.
+
+They annotated nothing. No `annotation_output/<user>/` directory is created and
+nothing lands in the log, so from the outside this is indistinguishable from an
+annotator who finished. Three items at `num_annotators_per_item: 1` does it to
+the fourth person through the door. On a pilot that person is usually you, with
+a fresh login, and it reads as "the study is broken".
+
+Before recruiting, multiply: `items x num_annotators_per_item` is the number of
+annotator-items you have to hand out, and `max_annotations_per_user` divides it
+into people.
+
 ## Choosing the number of annotators
 
 | Situation | Number |

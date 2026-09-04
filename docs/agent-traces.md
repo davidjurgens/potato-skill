@@ -105,6 +105,14 @@ it.
 every marker in the top-left corner — the overlay renders, so it looks
 configured rather than broken.
 
+**`multimodal_reasoning` reads a different key per step type.** An image step
+needs `image` or `image_url`; a tool step needs `tool` (or `name`) plus `args`,
+`arguments` or `input`; only the text step falls back to `content`. A trace
+keyed uniformly on `content` therefore renders its prose correctly and shows
+`missing image` and `tool {}` for everything else — which looks like missing
+data rather than a key mismatch. `type_key` names the field holding the step
+type; the per-step content keys are not configurable.
+
 **Screenshots come from a second static root.** Trace data that sets
 `screenshot_url: screenshots/step_000.png` is served from `<task_dir>/screenshots/`,
 which is separate from `media_directory` and not configurable. Miss it and every
@@ -121,11 +129,10 @@ suggestions the annotator corrects.
 
 **`tool_contention` needs times on its calls.** A call is `{agent, tool, start,
 end, resource}` and the seconds are what make a contention: same resource,
-overlapping interval. Feed it `{agent, tool, resource}` and the lanes still
-render, one per agent, and every item reports "No shared-resource contention
-detected", which is what a trace with no contention looks like too. It also
-pairs a single agent's own overlapping calls with each other, so expect a few
-`coder <-> coder` cards to classify.
+overlapping interval. Feed it `{agent, tool, resource}` and every call sits at
+0-0 and can never overlap; from 2.8.2-11 it says the times are missing rather
+than reporting a clean trace. Self-pairs are skipped from the same release, so
+`coder <-> coder` cards no longer appear.
 
 **The display reads different keys from the schemes.** Both halves of the page
 take the step list, and they disagree about what a step is called: the schemes
@@ -133,9 +140,9 @@ take `agent_key` and `steps_key`, while `multi_agent_discussion`, `agent_trace`,
 `cot_trace` and `eval_trace` take `speaker_key` and `text_key`, defaulting to
 `speaker` and `text`. Steps shaped `{index, agent, text}` therefore render
 correctly in the questions and as a column of grey "U" avatars with no names in
-the trace above them. Set `speaker_key: agent` in `display_options`.
-`display_registry.list_displays()` does not admit the option exists; read it off
-the renderer class, as `building-the-ui.md` describes.
+the trace above them. Set `speaker_key: agent` in `display_options`. (`list_displays()` did not admit
+the option existed until 2.8.2-11; on an older checkout, read it off the
+renderer class.)
 
 **A linked act saves without its link.** In `consensus_tracking` and
 `context_attribution`, an act named in `linked_acts` asks for a second click on
@@ -145,10 +152,34 @@ reads `agreement -> #1`. The widget marks the card `ct-awaiting-ref` and nothing
 consults it. If the reference is the point of the study, count the ref-less acts
 at export before you count anything else.
 
-**`required` on any of these means "touched once".** These schemes answer through
-one hidden JSON input, and requiredness tests it for a non-empty string, so a
-scorecard covering four agents on three dimensions is satisfied by one click.
-`building-the-ui.md` has the measurement and what to do instead.
+**`required` on these now counts the cells, from 2.8.2-11.** Each widget writes
+what is still missing onto its own form and the banner beside Next reads it, so
+a scorecard covering four agents on two dimensions plus two team dimensions
+blocks with "Score each agent and the team as a whole (1 of 10 scored)" instead
+of passing on the first click. Verified on that config. The banner carries
+`role="alert"`, so a screen reader gets it too.
+
+The media widgets were not part of that change: `video_annotation`,
+`temporal_grounding` and `tiered_annotation` still treat one mark as an answer.
+`modalities.md` has the detail.
+
+**`trajectory_eval`'s score ignores everything but severity.** Mark all five
+steps `incorrect`, give each an error type, and skip the severity, and the
+widget shows `Score: 100 / 100` and stores `"score":100` — a flawless number on
+a trajectory the annotator condemned at every step. A `correct` step with a
+stray severity, meanwhile, is deducted. If you export `score`, make severity
+mandatory in the instructions and recompute from `steps` before you believe it.
+
+**`trajectory_edit`'s `require_reason_on_edit` does not require a reason.** It
+decides whether the reason field is drawn, nothing more: an edit with
+`"reason": ""` saves and Next advances. Read `reason` at export and treat blank
+as unexplained.
+
+**`code_review` stores empty comments.** *+ Add Comment* appends a row
+immediately and the row persists whether or not anything is typed into it —
+`{"category":"bug","file":"","line":null,"text":""}`. Drop rows with empty
+`text` before counting review comments, and expect `"verdict": ""` from an
+annotator who rated files and never picked one.
 
 ## World-model rollouts
 

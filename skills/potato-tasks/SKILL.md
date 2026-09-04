@@ -65,7 +65,7 @@ They live beside this file in `scripts/`.
 | `estimate_effort.py config.yaml --rate 15` | Items, annotators needed, minutes each, total hours and cost |
 | `find_design.py --type span --with-instructions` | Searches 440 published task designs in the Potato Showcase |
 | `handover.py config.yaml --confirm` | Removes the accounts you made while testing and writes `RUNNING.md` |
-| `check_ui.py --url … --config config.yaml` | Renders every page and reports schemes below the fold, empty media, empty choice tiles, answers nothing collects, keybinding conflicts and schemes that never appeared. `--phase poststudy` measures a page the walk cannot reach |
+| `check_ui.py --url … --config config.yaml` | Renders every page and reports schemes below the fold, empty media, empty choice tiles, schemes with no control to answer with, answers nothing collects, what the widgets say went wrong, keybinding conflicts and schemes that never appeared. `--phase poststudy` measures a page the walk cannot reach |
 | `study_status.py --url … --task-dir .` | Progress, per-annotator pace, agreement, and what looks wrong on a **running** study |
 
 Each takes `--help`, and `boot_and_check`, `walk_task`, `check_ui` and

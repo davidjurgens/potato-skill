@@ -15,8 +15,8 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | Very large images, microscopy, maps | `image` + `viewer`/`tiles` on the scheme | `image_annotation` | Deep zoom drives the transform; never compute it yourself |
 | Several images per item | `gallery` | a classification scheme, or `image_annotation` per field | `gallery` cannot be a `span_target` |
 | Depth or range data | `depth_map` | classification, or `spatial_annotation` | Windowing and colormap are display options, not data |
-| A region and a phrase for it | `image` | `region_caption` | Agreement is over *matched* regions — `agreement_distance` |
-| "Did the model point at the right thing" | `image` | `grounding_eval` | `region_type: point` scores differently from boxes; see below |
+| A region and a phrase for it | `image` | `image_annotation` **+** `region_caption` | Without the canvas scheme there is nothing to describe; agreement is over *matched* regions |
+| "Did the model point at the right thing" | `image` | `image_annotation` **+** `grounding_eval` | Same pairing; `region_type: point` scores differently from boxes |
 | Video, judge the whole clip | `video` | any classification scheme | Nothing special |
 | Video, mark moments or objects | *(none needed)* | `video_annotation` | Five modes, and `labels` is required in every one |
 | "Find the interval this sentence describes" | *(none needed)* | `temporal_grounding` | Reads `video_key`/`events_key`, **not** `source_field` |
@@ -28,7 +28,7 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | A chat log or conversation | `dialogue` | anything, often `turn_level` | Span target; threading is a display option |
 | A branching conversation | `conversation_tree` | `tree_annotation` | **Not** a span target |
 | Several agents talking | `multi_agent_discussion` | `failure_attribution`, ratings | Span target; see `agent-traces.md` |
-| Point clouds, LiDAR, 3D scans | *(none needed)* | `spatial_annotation` | `lod` defaults on, which changes what `max_points` does |
+| Point clouds, LiDAR, 3D scans | the cloud path, **unlabelled** | `spatial_annotation` | It reads the path off the page, not the item; `lod` defaults on, which changes what `max_points` does |
 | Robot episodes, teleop logs | *(none needed)* | `episode_annotation` | Four layers; pick the ones you need |
 
 ## Where the widget looks for its data
@@ -106,6 +106,39 @@ annotation_schemes:
 canvas, and no error. The consequence is that the image renders twice, which is
 correct; `building-the-ui.md` has the CSS to hide the display copy.
 
+**`region_caption` and `grounding_eval` are not drawing schemes.** Each owns
+what hangs off a region — the description, or the phrase-to-region binding — and
+needs an `image_annotation` scheme in the same config to draw on. On their own
+they validate, boot clean, and render a widget nobody can use: `region_caption`
+shows "Draw a region on the image, then describe it" over a list that stays
+empty for the life of the study, and `grounding_eval` lists the phrases with
+only *Not present in the image* available, so every answer it can record is
+`{"regions":{},"absent":[...]}`. Put the canvas scheme first:
+
+```yaml
+- annotation_type: image_annotation
+  name: region
+  description: Draw a region around each thing you describe.
+  source_field: image
+  tools: [bbox, polygon]
+  labels: [{name: referent, color: '#6e56cf'}]
+- annotation_type: region_caption
+  name: captions
+  description: Describe each region you drew.
+```
+
+`min_length` on `region_caption` is dead — it reaches the browser and nothing
+reads it, so a three-character caption counts as described. `require_all` warns
+once and lets the second Next through. If a short caption is not acceptable,
+say so in the instructions and check it in the export.
+
+**The canvas is bigger than the picture.** A 640x420 image sits centred in an
+831x600 canvas, so there is a margin around it that still takes a drag. A box
+drawn wholly in the margin is discarded silently. A box that *starts* in the
+margin is stored with coordinates outside `[0, 1]`, `{"x": -0.046, "y": -0.0007,
+...}`, and shown as "at -5%, 0%". Clamp on the way out, or drop boxes with a
+negative corner, before anything computes IoU against them.
+
 **Which is also why a practice round cannot show the image.** Phase pages do not
 render `instance_display`, so a geometry scheme on a `training` phase has no
 `<img>` and paints "Failed to load image" instead. `quality-control.md` has the
@@ -157,10 +190,24 @@ over the whole clip, or a second pass.
 `video_fps` is what frame numbers are computed against. Wrong value, wrong frame
 indices in the export, and nothing complains.
 
+**`min_segments` is decoration.** It validates as an integer, reaches the
+browser as `minSegments`, and is read by nobody: a scheme with `min_segments: 2`
+and `required: true` is satisfied by one segment, and Next goes through. On the
+video and audio widgets `required` means "the annotator made one mark", not
+"the annotator finished". If a study needs two segments per clip, say so in the
+instructions and check it in the export — `segments` is a list, so the count is
+one `len()` away.
+
 **`temporal_grounding` is a different task and a different config shape.** It
 takes `video_key` and `events_key` off the item and scores the annotator's
 interval against a predicted one with live IoU. Writing `source_field` there
 gets you a player with no video.
+
+`required: true` on it means one keystroke in one box. An item declaring two
+events, with a start typed into the first and nothing else, saves
+`{"events":{"0":{"start":1.5}}}` and advances: an interval with no end, one
+event of two, and the study calls the item done. Check for `end` on every event
+before you trust the IoU column.
 
 ## Audio and speech
 
@@ -209,6 +256,13 @@ Verified on Potato 2.8.2 (`v2.8.2-9-g19ce0041`); on earlier builds the panel sai
 `annotations`. If you inherit an older checkout, put the per-region distinction in
 `labels` and ask everything else once for the whole clip.
 
+**Zoom in and zoom out do nothing on either waveform widget.** Both
+`audio_annotation` and `video_annotation` call `view.getZoom()`, which the
+bundled Peaks build does not have, so the button raises an uncaught
+`view.getZoom is not a function` and the view does not move. *Fit* works, since
+it is the one of the three that never asks for the current zoom. Plan segment
+work at whatever resolution the whole clip gives you, or keep the clips short.
+
 **The gesture is right-click drag, not drag.** A left-drag on the waveform moves
 the playhead, so a checker that drags the way it would on a canvas creates
 nothing and reports no error. `[` and `]` then Enter is the keyboard route. The
@@ -224,7 +278,24 @@ per-segment error tags plus a correction. It reads `audio_key`,
 `tiered_annotation` is the ELAN/Praat shape: named tiers stacked over one
 timeline. It requires `source_field` and `tiers`, and **`media_type` defaults to
 `audio`** — a video task that forgets to set it gets an audio element and no
-picture.
+picture. Three things about it on 2.8.2-11:
+
+- Its Peaks.js wiring throws on every load (`zoomview.on is not a function`,
+  `tiered-annotation.js:1073`) and the failure is swallowed as a console
+  warning. Everything after that line in the initialiser is skipped, so
+  double-click on the waveform does not seek, clicking the overview does not
+  navigate, the initial zoom and auto-scroll are never set, and nothing refits
+  on resize. Segment click and drag still work, which is why it looks fine.
+- **`transcript_field` labels every seeded turn with the tier's first label.**
+  It carries the turn's real `speaker` in a field nothing displays, so a
+  two-speaker call arrives as four utterances all labelled "Caller", two of
+  which are the agent. The contradiction (`"label":"Caller",
+  "speaker":"agent"`) is what persists once the annotator edits anything.
+- **There is no gesture to relabel an existing annotation.** The label buttons
+  set the label for the *next* one drawn; the keyboard offers play, step,
+  Delete and Escape. Correcting a seeded label means deleting it and drawing it
+  again. If the labels matter more than the boundaries, seed nothing and let
+  annotators draw.
 
 ## Dialogue and podcasts
 
@@ -246,8 +317,8 @@ For per-turn questions rather than one judgment for the whole thing, use
 `span_target` — `pdf`, `spreadsheet` and `agent_trace` anchor spans their own way
 and are missing from the flag. Ask
 `display_registry.get_span_target_capable_types()`, which is what the validator
-uses. It under-reports the options too, `speaker_key` and `text_key` among them;
-`building-the-ui.md` has that list and the way round it.
+uses. (The same table under-reported `optional_fields` until 2.8.2-11; it is
+accurate now, and `test_doc_counts.py` fails if it drifts again.)
 
 ## 3D and embodied
 
@@ -262,12 +333,44 @@ uses. It under-reports the options too, `speaker_key` and `text_key` among them;
 
 `tools` and `labels` are required, as with images.
 
+**The viewer finds the cloud on the page, not in the item.** `source_field`
+names the key, and then `pc-viewer.js` looks for a rendered element whose
+`data-field-key` matches and reads its *text*. So the cloud path has to be
+either the item's `text_key` (what the bundled example does) or a display field
+— and that field must have **no `label:`**, because the label ends up in the
+same text node and the path is rejected for containing whitespace. All three of
+these produce "No point cloud for this item: the "point_cloud" field is empty.
+Check item_properties in the config", which is not where the problem is:
+
+```yaml
+# dead: the cloud is in the data and nowhere on the page
+instance_display: {fields: [{key: notes, type: text, label: Notes}]}
+
+# dead: the label is in the way
+instance_display: {fields: [{key: cloud, type: text, label: Cloud}]}
+
+# works: 9,091 points, all loaded
+instance_display: {fields: [{key: cloud, type: text}]}
+```
+
+Boxes come back in **metres in the sensor frame**, not normalized like image
+annotation: `{"center": [35.47, -7.58, -0.90], "size": [15.71, 1.46, 1.70],
+"rotation": [0, 0, 0, 1]}`.
+
 **`lod` defaults to `True`**, and that changes the meaning of the neighbouring
 keys: under LOD the cloud loads as an octree and `point_budget` /
 `max_loaded_nodes` govern what is in memory, while **`max_points` is used only
 when `lod: false`**. Setting `max_points` on a default config and expecting a cap
 does nothing at all. `mpr` and `slab_thickness` switch to slab views for
 medical-style data.
+
+`rollout_evaluation` puts several generated videos on one clock, with
+violations, preference and counterfactual layers. It is the one media widget
+that already reports its own shortfall ("0 of 3 panels answered, still to do: A,
+B, C"), so `required` on it means what it says. Its status line claims "3
+rollouts, 0.00 s" whatever the clips are, because the duration is only learned
+from the browser after that sentence is written; the clock and frame counter
+under the panels are right. Use WebM: the widget says so itself when handed MP4.
 
 `episode_annotation` is the embodied one: synchronized video streams plus
 time-series lanes. Its four `layers` (`phases`, `outcome`, `reward`,

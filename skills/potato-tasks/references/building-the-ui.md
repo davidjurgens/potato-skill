@@ -57,28 +57,28 @@ An unknown `type` fails validation with the valid list in the message.
 | `live_agent` | Live agent viewer with controls |
 | `live_coding_agent` | Live coding agent with intervention |
 
-`display_options` differ per type, and **nothing checks them**. A misspelled
-option passes `validate --strict` with "OK — no issues found" and then does
-nothing, so the page comes up wrong with no error anywhere. Validation covers the
-required fields and whether the type supports `span_target`; it never looks
-inside `display_options`.
+`display_options` differ per type, and from 2.8.2-11 a key the display does not
+accept is a validation error that names the alternatives:
 
-Worse, the obvious way to look an option up is missing some. `list_displays()`
-reports a table hardcoded in `registry.py`, and on 2.8.2 **14** of the 24 entries
-list fewer options than their renderer accepts: **44** options are missing
-between them, **15** of those on `pdf` alone, including `ocr` and `link_schema`.
-Ask the renderer class instead:
+```
+instance_display.fields[0].display_options.no_such_option is not an option for
+display type 'text', so it would be ignored silently. Accepted options:
+collapsed_by_default, collapsible, key, max_height, preserve_whitespace.
+```
+
+Before that release nothing looked inside `display_options` at all: a misspelled
+option passed `validate --strict` with "OK — no issues found" and the page came
+up wrong with no error anywhere. If your Potato predates it, spell-check these by
+hand — that is where an hour goes.
+
+To see what a display takes:
 
 ```python
 from potato.server_utils.displays.registry import display_registry
-entry = display_registry.get("multi_agent_discussion")
-sorted(getattr(entry, "renderer", entry).optional_fields)
-# ['collapse_environment', 'show_addressees', 'show_legend', 'show_turn_numbers',
-#  'speaker_key', 'text_key', 'thread_replies']
+[d for d in display_registry.list_displays() if d["name"] == "multi_agent_discussion"]
+# optional_fields: ['collapse_environment', 'show_addressees', 'show_legend',
+#  'show_turn_numbers', 'speaker_key', 'text_key', 'thread_replies']
 ```
-
-`list_displays()` names five of those seven. The two it omits are the two that
-decide whether the display can read your data at all.
 
 **A display that reads a list has its own idea of the field names.** The
 conversation and trace displays (`dialogue`, `multi_agent_discussion`,

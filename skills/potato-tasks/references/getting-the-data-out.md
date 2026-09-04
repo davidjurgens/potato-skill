@@ -36,6 +36,31 @@ not a download. On a host you cannot reach a shell on, `/admin/api/data/archive`
 streams the whole task directory as a gzipped tar instead. `deploying.md` has
 that path.
 
+**One scheme keeps its answers somewhere else.** `multi_document_event` writes
+the events themselves to `annotation_output/event_registry.json` — one registry
+for the whole study, not one file per annotator:
+
+```json
+{"events": {"evt_f6ec517d3154": {
+   "title": "Payments certificate outage",
+   "slot_values": {"service": "Payments API", "cause": "expired certificate"},
+   "member_doc_ids": ["r01"],
+   "evidence": [{"slot_name": "scope", "doc_id": "r01", "span_start": 0,
+                 "span_end": 30, "quoted_text": "Payments API returned 503s for",
+                 "created_by": "s4@x.com"}],
+   "created_by": "s4@x.com"}}}
+```
+
+Two consequences to decide about before you recruit. The per-annotator side is
+missing entirely: on 2.8.2-11 the input holding which events a document belongs
+to carries no `annotation-input` class, so `user_state.json` stays `{}` for that
+scheme and the export has nothing in it. The registry file is the whole dataset.
+The registry is also shared. Annotator 2 opens a document and sees annotator 1's
+events already attached to it, `member_doc_ids` records no attribution, and
+there is no second opinion to compute agreement from. Treat this as one
+collaborative pass rather than a replicated one, and back the file up the way
+you would back up `user_state.json`.
+
 **A bad format name is silent until it matters.** `export_annotation_format` is
 not checked at load, so `[csvv]` validates clean under `--strict`, boots clean,
 and produces one runtime warning after the first save — by which point nobody is

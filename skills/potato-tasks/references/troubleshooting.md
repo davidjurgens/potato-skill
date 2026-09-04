@@ -51,6 +51,10 @@ potato-annotation 2.7.0.
 | A shortcut does nothing and nothing warns | Two schemes claimed the same `key_value`; the second one loses silently | `potato preview` is the only reporter |
 | A canvas scheme renders an empty drawing area | No `instance_display` field of that media type. `source_field` names the data key, it does not fetch the media | Add the display field; expect the media to render twice |
 | The image appears twice on an image task | Correct behaviour: display field plus canvas copy | Hide the display copy with `base_css` if it bothers you |
+| `No point cloud for this item: the "X" field is empty` on a field that is not empty | `spatial_annotation` reads the path off the rendered page, and a display `label:` ends up in the same text node, which disqualifies it | Display the field with no `label:`, or make the cloud path the item's `text_key` |
+| A `region_caption` panel that never lists a region, or a `grounding_eval` whose only answer is "not present" | Neither draws; both need an `image_annotation` scheme beside them | Add the canvas scheme — `modalities.md` has it |
+| `+ New event` on `multi_document_event` does nothing, forever | No top-level `event_template:` block, so `/corpus/api/event` 404s. Nothing appears on the page | Add `event_template: {enabled: true, slots: [...]}` |
+| The waveform zoom buttons do nothing | `view.getZoom` does not exist in the bundled Peaks build; both audio and video widgets call it | Nothing to configure. *Fit* works; the rest is broken on 2.8.2-11 |
 | A free-text answer arrives as one cramped line | `text` defaults to `<input>` | `multiline: true` |
 | A labelled Likert renders as radio buttons | `Complex labels detected … using radio layout` | Cosmetic. The metric keys off `annotation_type`; check `kind` in `/admin/iaa` |
 | Whole phase pages render bold | Phase prose sits in a `<legend>`, weight 600 | `base_css` with `form.pure-display legend { font-weight: 400 }` |
@@ -83,6 +87,7 @@ potato-annotation 2.7.0.
 | `/admin/api/agreement` returns `experiment_col` TypeErrors for every scheme | Build bug, seen on a geometry task | Use `/admin/iaa` |
 | One annotator got fewer items than the others | Usually a quota set below the item count | Count annotators per item across **all** `user_state.json` files, not one |
 | Wiping `annotation_output/` changed nothing, and new annotators get "Thank You!" immediately | State is in memory; the wipe happened while the server was running | Stop, wipe, start |
+| A new annotator gets "Thank You!" on a server that was never wiped | `items x num_annotators_per_item` is used up, so there is no work to hand out | Raise `num_annotators_per_item`, or add items. No log line marks this |
 | A re-run of a browser driver lands on the sign-in page | Duplicate registration navigates to `/register`, which has no `switchTab()` | Use a fresh username per run |
 | `gold_standards.auto_promote: false` / `accuracy: 0.7` rejected | Both must be dictionaries despite being typed `boolean\|object` and `number\|object` | `{enabled: false}`, `{min_threshold: 0.7}` |
 | Annotations look wrong after a restart | Something hand-edited `output_annotation_dir` | Never edit it; the server rewrites those files whole |
