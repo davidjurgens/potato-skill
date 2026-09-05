@@ -259,6 +259,16 @@ rating scheme.
 annotators judge it as it happens; `agent_proxy` makes an agent the subject of
 annotation.
 
+`live_coding_agent` runs the agent's tool calls inside a container. Two defaults
+decide whether the session can do anything: `sandbox_image` is `python:3.12-slim`
+and `sandbox_network` is `none`. Together they mean the agent has whatever that
+image ships and no way to install more — asked to run the tests, it gets
+`pytest: not found` and an exit code of 127, and burns its turns looking for a
+runner. Build or name an image that already carries the tooling the task needs.
+`working_dir` is copied into a per-session workspace under `.potato-sandboxes/`,
+so the repository you point at is not the one the agent edits; check the copy,
+not the original, when you want to see what it did.
+
 `live_agent` drives a real browser, so it needs `playwright` and a browser
 installed (`pip install playwright && playwright install chromium`). Its
 `endpoint_type` takes `anthropic_vision`, `ollama_vision` or `openai_vision` —
