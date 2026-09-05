@@ -246,8 +246,18 @@ Twelve types accept it. Nine anchor spans by character offset in the standard
 way — into the PDF.js text layer, per cell, and per step. Setting `span_target`
 on anything else fails validation and the error lists what is allowed.
 
-With more than one span-target field, name the field on the scheme so spans
-land in the right place.
+**`target_field` is about schemes, not fields.** The field a span lands in comes
+from where the drag was, always: I put three span-target fields on one page with
+a single scheme naming none of them, and all three spans recorded against the
+right field with the right offsets. So you do not need it to make a span land
+correctly.
+
+What it does is say which field a scheme *owns*, which is how a drag is routed
+to the right scheme when several span schemes share a page. Name it when you
+have more than one span **scheme**, not when you have more than one span-target
+**field**. It does not restrict: a scheme pinned to one field still records
+elsewhere, deliberately, because the alternative is an author pinning their only
+scheme to one field and silently losing every drag in the others.
 
 **A geometry scheme finds its media in `instance_display` if it has to.**
 `image_annotation` looks at `text_key` first, then falls back to the rendered
