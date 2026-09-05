@@ -20,7 +20,7 @@ decides whether the items you care about ever reach three annotators.
 | Key | What it does | Default |
 |---|---|---|
 | `num_annotators_per_item` | Target annotators per item. **Set this one.** | 3 |
-| `min_annotators_per_instance` | Floor before an item counts as done | unset |
+| `min_annotators_per_instance` | **Nothing.** Reads as a floor, is never consulted | unset |
 | `max_annotations_per_item` | Hard cap per item; `-1` unlimited | -1 |
 | `max_annotations_per_user` | **Cap on dataset items per annotator**, unless `per_annotator_quota` overrides it | the item count |
 | `per_annotator_quota` | Per-annotator caps: `default`, `by_user`, `by_user_role`. Beats the key above | unset |
@@ -28,8 +28,15 @@ decides whether the items you care about ever reach three annotators.
 | `assignment_strategy` | Order items are handed out in | `fixed_order` |
 | `random_seed` | Makes the ordering reproducible | unset |
 
-Setting `num_annotators_per_item`, `min_annotators_per_instance` and
-`max_annotations_per_item` to the same number works and says you were unsure.
+Setting `num_annotators_per_item` and `max_annotations_per_item` to the same
+number works and says you were unsure.
+
+`min_annotators_per_instance` is stored at load and the stored value is read
+nowhere -- checked against Potato `be457e7b` -- so it neither raises nor lowers
+what anyone is served. A study setting it alongside `num_annotators_per_item`
+looks like it brackets coverage and does not. `num_annotators_per_item` is the
+enforced cap. (The key of the same name under `icl_labeling.example_selection`
+is a different setting, and that one is read.)
 
 #### `instance_per_annotator`
 

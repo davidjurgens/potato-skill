@@ -245,7 +245,7 @@ edges.
 | Key | Meaning |
 |---|---|
 | `num_annotators_per_item` | The target. Set this one. |
-| `min_annotators_per_instance` | The floor before an item counts as done |
+| `min_annotators_per_instance` | **Not read.** Looks like a floor, does nothing |
 | `max_annotations_per_item` | A hard cap; `-1` for unlimited |
 | `max_annotations_per_user` | How many dataset items **one annotator** is served. Defaults to all of them |
 
