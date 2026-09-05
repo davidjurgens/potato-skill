@@ -196,6 +196,70 @@ back to a study with nothing free, is handed items the *other* annotator now
 holds, and the log prints its "Enable instance_reclaim" advice even though
 `instance_reclaim` is enabled.
 
+## Giving cohorts different items and different questions
+
+`batch_assignment` pins named annotators to named items, and `scheme_sets` gives
+each cohort its own questions. They are usually wanted together.
+
+```yaml
+assignment_strategy: batch          # without this, the groups do not pick items
+
+annotation_schemes:
+  - annotation_type: radio
+    name: verdict
+    description: Is this acceptable?
+    labels: ["Yes", "No"]
+  - annotation_type: radio
+    name: severity
+    description: How severe?
+    labels: ["Low", "High"]
+
+scheme_sets:
+  quick:
+    - verdict
+  detailed:
+    - verdict
+    - severity
+
+batch_assignment:
+  groups:
+    - name: cohort_a
+      annotators: [alice, bob]
+      instances: ["1", "2", "3", "4"]
+      schemes: detailed
+    - name: cohort_b
+      annotators: [carol]
+      instances: ["5", "6", "7", "8"]
+      schemes: quick
+```
+
+Measured on that config: alice and bob were served items 1-4 with both questions,
+carol items 5-8 with only `verdict`.
+
+**`assignment_strategy: batch` is what makes the groups pick items.** Leave it
+out and the study still validates, still boots, and each cohort still gets its
+own questions -- but every annotator is served every item, because the group's
+item list is only consulted by the batch strategy. The working half is the
+problem: cohorts visibly getting different questions reads as proof the config
+took effect. On the same config without that one line, carol was served items 1
+through 5.
+
+A `schemes` binding is a `scheme_sets` name, a single scheme's `name`, or an
+inline list; anything else is refused at load. An annotator in no group falls
+back to the global `annotation_schemes` -- but only for questions. Under
+`assignment_strategy: batch` they are served **no items at all**, and get the
+no-work page telling them every item has its full complement of annotators.
+That is the wrong reason, and the log says the same: on an unlimited
+`num_annotators_per_item` it reports every item as already having as many
+annotators as it needs. If you use `batch_assignment` with a fixed roster,
+anybody who arrives outside it is turned away with a misleading explanation, so
+list every annotator you expect.
+
+The keys accept several spellings. `annotators` or `users`; `instances`, `items`
+or `instance_ids`; `instances_file`, `items_file`, `instance_ids_file`,
+`data_file`, `input_data_file` or `input_file` to read the ids from a file
+instead; `max_annotators`, `annotator_count` or `slots` for a per-group cap.
+
 ## Choosing the number of annotators
 
 | Situation | Number |
