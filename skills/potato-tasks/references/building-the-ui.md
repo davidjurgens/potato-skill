@@ -193,6 +193,12 @@ per line, so an offset of 145 counts the speaker labels and their separators
 too. Reconstruct that exact string before slicing a dialogue span, or read the
 span's `text` from the export instead of computing it.
 
+It follows that **a display option which changes the rendering changes the
+anchor**. Turning on `show_turn_numbers` puts a `[1] ` in front of every turn
+and moves every offset after it. Settle the display options for a span-target
+field before anyone annotates against it, and treat changing them afterwards the
+way you would treat editing the item text.
+
 **Several span schemes can share one field, and their spans are independent.**
 Two schemes anchored to the same `target_field` — one marking entities, one
 marking which sentence is first-hand — draw over each other on the page and are
@@ -224,6 +230,12 @@ Nine more work on every type:
 | `turn_level`, `turn_binding`, `turn_label` | Bind the scheme to conversation turns |
 
 Everything else is type-specific and listed in `annotation-types.md`.
+
+An `instance_display` field's own options — the ones `describe_display_type`
+lists as optional for that type — can be written flat on the field or nested
+under `display_options`, and the nested form wins when both are given. Only keys
+the type actually declares are picked up flat, so a misspelling is still
+silently ignored: check the rendered page, not the config.
 
 ### Quote `Yes` and `No` in a label list
 

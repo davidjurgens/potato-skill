@@ -456,6 +456,17 @@ class TestEveryIdentifierInProseIsReal:
         for _schema in schema_registry.list_schemas():
             vocab |= set(_schema["required_fields"])
             vocab |= set(_schema["optional_fields"])
+        # Every option any registered display declares. The scheme loop above
+        # does the same for annotation types; without this half a display
+        # option named in prose -- `show_turn_numbers`, `span_target`'s
+        # neighbours on a field -- has no registry behind it. Read off the
+        # DisplayDefinition rather than `list_displays()`, which under-reports
+        # (see the note at the top of this file).
+        for _name in display_registry.get_supported_types():
+            _defn = display_registry.get(_name)
+            for _attr in ("required_fields", "optional_fields"):
+                _fields = getattr(_defn, _attr, None) or ()
+                vocab |= set(_fields)
         # Export and import format names. `getting-the-data-out.md` routes a
         # downstream use to a format and `importing-existing-work.md` names the
         # readers, so both lists have to come from the registries -- a format
