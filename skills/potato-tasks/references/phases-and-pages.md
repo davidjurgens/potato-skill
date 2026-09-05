@@ -80,6 +80,17 @@ than once. Two `instructions` phases called `intro_a` and `intro_b` serve in tha
 order with a Previous button between them, which is the way to split long
 instructions across pages rather than one wall of text.
 
+**The exception is `annotation`: a second one is never served.** The annotation
+flow owns the item queue and ends the study when it is empty, so a study
+declaring `first_pass` and `second_pass` runs the first, reaches the last item
+and goes straight to the completion page — I drove three items and watched
+progress go 0/3, 1/3, 2/3, done, with the second phase's title never appearing.
+Since 2.8.2 `validate` warns and names both phases, and `--strict` refuses; the
+warning fires on the bare name `annotation` in `order` as well as on a named
+block, since `["annotation", "second_pass"]` is the same mistake spelled
+differently. For a second pass over the same items, look at adjudication or a
+second annotator instead.
+
 **Mapping form** — an `order` list plus one entry per phase, keyed by name:
 
 ```yaml
