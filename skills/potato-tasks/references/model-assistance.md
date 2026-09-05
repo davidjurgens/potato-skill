@@ -47,6 +47,22 @@ per-page, per-scheme alternative, keyed page number then annotation id.
 `base_url` makes `api_key` optional, on the validator as well as in the endpoint,
 so a local server needs no placeholder key.
 
+**One `ai_support` block serves every scheme, and each gets its own buttons and
+its own answer.** Three schemes on a page — a radio, a multiselect and a free
+text — gave three separate Hint/Keyword/Rationale rows, and each hint was about
+that scheme's question: the radio's discussed weighing the complaint against the
+resolution, the multiselect's walked its own five labels and said which phrases
+mapped to which, the text one described the summary it wanted. The suggestions
+landed on the right scheme too, highlighted with a sparkle — `Mixed` on the
+radio, and `Shipping`, `Build Quality` and `Support` but not `Battery` or
+`Price` on the multiselect. There is nothing per-scheme to configure.
+
+Two rough edges. On a narrow scheme the three buttons lose their labels and
+render as bare icons, so the same row reads differently depending on how wide
+its scheme box is. And the model's markdown is not rendered: a hint containing
+`**Identify the pain points:**` shows the asterisks. Ask for plain prose in the
+prompt if that matters to you.
+
 ### Keeping the endpoint out of the config
 
 `ai_support.ai_config_file` names a second YAML file, merged in at load. It is
