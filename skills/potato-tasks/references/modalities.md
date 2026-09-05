@@ -83,7 +83,17 @@ media_directory: media        # default; served at /media/<path>
   404s.
 
 Remote URLs work too, and are the right answer for a corpus you do not want in
-the bundle. `potato deploy` ships the whole task directory.
+the bundle. `potato deploy` ships the whole task directory. A `data:` URI in the
+field works as well, and is worth knowing about for a handful of small images
+you would rather not ship as files.
+
+A path that leaves `media_directory` fails in one of two ways, and only one of
+them tells you. `../outside/far.png` is refused by the traversal check and
+logged — `image path traversal blocked: ../outside/far.png` — so the log answers
+the question. An absolute filesystem path is not traversal, so it is handed to
+the browser as though it were a URL and 404s, with nothing written to the log.
+Both paint the same broken-image icon on the page, which is the only signal the
+annotator gets. Check the log before concluding the file is missing.
 
 ## Images and CV
 

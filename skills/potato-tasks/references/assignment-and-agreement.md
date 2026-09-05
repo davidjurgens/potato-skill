@@ -138,6 +138,26 @@ cosmetic one.
 three shapes, so `mode: scale` is scored continuous, `mode: multi_dimension` as a
 matrix, and the binary default as nominal. Read the kind out of the report.
 
+**`mean_matched_iou` averages over matched pairs, not over items.** A region one
+annotator drew and the other did not is not a zero in it; it is absent from it.
+Six matched pairs on a study where twelve of twenty regions never matched still
+reported 0.674, the mean of those six. That number answers "when both of them
+drew the same thing, how well did the boxes line up" and nothing else. What the
+disagreement about *whether* a thing is there costs you is in `detection_f1` and
+`mean_object_count_diff`; quote all three or none.
+
+**Region-caption agreement anchors on one annotator, so it is asymmetric.** The
+first annotator by sorted id defines the units, and everyone else is matched
+onto them at `match_iou`. Regions only the *second* annotator drew are never
+units and their captions are never counted, so `n_captions` is the anchor's
+captions plus one per match, not the number of captions in the data. Twelve
+anchor regions with six matches gave `n_captions: 18` over twenty stored
+captions. Swapping who annotates first changes the units, and the module says as
+much rather than hiding it. `agreement_distance` defaults to `token`, which
+scores a correct paraphrase as complete disagreement; `embedding` is the one
+that does not, and it falls back to `token` with a note in the report if
+`sentence-transformers` is missing.
+
 Consequences worth stating to a researcher up front:
 
 - **A 1–5 rating stored as a `radio` is scored as unordered**, so "1 vs 2" counts
