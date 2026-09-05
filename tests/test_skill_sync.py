@@ -82,6 +82,12 @@ PROSE_IDENTIFIERS = {
     # two levels deep, so `breakpoints.mobile` resolves and `mobile` alone does
     # not; config_module.py's layout entry is where both are declared
     "mobile", "tablet",
+    # The data key the `spreadsheet` display reads its column names from, named
+    # in prose in the note about {columns, rows}. Like the display_options
+    # below it lives in no registry -- the display types' data contracts are
+    # documented only in their own module docstrings
+    "headers",
+
     # `display_options` accepted by the `document` display, named in prose in the
     # note about what a string-valued document field does. The vocabulary is
     # built from the config-key registry and the schema/display type names, and

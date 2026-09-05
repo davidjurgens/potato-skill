@@ -280,6 +280,31 @@ generated and injected as `POTATO_SECRET_KEY` and `POTATO_ADMIN_API_KEY`
 environment variables at deploy time. Pass your own with `--env KEY=VALUE` and
 `--secret KEY=VALUE`.
 
+## Behind a reverse proxy
+
+"We'll put it at example.edu/annotate" is a request for a path prefix, and Flask
+has to be told about it or every asset URL comes out rooted at `/`. Two
+switches, both environment variables rather than config keys:
+
+```bash
+# the proxy sets headers (nginx: proxy_set_header X-Forwarded-Prefix /annotate)
+POTATO_PROXY_FIX=1 potato start config.yaml
+
+# the proxy cannot; name the prefix yourself
+POTATO_URL_PREFIX=/annotate potato start config.yaml
+```
+
+Both converge on the WSGI `SCRIPT_NAME`. `POTATO_PROXY_FIX` also reads
+`POTATO_PROXY_FIX_X_FOR`, `_X_PROTO`, `_X_HOST` and `_X_PREFIX`, for saying how
+many proxies deep the server sits. Potato's own
+`docs/deployment/reverse-proxy.md` is the upstream page.
+
+Driven on 2.8.2-26 behind a proxy mounting a task at `/annotate`: under either
+switch the annotation page renders styled and `url_prefix` reaches the page as
+`/annotate`. Walk the whole sign-in on the **proxied** URL before you hand it
+out, and do it in a browser: a prefix that reaches the stylesheet has not
+necessarily reached every form on the page.
+
 ## Before you expose anything
 
 The preflight will say all of this, but decide it before you type `up`:

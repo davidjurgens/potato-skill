@@ -14,7 +14,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `ai_budget` | object |  |  | Cost estimate and spend cap for AI actions. The complaint about commercial platforms is not the price but the surprise -- credits consumed by auto-labelling and discovered at export time |
 | `ai_support` | object |  |  | Model-backed label suggestions shown alongside each item |
 | `chat_support` | object |  |  | In-task chat with a model |
-| `icl_labeling` | object |  |  | In-context-learning labeler that builds few-shot prompts from high-confidence annotations already collected |
+| `icl_labeling` | object |  |  | In-context-learning labeler that builds few-shot prompts from high-confidence annotations already collected. Configured in four nested blocks, not as flat keys |
 
 ## Advanced Features
 

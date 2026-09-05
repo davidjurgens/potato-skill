@@ -2,11 +2,43 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 353 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 399 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
 Read this before configuring a block. Guessing a plausible sub-key name and running `potato validate --strict` works for most blocks, but not for the ones listed at the end, where a typo is silent.
+
+## `active_learning`
+
+Order items by model uncertainty
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `annotation_routing` | boolean | `False` | Route high-confidence predictions past the annotator instead of asking |
+| `bald_params` | object | `{'n_estimators': 5, 'bootstrap_fraction': 0.8}` | Ensemble size and bootstrap fraction for `query_strategy: bald` |
+| `calibrate_probabilities` | boolean | `True` | Calibrate the fitted model's probabilities, and keep the calibration only when it measurably helps |
+| `classifier` | object |  | The model that scores unlabeled items. `{name: ...}`, optionally with `hyperparameters`. `name` takes a short name (`logistic`, `random_forest`, `svm`) or a fully qualified import path such as `sklearn.linear_model.LogisticRegression` |
+| `classifier_params` | object |  | Extra keyword arguments passed to the classifier constructor |
+| `cold_start_strategy` | string | `random` | How items are ordered before the first fit: random or llm |
+| `confidence_method` | string |  | How an LLM's confidence is read: logprobs, verbalized or consistency |
+| `database` | object |  | Ignored. Run history is recorded through the project database and needs no configuration |
+| `enabled` | boolean | `False` | Turn active learning on. Also set `assignment_strategy: active_learning`, or nothing reorders |
+| `hybrid_weights` | object | `{'uncertainty': 0.7, 'diversity': 0.3}` | Weights for `query_strategy: hybrid`. Must sum to 1.0 |
+| `icl_ensemble_params` | object |  | How the ICL weight decays as real annotations accumulate |
+| `llm` | object |  | Use a model rather than a classifier for cold start and confidence: `{enabled, endpoint_url, model_name}` |
+| `max_instances_to_reorder` | integer |  | Cap on how many unlabeled items are ranked per pass. They are sampled, not taken from the head of the file |
+| `min_annotations_per_instance` | integer | `1` | How many annotations an item needs before it can be training data |
+| `min_instances_for_training` | integer | `10` | How many labeled items must exist before the first fit. Below this the cold-start strategy decides the order |
+| `model_persistence` | object |  | Save fitted models to disk: `{enabled, save_directory, retention_count}` |
+| `query_strategy` | string | `uncertainty` | What "informative" means: uncertainty, diversity, badge, bald or hybrid |
+| `random_sample_percent` | number | `0.2` | Fraction of each reordered batch left random, so the queue keeps exploring instead of only exploiting the model |
+| `resolution_strategy` | string | `majority_vote` | How several annotators' labels become one training label: majority_vote, first, or unanimous |
+| `routing_thresholds` | object |  | Confidence bounds for routing: `{auto_label_min_confidence, show_suggestion_below}` |
+| `schema_names` | array |  | Which schemes are learned. Defaults to every scheme with something learnable to predict |
+| `update_frequency` | integer | `5` | Retrain after this many new annotations |
+| `use_icl_ensemble` | boolean | `False` | Blend in-context-learning predictions into the ranking |
+| `vectorizer` | object |  | How items become features. `{name: ...}`, optionally with `hyperparameters`. `name` takes `tfidf`, `count` or `sentence-transformers`, or a fully qualified import path |
+| `vectorizer_params` | object |  | Extra keyword arguments passed to the vectorizer constructor. A YAML list for `ngram_range` is coerced to the tuple sklearn wants |
 
 ## `ai_budget`
 
@@ -376,6 +408,34 @@ Iterative best-worst scaling: re-generates tuples each round, concentrating comp
 | `seed` | integer |  | Seed for tuple generation |
 | `tuple_size` | integer |  | Items shown per comparison |
 | `tuples_per_item_per_round` | integer |  | How often each item is compared in one round |
+
+## `icl_labeling`
+
+In-context-learning labeler that builds few-shot prompts from high-confidence annotations already collected. Configured in four nested blocks, not as flat keys
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | boolean | `False` | Turn the labeler on |
+| `example_selection` | object |  | Which annotations become few-shot examples |
+| `example_selection.max_examples_per_schema` | integer | `10` | Cap on few-shot examples per scheme |
+| `example_selection.min_agreement_threshold` | number | `0.8` | How much annotators must agree before an item can be an example |
+| `example_selection.min_annotators_per_instance` | integer | `2` | How many annotators an item needs before it can be an example. The default of 2 makes the labeler inert on a study with `num_annotators_per_item: 1` -- no item can ever qualify |
+| `example_selection.refresh_interval_seconds` | integer | `300` | How often the example set is rebuilt from new annotations |
+| `llm_labeling` | object |  | When and how much the model labels |
+| `llm_labeling.batch_interval_seconds` | integer | `600` | Minimum wait between batches |
+| `llm_labeling.batch_size` | integer | `20` | Instances per labeling batch |
+| `llm_labeling.confidence_threshold` | number | `0.7` | Predictions below this are not kept |
+| `llm_labeling.max_total_labels` | integer |  | Hard cap on how many instances the model may label in total |
+| `llm_labeling.max_unlabeled_ratio` | number | `0.5` | Largest share of the unlabeled pool the model may take |
+| `llm_labeling.min_accuracy_threshold` | number | `0.7` | The accuracy below which labeling pauses |
+| `llm_labeling.pause_on_low_accuracy` | boolean | `True` | Stop labeling when verification says the model is wrong too often |
+| `llm_labeling.trigger_threshold` | integer | `5` | New annotations needed before a batch runs |
+| `persistence` | object |  | Where predictions are written |
+| `persistence.predictions_file` | string | `icl_predictions.json` | Filename for the stored predictions, under the output directory |
+| `verification` | object |  | Blind human checking of the model's labels |
+| `verification.enabled` | boolean | `True` | Route a sample of model labels to annotators |
+| `verification.sample_rate` | number | `0.2` | Share of model-labeled instances sent for checking |
+| `verification.selection_strategy` | string | `low_confidence` | Which of them to check: low_confidence or random |
 
 ## `item_properties`
 
@@ -759,7 +819,6 @@ Post task events to external URLs as they happen
 - `dataset_metadata.*`
 - `embeddings.*`
 - `huggingface_backup.*`
-- `icl_labeling.*`
 - `instance_reclaim.*`
 - `keyword_highlight_settings.*`
 - `live_agent.*`

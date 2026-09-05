@@ -89,6 +89,16 @@ grey "U" avatar with no name, no colour and no legend, while the annotation
 schemes above and below it read the same list correctly, because those take
 `agent_key`. Set `speaker_key: agent` and the page is right. Nothing warns.
 
+**`spreadsheet` reads `headers`, not `columns`.** Give it either
+`{headers: [...], rows: [[...]]}` or a plain list of row dicts, in which case
+the headers come from the first row's keys. A `{columns, rows}` dict renders the
+rows with no header row, and `show_headers: true` has nothing to act on.
+
+**`pairwise` takes its labels from `display_options`, not from the item.**
+`labels: ["Shift supervisor", "Automated report"]` names the two cells for the
+whole study; a `label` carried inside the data is ignored and the cells read "A"
+and "B". The data itself is `{left: ..., right: ...}` or a two-element list.
+
 **`pairwise` sits side by side at its defaults** from Potato 2.8.2: `cell_width`
 defaults to `auto`, which splits the row evenly and subtracts each cell's share
 of the gap. Measured at 1280px, both cells 398px wide on the same line.

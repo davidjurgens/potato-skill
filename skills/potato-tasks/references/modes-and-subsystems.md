@@ -127,6 +127,54 @@ agent traces are their own family, in `agent-traces.md`.
 | "people abandon assignments" | `instance_reclaim` |
 | "let annotators see their own progress" | `annotator_dashboard` |
 
+### The `when` grammar
+
+`triage.rules`, `automation.rules` and `review_workflow.routing` all filter with
+the same `when` condition, evaluated against the item's data dict:
+
+```yaml
+triage:
+  enabled: true
+  rules:
+    - when: {field: status, equals: error}
+      priority: 100
+      badge: "agent errored"
+    - when: {field: metadata.score, lt: 0.5}
+      priority: 60
+  signal_field: judge_score      # read when no rule matched
+  invert_signal: true            # lower is worse
+```
+
+One condition takes `field` plus exactly one operator: `equals`, `in`,
+`contains`, `exists`, `lt`, `lte`, `gt`, `gte`. Field paths may be dotted
+(`metadata.score`). String comparison for `equals` and `in` is
+case-insensitive; `contains` tests membership in a list field or a substring of
+a string one; a field the item does not carry never matches anything but
+`exists: false`. `when` also accepts a list of conditions, all of which must
+hold.
+
+`automation` rules add `sample_rate` (0–1, hashed on item id so the decision is
+stable) and `actions`, which are dicts rather than names:
+
+```yaml
+automation:
+  enabled: true
+  rules:
+    - name: "Route errors to review"
+      when: {field: status, equals: error}
+      sample_rate: 1.0
+      actions:
+        - {type: add_to_queue, priority: 200, reason: "agent errored"}
+        - {type: add_to_dataset, dataset: errors-to-fix}
+        - {type: notify, message: "New error trace"}
+```
+
+The seven action types are `add_to_queue`, `add_to_dataset`, `notify`,
+`enroll_review`, `run_evaluator`, `fire_webhook` and `refresh_topics`; the last
+three run on a background worker. `add_to_dataset` needs `datasets` enabled.
+`/admin/automation/status` reports `items_processed`, `rules_fired` and a count
+per action, which is how you find out whether a rule ever matched.
+
 ## What "enabling" a block costs
 
 Most blocks activate on `enabled: true` and nothing else. Two in this list refuse
@@ -161,7 +209,7 @@ annotation page, so tell the researcher they exist:
 | `/sessions` | `sessions` |
 | `/rooms` | `rooms` |
 | `/corpus` | `corpus_map` |
-| `/datasets` | `datasets` |
+| `/datasets/admin` | `datasets` (`/datasets` itself is not a route) |
 | `/pocket` | `pocket` (phones auto-route here) |
 | `/adjudicate` | `adjudication` |
 | `/admin/review` | `review_workflow` |
@@ -169,6 +217,9 @@ annotation page, so tell the researcher they exist:
 | `/psychometrics/dashboard` | `psychometrics` |
 | `/truth_serum/dashboard` | `truth_serum` |
 | a MACE tab inside `/admin` | `mace` (`/admin/api/mace/overview` for the JSON) |
+| `/admin/automation` | `automation`; `/status` and `/outcomes` beside it return JSON |
+| `/judge_calibration/admin` | `judge_calibration`; `/status`, `/progress`, `/run`, `/report` beside it |
+| `/api/mcp/manifest` | `mcp`, once an agent token exists |
 | `/admin/...` | agreement, exports, progress — always present |
 
 **`/admin` is the only admin page a browser can open cold.** It presents a key

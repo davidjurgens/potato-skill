@@ -144,6 +144,22 @@ the trace above them. Set `speaker_key: agent` in `display_options`. (`list_disp
 the option existed until 2.8.2-11; on an older checkout, read it off the
 renderer class.)
 
+**`eval_trace`'s third pane needs an answer-shaped speaker.** The Final Answer
+pane matches a step whose speaker or tool name reads like an answer — `final
+answer`, `send_message`, `respond`, `response`, `finish`, `submit`, `conclusion`
+— and otherwise falls back to the last action in the trace. A step whose speaker
+is the obvious `final` matches none of those, so the pane shows the last tool
+call and the agent's real answer is rendered as an observation hanging off it.
+Name the last step `Agent (Final Answer)` or similar.
+
+**`process_reward` needs `step_text_key` when the steps are dicts.** Pair it
+with `cot_segmentation` — the intended pairing, and what
+`examples/agent-traces/cot-process-reward/config.yaml` ships — and each step is
+a dict of `{index, text, type, char_start, char_end}`. Set `step_text_key: text`
+and the widget shows the prose; leave it at its default and the annotator is
+asked to judge the serialized dict. `cot_segmentation` also stamps every step it
+makes `type: observation`, which is what the `cot_trace` display badges them.
+
 **A linked act saves without its link.** In `consensus_tracking` and
 `context_attribution`, an act named in `linked_acts` asks for a second click on
 the turn it refers to. Skip that click and the act is stored with no `ref`, Next

@@ -82,10 +82,17 @@ annotators work. Pair with `automation` (rules over incoming items) and `triage`
 media_directory: media      # default; served at /media/
 ```
 
-Put images, audio and video under it and reference them by relative path from a
-data field. Without an `instance_display` field of the right type, that path
-renders as **text** — the classic "the item shows a file path instead of an
-image". See `building-the-ui.md` for the display types.
+Put images, audio and video under it, and write the path **including the
+directory** in the data field: `media/photo.png`, not `photo.png`. The displays
+emit the field value as the URL; only `depth_map` prepends the directory itself,
+so a bare filename resolves against the site root and 404s. Measured across one
+page on 2.8.2-26: `image`, `gallery`, `video`, `audio`, `pdf`,
+`audio_dialogue` and `web_agent_trace` all need the prefix in the data, and all
+of them except `pdf` fail without a word on the page.
+
+Without an `instance_display` field of the right type, that path renders as
+**text** — the classic "the item shows a file path instead of an image". See
+`building-the-ui.md` for the display types.
 
 ### Big corpora
 
@@ -159,7 +166,17 @@ worker id and the annotator never sees a login screen. Pair it with
 
 The login page has two tabs, `login` and `register`, in one document — if you are
 driving it in a browser, switch with `switchTab('register')` before filling the
-register form.
+register form. Both forms post `action` (`login` or `register`), `email` and
+`pass`; the fields are `#login-email`/`#login-pass` and
+`#register-email`/`#register-pass`.
+
+**The default authenticator keeps accounts in memory.** The boot log names the
+one you have: `Initialized UserAuthenticator with method: in_memory`. That
+method has no store behind it, so a username is only as durable as the process.
+`authentication` is the block that gives database-backed or SSO accounts;
+`secret_key` and `persist_sessions` cover the Flask session, which is a
+different thing. Decide this before you recruit rather than after the first
+restart.
 
 ## Serving it
 
