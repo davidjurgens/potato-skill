@@ -57,11 +57,18 @@ landed on the right scheme too, highlighted with a sparkle — `Mixed` on the
 radio, and `Shipping`, `Build Quality` and `Support` but not `Battery` or
 `Price` on the multiselect. There is nothing per-scheme to configure.
 
-Two rough edges. On a narrow scheme the three buttons lose their labels and
+**The model's output is escaped before it reaches the page**, which matters
+because a hint is generated *from* the item: markup in your corpus comes back
+through the model. I put `<b>` and `<img>` in an item's text and the hint panel
+rendered neither — 607 characters of hint, no elements the renderer did not
+create. The same holds for the rationale panel. Markdown in the output is
+rendered rather than shown as asterisks; I have driven the escaping half against
+a live model and taken the markdown half from the fix, because the model did not
+happen to emit any on the runs I made.
+
+One rough edge left: on a narrow scheme the three buttons lose their labels and
 render as bare icons, so the same row reads differently depending on how wide
-its scheme box is. And the model's markdown is not rendered: a hint containing
-`**Identify the pain points:**` shows the asterisks. Ask for plain prose in the
-prompt if that matters to you.
+its scheme box is.
 
 ### Keeping the endpoint out of the config
 
