@@ -65,6 +65,13 @@ watch_data_directory: true      # rescan while running and pick up new files
 watch_poll_interval: 5.0
 ```
 
+It reads `.json`, `.jsonl`, `.csv` and `.tsv`, and skips everything else without
+comment. A directory of `.md` or `.txt` files loads nothing, and the only sign is
+`Loaded 0 instances from data_directory: ./incoming` at INFO in the boot log —
+the config validates, the server starts, and the first annotator gets an empty
+study. Count the instances in the log before handing out the URL. This is also
+not the way to get documents into a `document` field; see `building-the-ui.md`.
+
 ### Remote and live sources
 
 ```yaml

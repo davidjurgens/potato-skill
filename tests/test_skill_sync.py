@@ -213,6 +213,10 @@ PROSE_IDENTIFIERS = {
     # the key /api/keyword_highlights returns naming which fields it scanned --
     # a response field, so it is in no config registry
     "fields_scanned",
+    # the three values display_options.style_theme accepts on a `document`
+    # field. Enum values rather than keys, so iter_key_docs does not carry
+    # them; the validator names all three when it refuses a fourth
+    "minimal", "print",
 }
 
 

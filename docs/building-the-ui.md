@@ -127,12 +127,18 @@ an older build, set it under half:
 **`document` expects a file that Potato ingested, not a field in your JSON.** The
 renderer reads `{rendered_html, metadata, text}` produced by the format pipeline
 (`data_directory`, `format_handling`). Point it at a plain string and that string
-is emitted as the field's HTML: Markdown is not rendered, `**Speaker:**` shows
-its asterisks, the content keeps the browser's default whitespace collapsing so
-paragraph breaks disappear, and `preserve_structure` and `show_outline` have
-nothing to act on — of the three, only `style_theme` reaches the DOM, as a
-`document-theme-<value>` class. It is a working span target either way. For a
-transcript you are shipping in a data file, `text` is the display you want.
+is emitted as the field's HTML: Markdown is not rendered and `**Speaker:**` shows
+its asterisks, which setting `format_handling: {enabled: true, default_format:
+markdown}` does not change — that block renders markup in a field the pipeline
+already produced, not a raw string you supplied. Paragraph breaks do survive: the
+wrapper carries `document-preserve-structure` and `white-space: pre-wrap`
+whatever you set, so `preserve_structure` is a no-op because it is always on
+rather than because there is nothing to act on. `show_outline` draws nothing.
+`style_theme` reaches the DOM as a `document-theme-<value>` class and takes
+`minimal` or `print` besides the default; a fourth value is refused at boot with
+all three named. It is a working span target either way, and
+spans anchor to the raw field value, newlines included. For a transcript you are
+shipping in a data file, `text` is the display you want.
 
 ### Geometry schemes need a display field for their media
 
