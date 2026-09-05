@@ -118,10 +118,12 @@ CASES = [
 #: `pairwise` gets its own boot rather than a slot in CASES, because its items
 #: replace the whole item display rather than sitting in a scheme box, and a
 #: sentinel shared with a neighbouring widget could not tell which one rendered
-#: it. Isolation is also what this case is for: at 5fecc94b `items_key` really
-#: was dead on a page carrying nothing else, because the global it reads is only
-#: assigned by the dynamic-schema populator, which returns early when no dynamic
-#: scheme is present. A co-located page hid that.
+#: it. Isolation is also what this case is for. At 5fecc94b `items_key` was dead
+#: on a page carrying nothing else: the global it read was only ever assigned by
+#: the dynamic-schema populator, which returns early when the page has no dynamic
+#: scheme. A co-located page hid that, and so did a run against a checkout where
+#: the fix had already landed -- which is why the provenance line exists.
+#: Fixed in Potato 0a85a017; this is the regression test.
 PAIRWISE_CASE = {
     "id": "pairwise-items_key",
     "sentinel": "SENTINEL_PAIR",
@@ -307,16 +309,6 @@ class TestConfiguredFieldKeysReachThePage:
         assert "Potato at " in rendered["potato"]
         print("\n" + rendered["potato"])
 
-    @pytest.mark.xfail(
-        reason="POTATO-BUGS-audit-25.txt finding 2, filed and being fixed. At "
-               "5fecc94b the only assignment to window.currentInstanceData "
-               "(annotation.js:6013) sits inside populateDynamicSchemaContent, "
-               "which returns at :5969 when the page has no dynamic-schema "
-               "container -- so a pairwise-only page can never reach it. "
-               "Non-strict so it reports XPASS the moment the fix lands; make "
-               "it a hard assertion then.",
-        strict=False,
-    )
     def test_pairwise_renders_its_items_key(self, rendered_pairwise):
         assert PAIRWISE_CASE["sentinel"] in rendered_pairwise["text"], (
             PAIRWISE_CASE["claim"] + "\n\n"
