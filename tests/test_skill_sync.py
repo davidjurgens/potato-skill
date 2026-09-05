@@ -210,6 +210,9 @@ PROSE_IDENTIFIERS = {
     # the field list_examples returns for each example, named in SKILL.md
     # because get_example wants that value under a differently-named parameter
     "dir",
+    # the key /api/keyword_highlights returns naming which fields it scanned --
+    # a response field, so it is in no config registry
+    "fields_scanned",
 }
 
 

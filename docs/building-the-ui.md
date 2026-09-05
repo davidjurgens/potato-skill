@@ -647,6 +647,12 @@ past two screens is worth restructuring.
 | `layout` | The form grid and groups — see *Arranging the questions* above |
 | `hide_navbar` | Hide the top bar |
 | `jumping_to_id_disabled` | Remove the jump-to-item control |
+
+The navbar's two arrows are **previous and next _unannotated_**, not previous
+and next. On a stretch the annotator has already answered they do nothing and
+say nothing, which reads as a dead button; the jump-to-item box beside them is
+how you get back to an item that is already done. `jumping_to_id_disabled`
+removes that box and with it the only way back.
 | `horizontal_key_bindings` | Lay shortcut hints out horizontally |
 | `highlight_linebreaks` | Make line breaks visible in item text |
 | `keyword_highlights_file` | Highlight given keywords in the item |
@@ -672,11 +678,11 @@ of word characters. The boot log names the shape it read and the count —
 `Loaded 3 keyword highlight patterns from … (read as delimited with a header
 (keyword, label, color))` — so read that line rather than the page.
 
-**Keyword highlighting covers one field.** Whatever `item_properties.text_key`
-names is scanned and nothing else, however many fields carry `span_target`. On a
-task whose conversation is in a `dialogue` field and whose summary is the
-`text_key`, the summary is highlighted and the conversation is not. Check
-`/api/keyword_highlights/<instance_id>`: it names the field it scanned.
+**Keyword highlighting covers `text_key` plus every field with
+`span_target: true`**, and nothing else — a field with no span target has
+nowhere to draw. Each match carries its own `target_field`, and
+`/api/keyword_highlights/<instance_id>` reports `fields_scanned`, which is the
+way to check that the field you care about was one of them.
 
 **`list_as_text` takes three sub-keys**: `text_list_prefix_type` (`alphabet`,
 `number`, `bullet` or `none`), `horizontal`, and `alternating_shading`. A bare
