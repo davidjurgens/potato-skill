@@ -103,21 +103,87 @@ print(sorted(c.items()))          # every real item should hit num_annotators_pe
 
 ## More annotators than work
 
-`num_annotators_per_item` times the item count is a hard ceiling on how much
-work exists. Once it is used up, the next person to register lands on:
+`num_annotators_per_item` times the item count is the ceiling on how much work
+exists. Once it is used up, the next person to register gets a page of its own:
 
-> **Thank You!**
-> You have completed the annotation task and your responses are saved.
+> **There is no work left for you**
+>
+> Every item in this study already has as many annotators as it needs, so
+> nothing could be assigned to you. You have not annotated anything, and nothing
+> has been recorded against your account.
+>
+> If you were asked to take part, tell whoever sent you the link -- they can
+> raise the number of annotators per item or add more data.
 
-They annotated nothing. No `annotation_output/<user>/` directory is created and
-nothing lands in the log, so from the outside this is indistinguishable from an
-annotator who finished. Three items at `num_annotators_per_item: 1` does it to
-the fourth person through the door. On a pilot that person is usually you, with
-a fresh login, and it reads as "the study is broken".
+It offers a **Check again** button, and says that reloading will give them work
+if more data arrives, which is true of a dynamic data source. The log carries a
+matching warning naming the cause and the fix:
+
+```
+No items could be assigned to carol: every item already has its full complement
+of annotators (num_annotators_per_item=1). Showing the no-work page rather than
+the completion page. Raise num_annotators_per_item or add data to give them work.
+```
+
+No `annotation_output/<user>/` directory is created for them. Three items at
+`num_annotators_per_item: 1` does this to the fourth person through the door,
+and on a pilot that person is usually you with a fresh login.
 
 Before recruiting, multiply: `items x num_annotators_per_item` is the number of
 annotator-items you have to hand out, and `max_annotations_per_user` divides it
 into people.
+
+### Holds and annotations
+
+An annotator who is *given* an item holds it, and the hold counts against the
+item's cap so that people spread out across the corpus instead of piling onto
+its first item. A hold is not a submission, though, and somebody who takes items
+and closes the tab would otherwise strand them. So when the cap would send an
+arriving annotator away with nothing, Potato relaxes it and hands out items that
+another annotator holds but has not submitted, logging:
+
+```
+Assigned 4 item(s) to bob that another annotator holds but has not submitted.
+Enable instance_reclaim to hand those back automatically instead.
+```
+
+**This means an over-subscribed study can collect more annotations per item than
+`num_annotators_per_item`, and nothing warns.** Measured on 4 items at
+`num_annotators_per_item: 1`, with no per-user cap: the first annotator was
+given all four and submitted nothing, the second was given the same four, and
+when both then answered item 1 it ended up with two annotations under a cap of
+one. If you pay per judgement, that is real money, and an agreement number
+computed over it is not the design you configured.
+
+Size the pool and it does not happen. The same study at 8 items with
+`max_annotations_per_user: 4` gave the first annotator items 1-4 and the second
+items 5-8, no overlap, and the relaxation never fired. The rule is the same
+multiplication as above: keep `annotators x their quota` at or under
+`items x num_annotators_per_item`.
+
+### Taking abandoned items back
+
+`instance_reclaim` is the machinery the log line points at, and it is off by
+default:
+
+```yaml
+instance_reclaim:
+  enabled: true
+  timeout_hours: 0.001    # fractional hours are fine; this is 3.6 seconds
+```
+
+An annotator who was given items and never submitted loses them after
+`timeout_hours`, and they go back into the pool. Items they *did* annotate are
+never reclaimed. Measured with two annotators over 4 items: the second one's
+arrival reclaimed all four from the first, and the log named each one.
+
+Two things to know before relying on it. It runs **when somebody asks for an
+assignment**, not on a timer -- it is called from the assignment pass, so on a
+quiet study nothing is reclaimed until the next annotator arrives. And it does
+not stop the relaxation above: an annotator whose items were reclaimed, arriving
+back to a study with nothing free, is handed items the *other* annotator now
+holds, and the log prints its "Enable instance_reclaim" advice even though
+`instance_reclaim` is enabled.
 
 ## Choosing the number of annotators
 
