@@ -86,6 +86,11 @@ method"). Screening is a `prestudy` *phase*, not the `prestudy` block.
 
 ## Two ways to write it
 
+The names in `order` are yours, not the type names, so a type can appear more
+than once. Two `instructions` phases called `intro_a` and `intro_b` serve in that
+order with a Previous button between them, which is the way to split long
+instructions across pages rather than one wall of text.
+
 **Mapping form** — an `order` list plus one entry per phase, keyed by name:
 
 ```yaml

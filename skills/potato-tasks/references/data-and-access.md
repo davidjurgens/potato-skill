@@ -17,6 +17,23 @@ item_properties:
 one object per line. Every object needs the fields named by `id_key` and
 `text_key`.
 
+Several files merge in the order listed, and they do not have to carry the same
+fields — I loaded a three-item file and a two-item file whose objects had
+different extra keys and got five instances, the first file's items first. But
+**an id repeated across files stops the server dead**, and `validate` does not
+see it coming:
+
+```
+$ potato validate config.yaml --strict   -> OK — no issues found.
+$ potato start config.yaml               -> ValueError: Duplicate instance ID
+                                            'SHARED' found at item 2
+```
+
+Failing rather than silently keeping one of the two is the right call, and the
+message names the id. Worth knowing before you split a corpus across files,
+because it is the one data problem that passes validation and then refuses to
+boot.
+
 | Key | Effect |
 |---|---|
 | `item_properties.id_key` | Field holding the unique identifier |
