@@ -185,9 +185,17 @@ def _browser_available() -> bool:
     return True
 
 
+#: Carried by the item under a key no scheme names. If this reaches the page,
+#: something is dumping the raw item and every assertion above it passes
+#: vacuously -- a sentinel would show up whether or not any widget read its key.
+#: The positive cases only mean something while this one holds.
+UNREAD_SENTINEL = "SENTINEL_UNREAD"
+
+
 def _write_study(work_dir: Path, cases, port: int) -> None:
     """One item carrying every case's fields, one scheme per case."""
-    item = {"id": "G1", "text": "SENTINEL_TEXTKEY the default text field."}
+    item = {"id": "G1", "text": "SENTINEL_TEXTKEY the default text field.",
+            "guard_unread": UNREAD_SENTINEL + " under a key nothing names."}
     for case in cases:
         item.update(case["item"])
 
@@ -298,6 +306,15 @@ class TestConfiguredFieldKeysReachThePage:
             f"renders empty. Nothing in the log says so.\n\n"
             + rendered["potato"] + "\n\n"
             + "\n".join(rendered["log"].splitlines()[-15:]))
+
+    def test_an_unnamed_field_does_not_reach_the_page(self, rendered):
+        """Without this, every assertion above could pass without a widget."""
+        assert UNREAD_SENTINEL not in rendered["text"], (
+            "the item's `guard_unread` field is on the page, and no scheme "
+            "names it. Something renders the raw item, so a sentinel arriving "
+            "on screen no longer shows that any widget read the key the config "
+            "points at -- the positive cases in this file are vacuous until "
+            "this is understood.\n\n" + rendered["potato"])
 
     def test_nothing_raised_while_rendering(self, rendered):
         errors = [line for line in rendered["log"].splitlines()
