@@ -61,7 +61,9 @@ and picking the wrong one gives you an empty widget with nothing in the log.
 | `video_path` | the `video` *scheme*, which is not the `video` display type |
 | `target_field` | `span` |
 | `source_field` | `error_span` — name the field holding the text to mark, or it falls back to `text_key` |
-| *(none — reads the item's `text_key`)* | the rest of the dynamic family: `extractive_qa`, `text_edit`, `card_sort`, `conjoint` |
+| `question_field`, `passage_field` | `extractive_qa` |
+| `items_field` | `card_sort` |
+| `profiles_field` | `conjoint` |
 | `span_schema` | `coreference`, `event_annotation`, `span_link` |
 
 Check before you write it:
