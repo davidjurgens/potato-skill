@@ -84,15 +84,18 @@ from potato.server_utils.displays.registry import display_registry
 conversation and trace displays (`dialogue`, `multi_agent_discussion`,
 `agent_trace`, `cot_trace`, `eval_trace`) take `speaker_key` and `text_key`,
 defaulting to `speaker` and `text`; `gallery` takes `url_key` and `caption_key`.
-Point one at turns shaped `{index, agent, text}` and every turn renders under a
-grey "U" avatar with no name, no colour and no legend, while the annotation
-schemes above and below it read the same list correctly, because those take
-`agent_key`. Set `speaker_key: agent` and the page is right. Nothing warns.
+Point one at turns shaped `{index, agent, text}` and the turns render with no
+speaker at all — just the text, in a `dialogue-turn` div with an empty
+`speaker-0` class and no name anywhere — while the annotation schemes above and
+below it read the same list correctly, because those take `agent_key`. Set
+`speaker_key: agent` and the names appear, with a colour per speaker. Nothing
+warns, and a reader skimming the page sees a conversation rather than an error.
 
-**`spreadsheet` reads `headers`, not `columns`.** Give it either
-`{headers: [...], rows: [[...]]}` or a plain list of row dicts, in which case
-the headers come from the first row's keys. A `{columns, rows}` dict renders the
-rows with no header row, and `show_headers: true` has nothing to act on.
+**`spreadsheet` takes `headers` or `columns`, and both work.** Give it
+`{headers: [...], rows: [[...]]}`, `{columns: [...], rows: [[...]]}`, or a plain
+list of row dicts, in which case the headers come from the first row's keys. I
+put the first two side by side on one page and they render identically, header
+row included.
 
 **`pairwise` takes its labels from `display_options`, not from the item.**
 `labels: ["Shift supervisor", "Automated report"]` names the two cells for the
