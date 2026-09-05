@@ -197,6 +197,13 @@ a point is `landmark`, and the button it renders says "Point" — so
 real tool names listed. A mask comes from `brush`, `fill` or `sam` rather than
 from a tool called `mask`.
 
+**A painted mask keeps the image's own resolution, not the canvas's.** The
+buffer behind a `brush` stroke is tiled at the source image's native size, so
+zooming, fitting or resizing the drawing surface does not move a stored mask. I
+painted one stroke on a 640x400 image and got the same bounding box, to the
+pixel, from the painted canvas, the in-memory buffer, the persisted annotation,
+`mask_png` and `coco`.
+
 `grounding_eval` also distinguishes three states per expression — answered with
 a region, answered as *absent*, and not answered — because "no region" otherwise
 conflates "there is no referent" with "I did not get to this one", and those

@@ -90,6 +90,14 @@ descriptions against the running server; `potato preview` does not.
 | The single resolved label per item, after adjudication | `adjudication` |
 | It published | `huggingface` (see `publish` in `modes-and-subsystems.md`) |
 
+**Take masks from an export, not from `user_state.json`.** The stored form is
+an internal one: the mask lives in a `_data` label as a JSON string whose `rle`
+is row-major with `size` as `[height, width]`. COCO's RLE is column-major, so
+reading the raw file with pycocotools conventions gives a transposed mask that
+looks plausible and is wrong — a stroke of mine came back at [289,0,321,399]
+instead of [390,180,473,200]. The `coco` exporter does the conversion, so
+`annToMask` on its output is correct.
+
 The vision and linguistics formats are the reason to ask early: a researcher who
 says "we'll train a detector on this" wants `coco` or `yolo`, and a task designed
 without that in mind can produce geometry that does not survive the conversion.
