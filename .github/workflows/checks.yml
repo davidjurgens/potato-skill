@@ -36,6 +36,9 @@ jobs:
           # server rather than the fallback.
           pip install -e './potato[mcp]'
           pip install -r requirements-dev.txt
+          # The render guard boots a page and reads it. Without a browser it
+          # skips, and a guard that always skips is not a guard.
+          python -m playwright install --with-deps chromium
 
       - name: The generated references are current
         env:
