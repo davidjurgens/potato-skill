@@ -172,7 +172,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
-| `agent_proxy` | object |  |  | Run an agent as the subject of annotation. This block only configures the backend -- to put the chat on the page, add an `instance_display` field of `type: interactive_chat`, which renders the panel the annotator talks to. Set `enabled: false` to turn it off without deleting the block |
+| `agent_proxy` | object |  |  | Run an agent as the subject of annotation. This block only configures the backend -- to put the chat on the page, add an `instance_display` field of `type: interactive_chat`, which renders the panel the annotator talks to. Connection settings (api_key, base_url, model) may be written directly in the block or under `ai_config` inside it, as the other model-backed blocks take them; a `base_url` pointing at an OpenAI-compatible server needs no key. Set `enabled: false` to turn it off without deleting the block |
 | `crowdsourcing` | object |  |  | Crowd platform integration (Prolific, MTurk and others) |
 | `database` | object |  |  | Database connection for item or user storage |
 | `huggingface_backup` | object |  |  | Mirror the annotation directory to a Hugging Face dataset repo on a schedule. Needs `enabled` and `repo_id`; the token comes from `token` (env substitution is applied) or HF_TOKEN, and `schedule_minutes` sets the cadence. A misconfiguration logs an error and lets the server run |
