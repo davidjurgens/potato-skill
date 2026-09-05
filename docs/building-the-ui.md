@@ -308,6 +308,13 @@ Three keys are required on every scheme regardless of type: `annotation_type`,
 `name`, `description`. `description` is the question text the annotator reads,
 so write it as a question.
 
+**`name` is the storage key, so it has to be unique within the phase.** Since
+2.8.2 two schemes sharing a name are refused, and the message says why: they also
+share one HTML input group, so answering the second clears the first and only one
+answer is saved. It applies across types: a `radio` and a `multiselect` sharing one name collide
+the same way, because the collision is the key rather than the widget. Names differing only in case are two names, and the same name on a phase
+page and in the annotation phase is fine, since those store separately.
+
 Nine more work on every type:
 
 | Key | Effect |
