@@ -681,7 +681,10 @@ Prefer them over reading the references when the server is connected —
 `describe_annotation_type` returns the required and optional fields for one type,
 which is the question the references are usually opened to answer.
 `render_task_screenshot` hands back the rendered page as an image with browser
-errors attached; it is still one page, and still the viewport.
+errors attached; it is still one page, and still the viewport. One join to know:
+`list_examples` returns each example's `dir`, and `get_example` takes that value
+under a parameter called `name` — the basename and the task name are both
+refused.
 
 ```bash
 potato mcp config --root .       # prints the client config block to save

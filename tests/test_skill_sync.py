@@ -207,6 +207,9 @@ PROSE_IDENTIFIERS = {
     # the argument names the live MCP tools publish in their own schemas,
     # quoted in SKILL.md so an agent can call them without a round trip
     "instance_id", "username",
+    # the field list_examples returns for each example, named in SKILL.md
+    # because get_example wants that value under a differently-named parameter
+    "dir",
 }
 
 

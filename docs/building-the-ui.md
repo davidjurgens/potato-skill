@@ -190,12 +190,19 @@ on anything else fails validation and the error lists what is allowed.
 With more than one span-target field, name the field on the scheme so spans
 land in the right place.
 
-**A geometry scheme needs its own `source_field`.** `image_annotation`,
-`audio_annotation` and the rest do not inherit the media from
-`instance_display`: the display renders the picture and the canvas above the
-question says *This item has no image to annotate*, because the scheme looked at
-`text_key` and found a caption. Name the field on the scheme —
-`source_field: photo` — and the same file loads into both.
+**A geometry scheme finds its media in `instance_display` if it has to.**
+`image_annotation` looks at `text_key` first, then falls back to the rendered
+image on the page, so a task with an `image` display field works without any
+extra wiring. Name `source_field` on the scheme anyway when the item carries
+more than one image, since the fallback takes the first one it finds; the
+console says which it used.
+
+**A span's offsets index the field as it was rendered, not as the data file
+holds it.** On a plain text field those are the same string. On a `dialogue`
+field they are not: the anchor is the turns joined as `"{speaker}: {text}"`, one
+per line, so an offset of 145 counts the speaker labels and their separators
+too. Reconstruct that exact string before slicing a dialogue span, or read the
+span's `text` from the export instead of computing it.
 
 **Several span schemes can share one field, and their spans are independent.**
 Two schemes anchored to the same `target_field` — one marking entities, one
@@ -664,6 +671,12 @@ strings, a list of objects, or a `{keyword: label}` map. A `*` matches any run
 of word characters. The boot log names the shape it read and the count —
 `Loaded 3 keyword highlight patterns from … (read as delimited with a header
 (keyword, label, color))` — so read that line rather than the page.
+
+**Keyword highlighting covers one field.** Whatever `item_properties.text_key`
+names is scanned and nothing else, however many fields carry `span_target`. On a
+task whose conversation is in a `dialogue` field and whose summary is the
+`text_key`, the summary is highlighted and the conversation is not. Check
+`/api/keyword_highlights/<instance_id>`: it names the field it scanned.
 
 **`list_as_text` takes three sub-keys**: `text_list_prefix_type` (`alphabet`,
 `number`, `bullet` or `none`), `horizontal`, and `alternating_shading`. A bare

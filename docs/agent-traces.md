@@ -257,7 +257,16 @@ rating scheme.
 
 `live_agent` and `live_coding_agent` run an agent inside the annotation page so
 annotators judge it as it happens; `agent_proxy` makes an agent the subject of
-annotation. These open control surfaces, so treat them the way you would treat
+annotation.
+
+`live_agent` drives a real browser, so it needs `playwright` and a browser
+installed (`pip install playwright && playwright install chromium`). Its
+`endpoint_type` takes `anthropic_vision`, `ollama_vision` or `openai_vision` —
+the last is what an OpenAI-compatible server such as vLLM needs, and the shipped
+example's comment names only the first two. The system prompt has to ask for an
+`action` that is an **object**, `{"type": "click", ...}`, because that is what
+the runner expects; a prompt that asks for a bare string gets one back and the
+session ends at step 0. These open control surfaces, so treat them the way you would treat
 anything that executes: do not expose them on a deployment that anyone with the
 URL can register for, and check `deploying.md` before handing out a link.
 
