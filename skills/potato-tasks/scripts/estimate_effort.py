@@ -104,8 +104,26 @@ def estimate(config: dict, base: str, wpm: int, rate: float) -> dict:
     seconds_per_item = reading_seconds + answering_seconds + NAVIGATION_SECONDS
 
     per_item = config.get("num_annotators_per_item") or 1
-    quota = config.get("max_annotations_per_user")
-    if not quota or quota < 0:
+    # Potato resolves one annotator's cap in this order (user_state_management.
+    # _resolve_user_quota): per_annotator_quota.by_user, then .by_user_role, then
+    # .default, and only then max_annotations_per_user. So a `default` displaces
+    # the global entirely -- estimating from the global alone reports a quota no
+    # annotator actually has, and divides the work among too few people.
+    quota_config = config.get("per_annotator_quota") or {}
+    named_quotas = {}
+    if isinstance(quota_config, dict):
+        for key in ("by_user", "by_user_role"):
+            entry = quota_config.get(key)
+            if isinstance(entry, dict):
+                named_quotas.update({f"{key}.{k}": v for k, v in entry.items()})
+        quota = quota_config.get("default")
+    else:
+        quota = None
+    if quota is None:
+        quota = config.get("max_annotations_per_user")
+    # `0` is a legal quota meaning that annotator is served nothing, so test for
+    # absence rather than falsiness -- `not 0` would report the whole corpus.
+    if quota is None or quota < 0:
         quota = n_items or 1
 
     judgements = n_items * per_item
@@ -140,6 +158,7 @@ def estimate(config: dict, base: str, wpm: int, rate: float) -> dict:
         "median_words_per_item": median_words,
         "annotators_per_item": per_item,
         "quota_per_annotator": quota,
+        "named_quotas": named_quotas,
         "judgements": judgements,
         "annotators_needed": annotators,
         "seconds_per_item": round(seconds_per_item, 1),
@@ -223,7 +242,13 @@ def main(argv=None) -> int:
     print(f"{result['items']} items x {result['annotators_per_item']} annotators "
           f"= {result['judgements']} judgements")
     print(f"{result['annotators_needed']} annotators at a quota of "
-          f"{result['quota_per_annotator']} items each\n")
+          f"{result['quota_per_annotator']} items each")
+    if result["named_quotas"]:
+        named = ", ".join(f"{k} = {v}" for k, v in
+                          sorted(result["named_quotas"].items()))
+        print(f"per_annotator_quota also caps named annotators ({named}); the "
+              f"count above uses the quota an unnamed annotator gets")
+    print()
 
     print(f"Per item: {result['seconds_per_item']}s "
           f"({result['reading_seconds_per_item']}s reading "

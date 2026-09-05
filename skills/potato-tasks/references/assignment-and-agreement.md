@@ -11,7 +11,8 @@ decides whether the items you care about ever reach three annotators.
 | `num_annotators_per_item` | Target annotators per item. **Set this one.** | 3 |
 | `min_annotators_per_instance` | Floor before an item counts as done | unset |
 | `max_annotations_per_item` | Hard cap per item; `-1` unlimited | -1 |
-| `max_annotations_per_user` | **Cap on dataset items per annotator. The only key that sets it.** | the item count |
+| `max_annotations_per_user` | **Cap on dataset items per annotator**, unless `per_annotator_quota` overrides it | the item count |
+| `per_annotator_quota` | Per-annotator caps: `default`, `by_user`, `by_user_role`. Beats the key above | unset |
 | `automatic_assignment.instance_per_annotator` | Nothing. See below. | — |
 | `assignment_strategy` | Order items are handed out in | `fixed_order` |
 | `random_seed` | Makes the ordering reproducible | unset |
@@ -32,12 +33,46 @@ Measured on 10 items, reading the assignment the server actually built:
 
 `instance_per_annotator` is not read anywhere in the server, and
 `automatic_assignment` does not validate its sub-keys, so it produces no warning
-and no behaviour. If you want a per-annotator workload cap,
-`max_annotations_per_user` is the key.
+and no behaviour. Use `max_annotations_per_user`, or `per_annotator_quota` if
+different annotators need different amounts.
 
 Left unset, the cap is the number of items loaded, so every annotator is offered
 the whole corpus. `-1` is explicit unlimited, and is what a dynamic data source
 needs for items added after boot to be assignable at all.
+
+#### Giving different annotators different amounts
+
+`per_annotator_quota` caps annotators individually. Potato resolves one
+annotator's cap in this order, taking the first that matches:
+
+1. `per_annotator_quota.by_user[<user>]`
+2. `per_annotator_quota.by_user_role[<their role>]`, where the role comes from
+   the `user_roles` map
+3. `per_annotator_quota.default`
+4. `max_annotations_per_user`
+
+So `default` displaces `max_annotations_per_user` rather than sitting beside it:
+set both and the global is never read, and nothing warns. Without `default`, an
+annotator matching neither override falls through to the global, which is how
+the two keys are meant to combine.
+
+Measured on 24 items with `default: 5`, `by_user: {alice: 3}`,
+`by_user_role: {expert: 7}`, `user_roles: {alice: expert, bob: expert, carol:
+novice}`, and `max_annotations_per_user: 20`:
+
+| Annotator | Served | Why |
+|---|---|---|
+| alice | 3 | `by_user` wins over her `expert` role |
+| bob | 7 | `expert` role |
+| carol | 5 | role `novice` has no entry, so `default` |
+| dave | 5 | no role, so `default` |
+
+Nobody got 20. An annotator who reaches their cap is shown the completion page,
+the same as finishing the corpus.
+
+A role named in `user_roles` with no matching `by_user_role` entry is not an
+error and does not warn -- that annotator silently gets `default`, which is
+carol above.
 
 ## Quality-control items do not consume the quota
 

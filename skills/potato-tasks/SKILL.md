@@ -217,9 +217,12 @@ Two that are easy to get wrong and expensive to discover late:
   cosmetic one. Table in `references/assignment-and-agreement.md`.
 - **`num_annotators_per_item` sets the target, `max_annotations_per_user` sets
   what one person actually sees.** Left unset the cap is the item count, so
-  everyone is offered the whole corpus. Set it below that and annotators simply
-  stop early, with nothing to say why. `automatic_assignment.instance_per_annotator`
-  looks like the key for this and is not read at all.
+  everyone is offered the whole corpus. Set it below that and an annotator who
+  reaches the cap is shown the ordinary completion page, which tells them they
+  finished the task rather than that they hit a quota.
+  `automatic_assignment.instance_per_annotator` looks like the key for this and
+  is not read at all; `per_annotator_quota` is real and overrides
+  `max_annotations_per_user`.
 
 ## The design record and the cost
 

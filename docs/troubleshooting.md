@@ -91,8 +91,8 @@ potato-annotation 2.7.0.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Annotators never see the last items | `max_annotations_per_user` is set below the item count | Raise it, or leave it unset so the cap is the item count |
-| `instance_per_annotator` has no effect | It is not read; `automatic_assignment` sub-keys are unvalidated | Use `max_annotations_per_user` |
+| Annotators never see the last items | `max_annotations_per_user` is set below the item count, or `per_annotator_quota` is capping them lower still | Raise whichever applies; `per_annotator_quota` wins, so raising the global alone changes nothing |
+| `instance_per_annotator` has no effect | It is not read; `automatic_assignment` sub-keys are unvalidated | Use `max_annotations_per_user`, or `per_annotator_quota` for per-annotator caps |
 | Agreement pages are empty | No overlapping annotations yet | Not a config problem |
 | Every admin JSON route returns `403 {"error":"Admin access required"}` | They need `X-API-Key` | `cat admin_api_key.txt` in `task_dir`; `/admin` HTML is open, the APIs are not |
 | `/admin/api/agreement` returns `experiment_col` TypeErrors for every scheme | Build bug, seen on a geometry task | Use `/admin/iaa` |

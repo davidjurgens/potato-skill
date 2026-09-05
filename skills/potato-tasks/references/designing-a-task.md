@@ -251,10 +251,11 @@ edges.
 
 Setting the first three to the same number is harmless but says you were unsure.
 
-`max_annotations_per_user` is the only key that decides how much one person is
-asked to do. Attention checks and gold items are injected on top of it rather
-than inside it, so enabling them does not shorten anyone's corpus. See
-`assignment-and-agreement.md`.
+`max_annotations_per_user` sets how much one person is asked to do, unless
+`per_annotator_quota` is also set -- it caps annotators individually and takes
+precedence, including over the global. Attention checks and gold items are
+injected on top of whichever applies rather than inside it, so enabling them
+does not shorten anyone's corpus. See `assignment-and-agreement.md`.
 
 Defaults worth arguing from: **1** when the labels are near-mechanical or the
 data is being used to prototype, and nobody is going to report agreement. **3**
