@@ -381,7 +381,7 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 ## Config keys
 
 `references/config-keys.md` lists the 156 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 399 documented **sub-keys** — the
+`references/config-keys-nested.md` lists the 401 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 23 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -662,19 +662,52 @@ Three that decide whether a deployment is safe to hand over:
 | `getting-the-data-out.md` | The 29 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
 | `config-keys.md` | 156 top-level keys *(generated)* |
-| `config-keys-nested.md` | 399 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys-nested.md` | 401 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, hosting, the preflight, bundles, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
 
 ## MCP
 
-If the Potato MCP server is connected, prefer its tools:
-`list_annotation_types`, `describe_annotation_type`, `list_display_types`,
-`list_examples`, `get_example`, `validate_config`, `preview_config`,
-`render_task_screenshot`. The last hands back the rendered page as an image with
-browser errors attached. It is still one page, and still the viewport.
+`potato mcp` is two servers, and `potato --help` lists neither.
+
+**Authoring.** `potato mcp serve --root .` speaks MCP over stdio and answers out
+of the same registries this pack is generated from: `list_annotation_types`,
+`describe_annotation_type`, `list_display_types`, `describe_display_type`,
+`list_config_keys`, `describe_config_key`, `get_config_schema`, `list_examples`,
+`get_example`, `validate_config`, `preview_config`, `render_task_screenshot`.
+Prefer them over reading the references when the server is connected —
+`describe_annotation_type` returns the required and optional fields for one type,
+which is the question the references are usually opened to answer.
+`render_task_screenshot` hands back the rendered page as an image with browser
+errors attached; it is still one page, and still the viewport.
 
 ```bash
-potato mcp config --root .
+potato mcp config --root .       # prints the client config block to save
+potato mcp tools                 # the tool list, without starting anything
 ```
+
+**A running task.** `potato mcp connect --url http://host:port --token …` bridges
+a live instance, if that task's config carries an `mcp` block naming the tools in
+`mcp.tools` and an agent holds a token:
+
+```bash
+potato mcp issue-token --config config.yaml --name some-agent --role admin
+```
+
+The bridge exposes the authoring tools *and* the live ones, the live ones
+prefixed `live_`: `live_get_status`, `live_get_config`, `live_get_progress`,
+`live_list_items`, `live_get_item`, `live_list_annotators`, `live_get_agreement`,
+`live_submit_annotation`, `live_assign_items`, `live_export_data`. Two things
+about calling them that the tool list does not tell you:
+
+- **Each live tool declares a single `arguments` parameter**, so the real
+  arguments go one level down: `{"arguments": {"instance_id": "W01"}}`. Passed at
+  the top level they are dropped and the tool answers as if you had passed
+  nothing — `instance_id is required`, or a `limit` silently ignored.
+- **The names and shapes are not in the schema.** `mcp.tools` is where to find
+  them: put a name Potato does not know in it and validation refuses the boot
+  with the full list.
+
+Everything an agent calls lands in `mcp_audit.jsonl`, one JSON object per call,
+recording the tool, the agent, the role and the argument *names*.

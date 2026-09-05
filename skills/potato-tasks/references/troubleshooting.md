@@ -114,4 +114,5 @@ potato-annotation 2.7.0.
 | Checking a conditional input with width/height | Hidden inputs still have a bounding box. Walk the ancestor chain for `display:none` |
 | Treating `--screenshot` exit 0 as "the UI is fine" | It renders one page, viewport only, and phase-page console noise is filtered out of your attention |
 | Trusting `validate` on phases, surveyflow or scheme entries | It does not look inside them |
+| Trusting `validate` on the paths a config names | It checks key names, not the filesystem. A missing `base_css`, `header_file` or `keyword_highlights_file` passes `--strict` and is silently ignored at boot; a missing `header_logo` refuses to boot; a data file outside the project directory passes and then raises `ConfigSecurityError`. Boot once before believing a path |
 | Driving a span drag after `scroll_into_view_if_needed` | Puts the text under the sticky navbar; the drag selects the header. Scroll up ~160px first |

@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 399 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 401 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -433,7 +433,9 @@ In-context-learning labeler that builds few-shot prompts from high-confidence an
 | `persistence` | object |  | Where predictions are written |
 | `persistence.predictions_file` | string | `icl_predictions.json` | Filename for the stored predictions, under the output directory |
 | `verification` | object |  | Blind human checking of the model's labels |
+| `verification.assignment_mix_rate` | number | `0.2` | Share of assignments that are verification items, when they are mixed in |
 | `verification.enabled` | boolean | `True` | Route a sample of model labels to annotators |
+| `verification.mix_with_regular_assignments` | boolean | `True` | Hand verification items out through the normal assignment queue, rather than only on request |
 | `verification.sample_rate` | number | `0.2` | Share of model-labeled instances sent for checking |
 | `verification.selection_strategy` | string | `low_confidence` | Which of them to check: low_confidence or random |
 

@@ -176,6 +176,26 @@ PROSE_IDENTIFIERS = {
     "source_field",
     # the other stage-1 command, named beside `preview`
     "validate",
+    # The ten interface languages ui_language bundles, quoted in
+    # building-the-ui.md. Language codes, not config keys.
+    "ar", "de", "es", "fr", "hi", "ja", "ko", "pt", "ru", "zh",
+    # The MCP control surface a live task exposes through `potato mcp connect`,
+    # named in SKILL.md so an agent can call them. They are tool names on the
+    # bridge, not config keys -- `mcp.tools` names them without the `live_`
+    # prefix the bridge adds, and nothing puts them in a registry this test can
+    # read.
+    "live_", "live_get_status", "live_get_config", "live_get_progress",
+    "live_list_items", "live_get_item", "live_list_annotators",
+    "live_get_agreement", "live_submit_annotation", "live_assign_items",
+    "live_export_data",
+    # the single parameter each live MCP tool declares, and a key passed inside
+    # it -- both JSON-RPC argument names rather than anything in a registry
+    "arguments", "limit",
+    # the file the MCP surface writes its call log to, default of mcp.audit_log
+    "mcp_audit.jsonl",
+    # the top-level key in user_state.json that spans are stored under, beside
+    # instance_id_to_label_to_value. An on-disk field, in no config registry
+    "instance_id_to_span_to_value",
 }
 
 

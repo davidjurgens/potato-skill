@@ -965,6 +965,7 @@ Per-step process reward signals for PRM training
   description: 'Verify the reward for each reasoning step: ✓ correct, ○ neutral, ✗
     incorrect'
   steps_key: cot_steps
+  step_text_key: text
   mode: per_step
   allow_neutral: true
   inline_with_trace: true

@@ -179,6 +179,19 @@ on anything else fails validation and the error lists what is allowed.
 With more than one span-target field, name the field on the scheme so spans
 land in the right place.
 
+**Several span schemes can share one field, and their spans are independent.**
+Two schemes anchored to the same `target_field` — one marking entities, one
+marking which sentence is first-hand — draw over each other on the page and are
+stored separately, each span carrying its own `schema` and `target_field`. Use
+that instead of folding two questions into one label set. Within a single
+scheme, a second span overlapping one already drawn is not created, so a scheme
+whose labels genuinely overlap needs to be two schemes.
+
+Spans do not live with the labels on disk. They are their own top-level key in
+`user_state.json`, `instance_id_to_span_to_value`, so a scheme that looks empty
+in `instance_id_to_label_to_value` may be fully annotated — see
+`getting-the-data-out.md` for the exported shape.
+
 ## The form: `annotation_schemes`
 
 Three keys are required on every scheme regardless of type: `annotation_type`,
@@ -615,6 +628,32 @@ past two screens is worth restructuring.
 | `keyword_highlights_file` | Highlight given keywords in the item |
 | `ui`, `ui_config` | Interface toggles |
 | `ui_language` | Interface language code |
+
+Three of those carry a contract the key name does not:
+
+**`keyword_highlights_file` is a three-column TSV with a header row**, not a list
+of words. The columns are the word, the scheme it belongs to, and the label
+within that scheme:
+
+```
+Word	Schema	Label
+latch	disposition	Open investigation
+swelled	disposition	Monitor
+```
+
+A word-per-line file is read without complaint and the boot log says
+`Loaded 0 keyword highlight patterns`. Check that line rather than the page.
+Zero patterns and a file whose words happen not to occur look identical to a
+reader.
+
+**`ui_language` ships ten bundled languages and English is not one of them**:
+`ar`, `de`, `es`, `fr`, `hi`, `ja`, `ko`, `pt`, `ru`, `zh`. English is what you
+get by leaving the key out, so leave it out; `ui_language: en` is refused by
+`--strict` as an unknown code.
+
+**`list_as_text` takes no sub-keys.** It is documented as an object and the
+validator rejects every sub-key you put in it, so the only forms that survive
+`--strict` are a bare `true` and an empty map.
 
 Reach for `task_layout` last. Hand-written layout HTML stops tracking changes
 to the schema generators, and most of what people want it for is

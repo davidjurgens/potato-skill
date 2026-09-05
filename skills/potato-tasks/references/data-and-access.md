@@ -38,6 +38,13 @@ them. csv, tsv and jsonl carry `instance_id` and the answers and no item fields
 at all, so plan to hand the data file over with the export, or to use `parquet`.
 `getting-the-data-out.md` has the comparison.
 
+**Every path in the config has to resolve inside the project directory.** A
+`data_files` entry that climbs out with `../` is refused at boot with
+`ConfigSecurityError: Path '...' resolves to '...' which is outside the project
+directory`. `potato validate` does not check paths, so this is a boot-time
+refusal rather than a validation one: copy shared data into the project, or move
+the config up to a directory that contains both.
+
 ### A directory instead of a list
 
 ```yaml
