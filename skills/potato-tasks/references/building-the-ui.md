@@ -179,13 +179,19 @@ on anything else fails validation and the error lists what is allowed.
 With more than one span-target field, name the field on the scheme so spans
 land in the right place.
 
+**A geometry scheme needs its own `source_field`.** `image_annotation`,
+`audio_annotation` and the rest do not inherit the media from
+`instance_display`: the display renders the picture and the canvas above the
+question says *This item has no image to annotate*, because the scheme looked at
+`text_key` and found a caption. Name the field on the scheme —
+`source_field: photo` — and the same file loads into both.
+
 **Several span schemes can share one field, and their spans are independent.**
 Two schemes anchored to the same `target_field` — one marking entities, one
 marking which sentence is first-hand — draw over each other on the page and are
 stored separately, each span carrying its own `schema` and `target_field`. Use
-that instead of folding two questions into one label set. Within a single
-scheme, a second span overlapping one already drawn is not created, so a scheme
-whose labels genuinely overlap needs to be two schemes.
+that instead of folding two questions into one label set. A span may also
+enclose one already drawn, in the same scheme or another, and both are kept.
 
 Spans do not live with the labels on disk. They are their own top-level key in
 `user_state.json`, `instance_id_to_span_to_value`, so a scheme that looks empty
@@ -615,7 +621,7 @@ past two screens is worth restructuring.
 | Key | Effect |
 |---|---|
 | `annotation_instructions` | Collapsible instructions banner; text or a path |
-| `header_file` | HTML rendered above the item |
+| `header_file` | **Inert.** The header template path is no longer configurable and nothing reads the key; `validate` reports it |
 | `custom_footer_html` | HTML on every page |
 | `header_logo` | Logo in the navbar |
 | `base_css` | An extra stylesheet |
@@ -629,31 +635,28 @@ past two screens is worth restructuring.
 | `ui`, `ui_config` | Interface toggles |
 | `ui_language` | Interface language code |
 
-Three of those carry a contract the key name does not:
+Two of those carry a contract the key name does not:
 
-**`keyword_highlights_file` is a three-column TSV with a header row**, not a list
-of words. The columns are the word, the scheme it belongs to, and the label
-within that scheme:
+**`keyword_highlights_file` reads six shapes.** The documented one is a CSV or
+TSV with a `keyword` header column; `label`, `schema` and `color` are optional
+beside it, matched by name in any order, and `keyword`/`word`/`pattern`/`term`
+are accepted spellings.
 
 ```
-Word	Schema	Label
-latch	disposition	Open investigation
-swelled	disposition	Monitor
+keyword,label,color
+latch,Defect,#ffcc00
+Ridge*,Place,
 ```
 
-A word-per-line file is read without complaint and the boot log says
-`Loaded 0 keyword highlight patterns`. Check that line rather than the page.
-Zero patterns and a file whose words happen not to occur look identical to a
-reader.
+One keyword per line also works, as do JSON, JSONL and YAML holding a list of
+strings, a list of objects, or a `{keyword: label}` map. A `*` matches any run
+of word characters. The boot log names the shape it read and the count —
+`Loaded 3 keyword highlight patterns from … (read as delimited with a header
+(keyword, label, color))` — so read that line rather than the page.
 
-**`ui_language` ships ten bundled languages and English is not one of them**:
-`ar`, `de`, `es`, `fr`, `hi`, `ja`, `ko`, `pt`, `ru`, `zh`. English is what you
-get by leaving the key out, so leave it out; `ui_language: en` is refused by
-`--strict` as an unknown code.
-
-**`list_as_text` takes no sub-keys.** It is documented as an object and the
-validator rejects every sub-key you put in it, so the only forms that survive
-`--strict` are a bare `true` and an empty map.
+**`list_as_text` takes three sub-keys**: `text_list_prefix_type` (`alphabet`,
+`number`, `bullet` or `none`), `horizontal`, and `alternating_shading`. A bare
+`true` turns it on with the defaults.
 
 Reach for `task_layout` last. Hand-written layout HTML stops tracking changes
 to the schema generators, and most of what people want it for is

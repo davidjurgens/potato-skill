@@ -477,7 +477,7 @@ MQM-style error span annotation with typed severity for quality evaluation
 
 **Required:** `error_types`
 
-**Optional:** `max_score`, `severities`, `show_score`
+**Optional:** `max_score`, `severities`, `show_score`, `source_field`
 
 ```yaml
 - annotation_type: error_span

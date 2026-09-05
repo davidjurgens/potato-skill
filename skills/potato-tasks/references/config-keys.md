@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 156 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 157 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -123,11 +123,11 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `annotation_instructions` | string |  |  | Instructions shown on every annotation page, as inline text; a filename here renders as that filename |
 | `completion_code` | string |  |  | Code shown when an annotator finishes, for crowdsourcing payout |
 | `custom_footer_html` | string |  |  | HTML appended to every page |
-| `header_file` | string |  |  | HTML file rendered above the item |
+| `header_file` | string |  |  | Ignored. The header template path is no longer configurable, and nothing reads this key -- `potato validate` reports it |
 | `header_logo` | string |  |  | Logo image shown in the header |
 | `highlight_linebreaks` | boolean |  |  | Make line breaks visible in item text |
 | `keyword_highlight_settings` | object |  |  | Styling for keyword highlights |
-| `keyword_highlights_file` | string |  |  | File of keywords to highlight in item text |
+| `keyword_highlights_file` | string |  |  | File of keywords to highlight in item text. A CSV or TSV with a `keyword` header column (plus optional label, schema, color) is the documented form; one keyword per line, and JSON/JSONL/YAML holding a keyword list, an object list or a {keyword: label} map, are read too. A `*` in a keyword matches any run of word characters. See docs/administration/productivity.md |
 
 ## Core / Required
 
@@ -233,6 +233,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `port` | integer |  | `8000` | Port to listen on. The -p flag overrides this |
 | `server` | object |  |  | Nested port/host/debug block, an alternative to the top-level keys |
 | `session_lifetime_days` | integer |  | `2` | Days before a persisted session expires |
+| `session_timeout_minutes` | integer |  | `480` | How long a signed-in session may sit idle before the server clears it. The clock restarts on every request, so it bounds inactivity, not the length of a shift |
 | `site_dir` | string |  |  | Directory holding the HTML templates for this task |
 | `site_file` | string |  |  | Specific template file to render the annotation page with |
 
@@ -247,7 +248,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `instance_display` | object |  |  | How each item is rendered: one entry per field, with a type drawn from the display registry (text, image, audio, video, ...) |
 | `jumping_to_id_disabled` | boolean |  |  | Remove the jump-to-item control |
 | `layout` | object |  |  | How the annotation questions are arranged on the page: a grid, collapsible groups, an explicit order, and responsive breakpoints. Without it every scheme stacks full-width in config order |
-| `list_as_text` | object |  |  | Render list-valued fields as text rather than as a list |
+| `list_as_text` | object |  |  | How a list-valued field is laid out. Sub-keys: text_list_prefix_type (alphabet, number, bullet or none), horizontal, alternating_shading. `true` turns it on with the defaults |
 | `task_layout` | string |  |  | Custom HTML for the annotation form area |
 | `ui` | object |  |  | Interface toggles |
 | `ui_config` | object |  |  | Additional interface settings |

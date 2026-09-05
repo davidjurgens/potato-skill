@@ -39,9 +39,11 @@ project/
     └── study.css
 ```
 
-Every file in that tree is below. A phase whose `file:` is missing does not stop
-the boot — the phase is dropped with one `ERROR` line and the study runs without
-it — so copy all three page files, not just the one you plan to edit.
+Every file in that tree is below. A phase whose `file:` is *missing* does not
+stop the boot: the phase is dropped with one `ERROR` line and the study runs
+without it. A file that exists and is malformed does stop it — one entry without
+`annotation_type` and the server exits before it listens — so copy all three
+page files, not just the one you plan to edit.
 
 ## config.yaml
 

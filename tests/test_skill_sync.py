@@ -196,6 +196,17 @@ PROSE_IDENTIFIERS = {
     # the top-level key in user_state.json that spans are stored under, beside
     # instance_id_to_label_to_value. An on-disk field, in no config registry
     "instance_id_to_span_to_value",
+    # list_as_text's three sub-keys and the values text_list_prefix_type takes.
+    # The key doc describes them in prose rather than registering each one, so
+    # iter_key_docs has no entry for `list_as_text.text_list_prefix_type`
+    "text_list_prefix_type", "alternating_shading",
+    "alphabet", "bullet", "none",
+    # column names keyword_highlights_file accepts in its CSV/TSV header, and
+    # the accepted spellings of the first one. File-format strings, not config
+    "keyword", "word", "pattern", "term", "color",
+    # the argument names the live MCP tools publish in their own schemas,
+    # quoted in SKILL.md so an agent can call them without a round trip
+    "instance_id", "username",
 }
 
 

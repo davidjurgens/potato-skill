@@ -143,7 +143,8 @@ example_scheme_for("bws")   # a scheme from a config that really runs
 
 ## MCP
 
-`potato mcp` is two servers, and `potato --help` lists neither.
+`potato mcp` is two servers, both listed under **other commands** in
+`potato --help`.
 
 `potato mcp serve --root .` answers authoring questions out of the same
 registries as everything above: `list_annotation_types`,
@@ -157,9 +158,7 @@ from `potato mcp issue-token`. The bridge adds ten live tools named
 `live_get_status`, `live_get_progress`, `live_list_items`, `live_get_item`,
 `live_list_annotators`, `live_get_config`, `live_get_agreement`,
 `live_assign_items`, `live_export_data` and `live_submit_annotation`. Each
-declares a single `arguments` parameter, so the real arguments go one level
-down — `{"arguments": {"instance_id": "W01"}}` — and at the top level they are
-dropped without a word.
+publishes a real parameter schema, so `tools/list` tells you what to pass.
 
 ```bash
 potato mcp config --root .    # prints a client config block
