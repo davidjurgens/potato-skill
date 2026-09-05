@@ -253,10 +253,17 @@ decide whether the session can do anything: `sandbox_image` is `python:3.12-slim
 and `sandbox_network` is `none`. Together they mean the agent has whatever that
 image ships and no way to install more — asked to run the tests, it gets
 `pytest: not found` and an exit code of 127, and burns its turns looking for a
-runner. Build or name an image that already carries the tooling the task needs.
-`working_dir` is copied into a per-session workspace under `.potato-sandboxes/`,
-so the repository you point at is not the one the agent edits; check the copy,
-not the original, when you want to see what it did.
+runner. Build or name an image that already carries the tooling the task needs:
+with `pytest` in the image the same session runs the tests, edits the file and
+re-runs them to green. `working_dir` is copied into a per-session workspace under
+`.potato-sandboxes/`, so the repository you point at is not the one the agent
+edits; check the copy, not the original, when you want to see what it did.
+
+The task box the annotator sees is seeded from the field the display is bound to.
+Bind it to the field holding the task text, not to the one naming the repository,
+or the box arrives holding the repository name and the annotator has to retype
+the task before starting the agent. Which directory the agent gets is `working_dir`'s
+job, so the key is free to carry the prompt.
 
 `live_agent` drives a real browser, so it needs `playwright` and a browser
 installed (`pip install playwright && playwright install chromium`). Its
