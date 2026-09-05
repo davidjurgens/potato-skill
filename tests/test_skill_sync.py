@@ -213,6 +213,15 @@ PROSE_IDENTIFIERS = {
     # the key /api/keyword_highlights returns naming which fields it scanned --
     # a response field, so it is in no config registry
     "fields_scanned",
+    # HTML and CSS vocabulary, not Potato's. The layout section has to name
+    # what the generated form gives an assistive reader (`fieldset`, `legend`,
+    # `alt`, `lang`) and what a CSS length looks like (`px`), because the
+    # accessibility claim is about rendered HTML rather than about config.
+    "fieldset", "legend", "alt", "lang", "px",
+    # the two values instance_display.layout.direction accepts. Enum values
+    # rather than keys, so iter_key_docs does not carry them.
+    "vertical",
+
     # the three values display_options.style_theme accepts on a `document`
     # field. Enum values rather than keys, so iter_key_docs does not carry
     # them; the validator names all three when it refuses a fourth

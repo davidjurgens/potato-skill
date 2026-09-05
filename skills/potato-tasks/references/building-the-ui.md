@@ -28,6 +28,65 @@ instance_display:
 `fields` is required and cannot be empty. Each entry needs `key` and `type`.
 An unknown `type` fails validation with the valid list in the message.
 
+### Laying the item out
+
+`instance_display.layout` is the whole of it: `direction` (`vertical` or
+`horizontal`) and `gap`. There is no per-field width, span or weight. That
+matters more than it sounds, because `direction: horizontal` divides the width
+**equally** between fields regardless of what is in them.
+
+Four fields on a 1500px window gave me four 198px columns: an 800x600 image
+rendered at 148x111 next to a one-line caption, beside a dialogue that ran 763px
+tall while its neighbours were under 200px. Each column is as wide as the
+narrowest thing deserves and as tall as the tallest thing needs.
+
+So for the common asks:
+
+- **An image beside its text.** Two fields, `direction: horizontal`. Accept the
+  even split, or weight it with `base_css` — see below.
+- **Very long text.** Keep it `vertical` and give the field
+  `collapsible: true` with `collapsed_by_default: true`, which renders a Show
+  toggle instead of the body. A 7,000-character transcript then costs one line
+  of page until the annotator wants it.
+- **A multi-party conversation.** `dialogue` with `speaker_key` and `text_key`
+  naming your fields, plus `show_turn_numbers: true`. Each speaker gets its own
+  colour down the left edge and a bold name; `alternating_shading: true` adds
+  row banding. This is the one that needs no CSS at all.
+
+**Weighting a horizontal row needs `base_css` and a positional selector.**
+Each field is wrapped in a `.display-field-resizable` div, and that wrapper is
+the flex child — so a rule on `.display-field[data-field-key=...]` computes and
+does nothing, which is a confusing half-hour. The wrapper carries no key, so the
+only handle is position:
+
+```css
+/* base_css: give the image three shares and the caption one */
+.display-field-resizable:nth-child(1) { flex: 3 1 0; }
+.display-field-resizable:nth-child(2) { flex: 1 1 0; }
+```
+
+That took my image from 148px to 289px wide. It is positional, so it breaks if
+you reorder `fields` — leave a comment in the config saying so.
+
+**`max_height` on a field must be a bare number.** Write `max_height: 220`, not
+`max_height: "220px"`. The wrapper appends the unit itself, so a value carrying
+one becomes `max-height: 220pxpx`, which the browser discards — the field is
+then unclamped and nothing says so. That is the opposite convention from
+`layout.grid.gap` and `instance_display.layout.gap`, which are CSS length
+strings, so the same block wants a string for one length and a number for the
+other. Eleven display types accept `max_height`; the validator lists which
+options a type takes when you get one wrong, and its message names the near
+miss, which is the fastest way to check.
+
+**What you get for free, and it is more than you would guess.** The generated
+form is properly structured: every radio has an associated label, every question
+is a `fieldset` with a `legend`, images carry `alt`, and the document has `lang`.
+That is what a screen reader needs, and none of it requires configuration. The
+gap I have measured is that the page has no `<h1>` — the task name lives in the
+navbar as plain text — so there is no top-level landmark for heading navigation.
+Custom canvas widgets are a separate question from the form; check those
+yourself if your annotators rely on assistive technology.
+
 ### The 24 display types
 
 | Type | For |
