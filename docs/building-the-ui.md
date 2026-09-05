@@ -79,15 +79,17 @@ only handle is position:
 That took my image from 148px to 289px wide. It is positional, so it breaks if
 you reorder `fields` — leave a comment in the config saying so.
 
-**`max_height` on a field must be a bare number.** Write `max_height: 220`, not
-`max_height: "220px"`. The wrapper appends the unit itself, so a value carrying
-one becomes `max-height: 220pxpx`, which the browser discards — the field is
-then unclamped and nothing says so. That is the opposite convention from
-`layout.grid.gap` and `instance_display.layout.gap`, which are CSS length
-strings, so the same block wants a string for one length and a number for the
-other. Eleven display types accept `max_height`; the validator lists which
-options a type takes when you get one wrong, and its message names the near
-miss, which is the fastest way to check.
+**`max_height` and `min_height` take a bare number or a CSS length.** They are
+options of the resizable wrapper rather than of any one display type, so they
+work on every field: `max_height: 220` means 220px, and `max_height: "15rem"`
+comes through as `15rem` and computes to 240px. `50%` and other units pass
+through too. That matches `layout.grid.gap` and `instance_display.layout.gap`,
+so the whole block takes lengths the same way.
+
+When you do get an option wrong, the validator names the near miss — "is not an
+option for display type 'text' … Did you mean 'max_height'?" — and lists what
+that type accepts, which is the fastest way to check anything in
+`display_options`.
 
 **What you get for free, and it is more than you would guess.** The generated
 form is properly structured: every radio has an associated label, every question
