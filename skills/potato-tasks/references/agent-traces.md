@@ -103,13 +103,21 @@ copies that spelling gets "no screenshot" on every card while the file itself
 serves fine over `/screenshots/`. Check the route with `curl` before you suspect
 the file; if it answers 200, the key is what is wrong.
 
-**`multimodal_reasoning` reads a different key per step type.** An image step
-needs `image` or `image_url`; a tool step needs `tool` (or `name`) plus `args`,
-`arguments` or `input`; only the text step falls back to `content`. A trace
-keyed uniformly on `content` therefore renders its prose correctly and shows
-`missing image` and `tool {}` for everything else — which looks like missing
-data rather than a key mismatch. `type_key` names the field holding the step
-type; the per-step content keys are not configurable.
+**`multimodal_reasoning` infers the step type from the keys, and every type
+falls back to `content`.** An image step reads `image`, `image_url`, `url`,
+`src`, then `content`; a tool step's arguments read `args`, `arguments`,
+`tool_call.args`, `input`, then `content`, and its name reads `tool`, `name`,
+`tool_call.name`, then the literal string `tool`; a text step reads `text`,
+`content`, `reasoning`. So a trace keyed uniformly on `content` renders
+correctly *as long as each step carries an explicit `type`* — the image draws
+and the tool call prints.
+
+What uniform keying breaks is the type inference. Without `type`, the type comes
+from the presence of `image`/`image_url` or `tool`/`tool_calls`/`tool_call`, and
+a step that has neither is text. Drop `type` from a `content`-only trace and
+every card is labelled TEXT, with the image's URL printed as a line of prose
+rather than fetched. `type_key` names the field holding the type; the per-step
+content keys are not configurable.
 
 **Screenshots come from a second static root.** Trace data that sets
 `screenshot_url: screenshots/step_000.png` is served from `<task_dir>/screenshots/`,
