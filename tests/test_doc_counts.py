@@ -32,6 +32,29 @@ def _counts():
     from potato.server_utils.examples_manifest import load_manifest
     from potato.server_utils.schemas.registry import schema_registry
 
+    # The shapes `keyword_highlights_file` accepts, counted by running one
+    # representative of each past Potato's own parser and collapsing the
+    # header-naming variants ("delimited with a header (keyword, label)") into
+    # one family. The claim in `building-the-ui.md` is a number an author uses
+    # to decide whether their file will be read at all, and nothing else pins
+    # it: the parser is a function, not a registry, so it cannot drift into a
+    # count the way the schema registry does -- it drifts silently instead.
+    from potato.flask_server import _parse_keyword_highlight_entries
+
+    _kw_fixtures = [
+        ("keyword,label,color\nlatch,Defect,#ffcc00\n", "h.csv"),
+        ("thing,description\nlatch,Defect\n", "h.csv"),
+        ("latch\nridge\n", "h.txt"),
+        ('[{"keyword":"latch"}]', "h.json"),
+        ('{"keyword":"latch"}\n{"keyword":"ridge"}\n', "h.jsonl"),
+        ("- latch\n- ridge\n", "h.yaml"),
+    ]
+    _kw_shapes = set()
+    for _raw, _path in _kw_fixtures:
+        _entries, _shape = _parse_keyword_highlight_entries(_raw, _path)
+        if _entries:
+            _kw_shapes.add(str(_shape).split(" (", 1)[0])
+
     key_docs = dict(iter_key_docs())
     top_docs = {p: d for p, d in key_docs.items() if "." not in p}
     sub_docs = {p: d for p, d in key_docs.items() if "." in p}
@@ -64,6 +87,7 @@ def _counts():
         "documented_sub_keys": len(sub_docs),
         "unchecked_blocks": len(unchecked),
         "examples": load_manifest()["count"],
+        "keyword_shapes": len(_kw_shapes),
     }
 
 
@@ -106,6 +130,12 @@ CLAIMS = [
     # about it is a gap an author cannot see.
     ("references/getting-the-data-out.md",
      r"(\d+) formats are registered", "export_formats"),
+
+    # An author whose file is not one of these shapes gets "Loaded 0 patterns",
+    # which reads as an empty file rather than an unrecognised one. The number
+    # is how they decide whether to keep debugging their file or their config.
+    ("references/building-the-ui.md",
+     r"`keyword_highlights_file` reads (\d+) shapes", "keyword_shapes"),
 
     # The argument for adding no phases by default is this ratio, so both
     # halves of it have to stay true.

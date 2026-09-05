@@ -679,7 +679,7 @@ removes that box and with it the only way back.
 
 Two of those carry a contract the key name does not:
 
-**`keyword_highlights_file` reads six shapes.** The documented one is a CSV or
+**`keyword_highlights_file` reads 6 shapes.** The documented one is a CSV or
 TSV with a `keyword` header column; `label`, `schema` and `color` are optional
 beside it, matched by name in any order, and `keyword`/`word`/`pattern`/`term`
 are accepted spellings.
@@ -691,10 +691,15 @@ Ridge*,Place,
 ```
 
 One keyword per line also works, as do JSON, JSONL and YAML holding a list of
-strings, a list of objects, or a `{keyword: label}` map. A `*` matches any run
-of word characters. The boot log names the shape it read and the count —
-`Loaded 3 keyword highlight patterns from … (read as delimited with a header
-(keyword, label, color))` — so read that line rather than the page.
+strings, a list of objects, or a `{keyword: label}` map. The sixth shape is a
+headerless delimited file, read positionally as keyword, label, schema; it warns
+and tells you to add a header. A `*` matches any run of word characters.
+
+The boot log names the shape it read and the count — `Loaded 3 keyword highlight
+patterns from … (read as delimited with a header (keyword, label, color))` — so
+read that line rather than the page. A header the loader does not recognise is
+not an error: the file is read positionally and the header row itself becomes a
+keyword.
 
 **Keyword highlighting covers `text_key` plus every field with
 `span_target: true`**, and nothing else — a field with no span target has
