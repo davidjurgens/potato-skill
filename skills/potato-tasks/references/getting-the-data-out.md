@@ -96,7 +96,9 @@ formats wrote two images. The third appears in none of them, not even as an
 entry with an empty annotation list. That matters for detector training, where
 images with no objects are the negatives, and it matters for anyone reconciling
 counts: a study of N items exports the number of items somebody actually marked,
-not N. Nothing warns.
+not N. Every format says so in its warnings and names the items, so read them —
+this is the one case where the count you get and the count you expected differ
+for a reason that is nobody's mistake.
 
 **Take masks from an export, not from `user_state.json`.** The stored form is
 an internal one: the mask lives in a `_data` label as a JSON string whose `rle`
