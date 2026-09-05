@@ -181,8 +181,38 @@ user_config:
 | `rbac` | Role assignments and SSO role mapping |
 
 `url_direct` is what crowdsourcing platforms want: the platform appends the
-worker id and the annotator never sees a login screen. Pair it with
-`completion_code` and `auto_redirect_on_completion`.
+worker id and the annotator never sees a login screen.
+
+### Running on a crowd platform
+
+```yaml
+login: {type: url_direct, url_argument: PROLIFIC_PID}
+crowdsourcing: {provider: prolific}
+completion_code: CODE-ABC123
+auto_redirect_on_completion: true
+auto_redirect_delay: 3000        # milliseconds on the completion page first
+```
+
+`crowdsourcing.provider` takes `prolific`, `mturk`, `connect`, `sona`,
+`microworkers`, `clickworker`, `expert`, `generic` or `url_direct`, and the boot
+log confirms it — `Initialized crowdsourcing provider: prolific`. Set
+`login.url_argument` to whatever the platform appends: Prolific sends
+`PROLIFIC_PID`, so `?PROLIFIC_PID=worker777` seats that worker with no login
+screen and their id in the navbar.
+
+Naming a provider changes the completion page, which is the part worth seeing
+before you launch. With the redirect off it reads
+
+    Thank You! You have completed the annotation task and your responses are saved.
+    CODE-ABC123
+    Click to copy your completion code
+    Return to Prolific
+
+— the code, a copy control, and a return link named after the provider. With
+`auto_redirect_on_completion: true` the worker is sent to the platform's
+completion URL instead, after `auto_redirect_delay`. I drove both: the redirect
+really does leave for the platform, so test with it off first unless you enjoy
+losing your browser session mid-check.
 
 The login page has two tabs, `login` and `register`, in one document — if you are
 driving it in a browser, switch with `switchTab('register')` before filling the
