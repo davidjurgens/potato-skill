@@ -213,6 +213,14 @@ PROSE_IDENTIFIERS = {
     # the key /api/keyword_highlights returns naming which fields it scanned --
     # a response field, so it is in no config registry
     "fields_scanned",
+    # `min_height` and `max_height` are options of the resizable WRAPPER in
+    # instance_display.py, not of any display type, so they appear in no
+    # registry's optional_fields and iter_key_docs does not carry them.
+    # `max_height` happens to be declared by eleven display types as well;
+    # `min_height` is not declared anywhere and is still real. Verified by
+    # setting both and reading the computed style.
+    "min_height",
+
     # HTML and CSS vocabulary, not Potato's. The layout section has to name
     # what the generated form gives an assistive reader (`fieldset`, `legend`,
     # `alt`, `lang`) and what a CSS length looks like (`px`), because the
