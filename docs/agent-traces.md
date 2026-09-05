@@ -101,9 +101,18 @@ it.
 
 **`gui_trajectory` coordinates default to normalized.** Each step may carry
 `x`/`y` for the grounding marker, read as 0..1 **unless** you set
-`coord_space: pixels`. A trace exported in pixels with the default setting puts
-every marker in the top-left corner — the overlay renders, so it looks
-configured rather than broken.
+`coord_space: pixels`. A trace exported in pixels with the default setting is
+read as fractions, so a click at 420 becomes `left: 42000%` and the marker
+leaves the picture entirely. The card's own coordinate readout is the tell —
+`click @ 42000%, 12000%` beside a screenshot 640 pixels wide.
+
+**`gui_trajectory` takes the screenshot from `screenshot`, not
+`screenshot_url`.** The step key is `screenshot`, falling back to `image`, and
+`screenshot_key` on the scheme renames it. `screenshot_url` is what the live
+agent runner *writes* into the steps it produces, so a hand-authored trace that
+copies that spelling gets "no screenshot" on every card while the file itself
+serves fine over `/screenshots/`. Check the route with `curl` before you suspect
+the file; if it answers 200, the key is what is wrong.
 
 **`multimodal_reasoning` reads a different key per step type.** An image step
 needs `image` or `image_url`; a tool step needs `tool` (or `name`) plus `args`,

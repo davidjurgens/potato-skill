@@ -181,6 +181,20 @@ hit rate over regions. If the researcher is evaluating a pointing model, set
 `region_type: point` and report the hit rate; do not quote it beside an IoU as
 though they were the same number.
 
+The expressions come from the `expressions` field of the item, and
+`expressions_field` renames it. Point it at the wrong key and the widget says so
+on the page — "This item has no referring expressions. The schema reads them
+from the 'expressions' field; set `expressions_field` if they live somewhere
+else" — which is the only reason that mistake costs a minute rather than an
+afternoon.
+
+**`region_type` and `tools` are different vocabularies, and the UI labels do not
+match either.** `region_type: point` is right, but the drawing tool that places
+a point is `landmark`, and the button it renders says "Point" — so
+`tools: [point]` is the natural guess and is refused at boot, with the twelve
+real tool names listed. A mask comes from `brush`, `fill` or `sam` rather than
+from a tool called `mask`.
+
 `grounding_eval` also distinguishes three states per expression — answered with
 a region, answered as *absent*, and not answered — because "no region" otherwise
 conflates "there is no referent" with "I did not get to this one", and those
