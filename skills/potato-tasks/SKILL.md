@@ -54,7 +54,7 @@ The browser walk in `scripts/walk_task.py` additionally needs Playwright:
 
 ## The scripts in this skill
 
-Seven of the procedures below are scripts rather than instructions, because they
+Eight of the procedures below are scripts rather than instructions, because they
 are long enough to get wrong by hand and they are what you will run repeatedly.
 They live beside this file in `scripts/`.
 
@@ -67,6 +67,7 @@ They live beside this file in `scripts/`.
 | `handover.py config.yaml --confirm` | Removes the accounts you made while testing and writes `RUNNING.md` |
 | `check_ui.py --url … --config config.yaml` | Renders every page and reports schemes below the fold, empty media, empty choice tiles, schemes with no control to answer with, answers nothing collects, what the widgets say went wrong, keybinding conflicts and schemes that never appeared. `--phase poststudy` measures a page the walk cannot reach |
 | `study_status.py --url … --task-dir .` | Progress, per-annotator pace, agreement, and what looks wrong on a **running** study |
+| `model_prices.py config.yaml` | Fetches live model prices and puts them beside what Potato's compiled table would charge, before you choose an `ai_budget.cap_usd` |
 
 Each takes `--help`, and `boot_and_check`, `walk_task`, `check_ui` and
 `study_status` take `--json` when you want to act on the result rather than read
@@ -242,6 +243,21 @@ python .claude/skills/potato-tasks/scripts/estimate_effort.py config.yaml --rate
 reports how many annotators the design needs, how long each is working, total
 hours and a cost. Run it before the instructions get written — it is the cheapest
 place to catch a design nobody can afford.
+
+If the task also calls a model, the other half of the bill is per token, and
+Potato prices it from a table compiled into the package that matches on the
+longest substring of the model name. A model the table does not list is priced,
+silently, from whatever family row its name happens to contain, and
+`ai_budget.cap_usd` then refuses or permits work on that number.
+
+```bash
+python .claude/skills/potato-tasks/scripts/model_prices.py config.yaml
+```
+
+fetches current prices when you run it, puts them next to what Potato would
+charge, and names the row the charge came from. Do this rather than writing a rate
+into `DESIGN.md`: a price copied into a document is wrong at the next repricing
+and goes on reading as though somebody had checked it.
 
 `references/recording-decisions.md` has the `DESIGN.md` template and what moves
 the estimate.

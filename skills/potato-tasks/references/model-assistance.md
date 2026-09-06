@@ -384,15 +384,32 @@ drive it instead:
    |---|---|---|
    | `claude-opus-5` | `claude-opus` | a newer generation at the older rate |
    | `claude-haiku-4-5` | `claude-haiku` | same |
-   | `gpt-4.1-nano` | `gpt-4.1` | a cheap variant at its parent's rate, five times the `gpt-4.1-mini` row |
+   | `gpt-4.1-nano` | `gpt-4.1` | a cheap variant at its expensive parent's rate |
    | `gpt-5`, `o4-mini`, `gemini-3.0-pro` | nothing | unpriced, warns, runs |
 
    The first three produce no warning at all, and the error runs in both
    directions: an unlisted new generation can be under-priced, so the cap lets
    spend through, while an unlisted cheap variant is over-priced, so the cap
-   refuses runs that were affordable. Verify the model you are actually using
-   against the table before relying on a number, and watch
-   `/admin/api/ai-cost` rather than trusting the cap.
+   refuses runs that were affordable.
+
+   No rate is written down here, and none should be: the next repricing makes
+   it wrong without making it look wrong. Ask at the moment you need it:
+
+   ```bash
+   python .claude/skills/potato-tasks/scripts/model_prices.py config.yaml
+   ```
+
+   It finds every model the config names, including one that lives only in
+   `ai_config_file`, fetches a catalogue when it runs, and puts the live rate
+   next to what Potato would charge. It names the row the charge came from, and
+   which way the cap will be wrong. Run it before choosing a `cap_usd`, not
+   after. Self-hosted endpoints are skipped rather than reported as unpriced,
+   because zero is already the right answer for them. With no network it says
+   so and falls back, which is a different sentence from "that model is not
+   listed"; do not read one as the other.
+
+   Watch `/admin/api/ai-cost` as well. The cap is checked against a projection,
+   and the projection is the only thing the running total is made of.
 
 `cache_config.disk_cache` is worth turning on for anything with more than a few
 dozen items: without it, the same item re-queries the model on every page view.
@@ -428,6 +445,16 @@ reading the response body and the rendered DOM:
 - `icl_labeling` collecting examples once a second annotator agreed — 0 across 0
   on one annotator, 6 across 2 schemas on two
 - `arena` running two models against one prompt and recording a preference
+- the price table against a live catalogue, row by row. Every row that names a
+  model the catalogue still lists agrees with it exactly; the rest name a family
+  (`claude-opus`) or a model that has been retired, and nothing can confirm
+  those. The table is not stale, it is partial, and the partial rows are the
+  ones the substring rule prices from
+- `cost.record_spend` having one caller outside the tests
+  (`server_utils/judge_alignment.py`), which passes the projection with
+  `estimated=True`. The `estimated` column anticipates measured figures and
+  nothing writes one, so the running total is projections summing projections
+  and cannot be checked against an invoice
 
 On 2.8.2 itself none of the three endpoint types worked against a local server:
 `vllm` sent a parameter vLLM ignores, `openai`'s correct answer was delivered to

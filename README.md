@@ -31,7 +31,7 @@ pip install potato-annotation
 |---|---|
 | `skills/potato-tasks/SKILL.md` | What Claude Code loads when the skill fires |
 | `skills/potato-tasks/references/` | 27 reference files, loaded on demand |
-| `skills/potato-tasks/scripts/` | Seven helpers an agent runs rather than reconstructs |
+| `skills/potato-tasks/scripts/` | Eight helpers an agent runs rather than reconstructs |
 | `AGENTS.md` | The same guidance for Codex and Cursor, which read this filename directly |
 
 Three references are generated from Potato's registries by
