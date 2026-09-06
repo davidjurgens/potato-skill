@@ -374,7 +374,24 @@ drive it instead:
    unenforced. The models most likely to be missing are the newest ones, which
    is what a study starting today reaches for. A local endpoint is priced at
    zero rather than unpriced, so it is capped correctly and always passes.
-   If you are spending real money on a model outside that list, watch
+
+   **Being absent from the table and being matched to the wrong row are
+   different failures, and only the first one warns.** Matching is by longest
+   substring, so a model whose family name is already listed is priced silently
+   at whatever that row says:
+
+   | Model | Priced as | Effect on the cap |
+   |---|---|---|
+   | `claude-opus-5` | `claude-opus` | a newer generation at the older rate |
+   | `claude-haiku-4-5` | `claude-haiku` | same |
+   | `gpt-4.1-nano` | `gpt-4.1` | a cheap variant at its parent's rate, five times the `gpt-4.1-mini` row |
+   | `gpt-5`, `o4-mini`, `gemini-3.0-pro` | nothing | unpriced, warns, runs |
+
+   The first three produce no warning at all, and the error runs in both
+   directions: an unlisted new generation can be under-priced, so the cap lets
+   spend through, while an unlisted cheap variant is over-priced, so the cap
+   refuses runs that were affordable. Verify the model you are actually using
+   against the table before relying on a number, and watch
    `/admin/api/ai-cost` rather than trusting the cap.
 
 `cache_config.disk_cache` is worth turning on for anything with more than a few

@@ -46,7 +46,7 @@ Cost estimate and spend cap for AI actions. The complaint about commercial platf
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `cap_usd` | number |  | Dollar ceiling for this project's AI spend. A run projected to cross it is refused BEFORE it starts, so it cannot leave a part-labelled dataset and a bill for it |
+| `cap_usd` | number |  | Dollar ceiling for this project's AI spend. A run projected to cross it is refused BEFORE it starts rather than halted partway, so it does not leave a part-labelled dataset and a bill for it. Binds only a model Potato can price: an unpriced model logs a warning and runs, because a dollar ceiling has no dollar figure to compare against |
 
 ## `ai_support`
 
