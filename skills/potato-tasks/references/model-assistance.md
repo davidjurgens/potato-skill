@@ -358,6 +358,25 @@ drive it instead:
    aimed at metered providers; against your own GPU they measure tokens rather
    than money.
 
+   **The cap only binds a model Potato has a price for.** Prices are a
+   hardcoded table of about a dozen families -- the `gpt-4o`, `gpt-4.1`,
+   `o3-mini`, `claude-haiku/sonnet/opus` and `gemini-1.5/2.5` lines. A model
+   outside it has no dollar figure to compare against, so the run proceeds
+   uncapped and says so in the log:
+
+   ```
+   ai_budget.cap_usd is set but 'gpt-5' has no price on record, so this run
+   cannot be checked against it. Projected 875,000 tokens.
+   ```
+
+   Measured with `cap_usd: 1.00` on a 500-item batch: `gpt-4o` was projected at
+   $2.56 and refused; `gpt-5`, `o4` and `claude-fable-5` all ran with the cap
+   unenforced. The models most likely to be missing are the newest ones, which
+   is what a study starting today reaches for. A local endpoint is priced at
+   zero rather than unpriced, so it is capped correctly and always passes.
+   If you are spending real money on a model outside that list, watch
+   `/admin/api/ai-cost` rather than trusting the cap.
+
 `cache_config.disk_cache` is worth turning on for anything with more than a few
 dozen items: without it, the same item re-queries the model on every page view.
 `cache_config.prefetch.warm_up_page_count` generates ahead so the first annotator
