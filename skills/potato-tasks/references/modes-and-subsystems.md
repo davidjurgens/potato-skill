@@ -247,6 +247,43 @@ nothing validates them (see `config-keys-nested.md`):
 | `sequential_key_binding` | Number the labels 1,2,3… instead of naming keys |
 | `dynamic_options`, `dynamic_options_field` | Options come from the item, not the config |
 
+### What `codebook: true` carries over
+
+The first boot seeds the codebook from the labels of **every** scheme that sets
+`codebook: true`, and how you wrote those labels decides what the codebook
+contains. Bare strings give it names and nothing else, so the tray shows
+colourless codes reading "No content yet" while the annotation chips still look
+right. The form looks configured, and everything the researcher wrote about each
+code is on the floor. The dict form carries three things:
+
+```yaml
+annotation_schemes:
+  - annotation_type: radio
+    name: stance
+    description: What stance does it take?
+    codebook: true
+    labels:
+      - name: Supportive
+        color: "#2e7d32"
+        description: The text endorses the proposal, including qualified endorsement.
+      - name: Opposed
+        color: "#c62828"
+        tooltip: The text argues against the proposal on any grounds.
+      - name: Neutral
+        color: "#616161"
+```
+
+`name` becomes the code, `color` its colour in the tray and on the chips, and
+`description` its definition. `tooltip` is accepted as the same thing, so a
+config already using it for hover text needs no change. A label with neither
+gets a code with no definition rather than an invented one -- `Neutral` above.
+
+Seeding is a first-run bootstrap gated on the codebook being empty, so a label
+added to the config later does not appear: run `potato codebook config.yaml`.
+That gate is per codebook rather than per scheme, and it is applied after every
+codebook-backed scheme has contributed, so a label declared only on a second
+scheme is seeded too.
+
 ## When you cannot find the feature
 
 The routing above covers what the key documentation names. For anything else:
