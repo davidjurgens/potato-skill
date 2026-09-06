@@ -202,7 +202,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `cases` | object |  |  | Group instances into units of analysis -- a participant, an interview -- so codes can be counted per case rather than per item |
 | `codebook` | object |  |  | The shared label set a scheme opts into with a scheme-level `codebook: true`, edited from /codebook and stored per project |
 | `codebook_invivo_key` | string |  | `i` | Key that opens the in-vivo 'code from selection' composer while text is selected in a codebook-backed span scheme. Only the first character is used |
-| `codebook_mode` | string |  |  | Top-level shorthand for codebook.mode, and the value that wins when both are set. Unset it resolves to open under qda_mode/solo_mode and fixed otherwise; a crowdsourcing backend force-locks fixed |
+| `codebook_mode` | string |  |  | Top-level shorthand for codebook.mode, and the value that wins when both are set. Unset it resolves to open under qda_mode/solo_mode and fixed otherwise; a crowdsourcing backend force-locks fixed, whichever way the platform is named, with crowdsourcing.provider: expert the one exception (hired by name rather than recruited) |
 | `qda_mode` | object |  |  | Qualitative data analysis mode. Turning it on moves the defaults for memos, the codebook and case grouping together, rather than each being switched on separately |
 | `search` | object |  |  | Full-text search over loaded items, backed by SQLite FTS5. Admin search is read-only and always available; annotator search-and-claim is a separate opt-in |
 
