@@ -17,7 +17,11 @@ This asks a live source instead, at the moment you run it, so nothing here goes
 stale between one study and the next. Prices are quoted per million tokens and
 are what OpenRouter publishes for routing that model, which is not necessarily
 what your provider will invoice you. Treat every figure as an order of
-magnitude for deciding "can this study afford this", never as a quote.
+magnitude for deciding "can this study afford this", never as a quote. Measured
+on 2026-09-07: for `gpt-5.6-sol` OpenAI lists $4/$20 per 1M and OpenRouter
+publishes $2/$10, while `gpt-5.6-terra` and `gpt-5.6-luna` agree exactly across
+both. A disagreement here is a question to take to the vendor's page, not a
+verdict against Potato.
 """
 
 from __future__ import annotations
@@ -147,18 +151,39 @@ def near_names(model: str, index: dict, limit: int = 5) -> list:
 # ------------------------------------------------- what Potato would charge
 
 
-def potato_price(model: str, endpoint_type: str) -> dict:
+def _call_with_overrides(func, model, endpoint_type, overrides):
+    """Call a pricing function, passing `overrides` only if it accepts them.
+
+    `ai_budget.prices` is newer than this script's oldest supported Potato.
+    Passing it unconditionally is a TypeError against an older install, and
+    dropping it silently would price the run from the built-in table while the
+    config says otherwise -- the report would be about a study nobody is
+    running.
+    """
+    if not overrides:
+        return func(model, endpoint_type), False
+    try:
+        return func(model, endpoint_type, overrides), True
+    except TypeError:
+        return func(model, endpoint_type), False
+
+
+def potato_price(model: str, endpoint_type: str, overrides: dict = None) -> dict:
     """Ask the installed Potato what it would charge, and whether it is sure.
 
     Imports rather than reimplements. Two copies of a matching rule is the
     shape that drifts, and the whole finding here is about a matching rule.
+
+    `overrides` is the config's own `ai_budget.prices`, which is merged over
+    the built-in table by the same substring rule.
     """
     try:
         from potato.ai import cost
     except Exception as exc:                       # pragma: no cover - env
         return {"available": False, "reason": str(exc)}
 
-    prices = cost.price_for(model, endpoint_type)
+    prices, used_overrides = _call_with_overrides(
+        cost.price_for, model, endpoint_type, overrides)
     exact = getattr(cost, "price_matched_exactly", None)
     result = {
         "available": True,
@@ -169,12 +194,18 @@ def potato_price(model: str, endpoint_type: str) -> dict:
             cost, "LOCAL_ENDPOINTS", frozenset()),
         # None where the installed Potato predates the check, which is a
         # different thing from "it matched exactly" and is reported as such.
-        "matched_exactly": exact(model, endpoint_type) if exact else None,
+        "matched_exactly": (_call_with_overrides(
+            exact, model, endpoint_type, overrides)[0] if exact else None),
+        "overridden": False,
     }
     if prices is not None and not result["local"]:
-        table = getattr(cost, "PRICE_TABLE", {})
+        table = dict(getattr(cost, "PRICE_TABLE", {}))
+        from_config = set(overrides or ()) if used_overrides else set()
+        table.update({k: overrides[k] for k in from_config})
         rows = [p for p in table if p in (model or "").lower()]
-        result["matched_row"] = max(rows, key=len) if rows else None
+        row = max(rows, key=len) if rows else None
+        result["matched_row"] = row
+        result["overridden"] = row in from_config
     return result
 
 
@@ -256,7 +287,7 @@ def _gap(ratio: float) -> str:
 
 
 def review(model: str, endpoint_type: str, index: dict,
-           have_catalogue: bool = True) -> dict:
+           have_catalogue: bool = True, overrides: dict = None) -> dict:
     """One model's two prices and what the difference means.
 
     `have_catalogue` is carried rather than inferred from an empty index.
@@ -264,7 +295,7 @@ def review(model: str, endpoint_type: str, index: dict,
     findings, and reporting the second as the first is how a reader concludes
     a model is unlisted when nothing ever asked.
     """
-    potato_says = potato_price(model, endpoint_type)
+    potato_says = potato_price(model, endpoint_type, overrides)
     # A self-hosted model is already correctly priced at zero, so looking it up
     # can only produce noise: a near-name suggestion for a checkpoint nobody is
     # billing for reads as though the zero were a gap to fill.
@@ -289,7 +320,15 @@ def review(model: str, endpoint_type: str, index: dict,
     potato = report["potato"]
     live = report["live"]
 
-    if potato.get("local"):
+    if potato.get("overridden"):
+        report["verdict"] = (
+            f"priced by this config's `ai_budget.prices`, not by Potato's "
+            f"table, via the `{potato.get('matched_row')}` entry. "
+            + ("The live rate above is the check on what you wrote there"
+               if live else
+               "Nothing here checks that figure: the catalogue does not "
+               "list this model either"))
+    elif potato.get("local"):
         report["verdict"] = (
             "self-hosted: Potato prices this at zero, which is right. The "
             "token count still predicts how long the run takes.")
@@ -311,10 +350,16 @@ def review(model: str, endpoint_type: str, index: dict,
                 report["verdict"] += (
                     f" -- {_gap(ratio)}, so a cap will let spend through")
         elif ratio and (ratio > 1.05 or ratio < 0.95):
+            # Both sources named this model, so the disagreement is between
+            # them rather than a matching failure. `gpt-5.6-sol` is priced at
+            # $4/$20 by OpenAI and $2/$10 here, and the table is the one that
+            # matches the vendor. Say the two sources differ; do not say the
+            # table is wrong.
             report["verdict"] = (
-                f"the shipped table has its own row for this and disagrees "
-                f"with the live rate ({potato['input']:g} against "
-                f"{live['input']:g} in)")
+                f"both sources price this model and they differ "
+                f"({potato['input']:g} against {live['input']:g} in). A "
+                f"router charges its own rate, so check the vendor's pricing "
+                f"page before you trust either number for a cap")
         else:
             report["verdict"] = "the shipped table agrees with the live rate"
     elif live and potato.get("input") is None:
@@ -354,7 +399,10 @@ def _print(reports, catalogue_note, as_of):
             print(f"  Potato    no price on record (table as of {potato['as_of']})")
         else:
             row = potato.get("matched_row")
-            via = f"   via the '{row}' row" if row else ""
+            if potato.get("overridden"):
+                via = f"   from ai_budget.prices, '{row}'"
+            else:
+                via = f"   via the '{row}' row" if row else ""
             print(f"  Potato   ${potato['input']:>8.3f} in / ${potato['output']:>8.3f} out "
                   f"per 1M{via}")
         print(f"  -> {report['verdict']}")
@@ -385,7 +433,7 @@ def main(argv=None) -> int:
     if not args.config and not args.model:
         parser.error("give a config, or --model NAME")
 
-    targets, base = [], "."
+    targets, base, overrides = [], ".", None
     for name in args.model:
         targets.append({"model": name, "endpoint_type": args.endpoint_type,
                         "where": "--model"})
@@ -395,7 +443,9 @@ def main(argv=None) -> int:
             print(f"No such config: {path}", file=sys.stderr)
             return 2
         base = os.path.dirname(path) or "."
-        found = models_in_config(_load_yaml(path), base)
+        config = _load_yaml(path)
+        overrides = (config.get("ai_budget") or {}).get("prices") or None
+        found = models_in_config(config, base)
         for entry in found:
             if entry.get("missing"):
                 print(f"ai_config_file points at {entry['where']}, which is not "
@@ -440,7 +490,8 @@ def main(argv=None) -> int:
         note += ("  The feed answered but listed no usable models, so its "
                  "shape may have changed.")
     reports = [review(t["model"], t.get("endpoint_type", ""), index,
-                      have_catalogue=catalogue is not None)
+                      have_catalogue=catalogue is not None,
+                      overrides=overrides)
                for t in targets]
     as_of = next((r["potato"].get("as_of") for r in reports
                   if r["potato"].get("available")), "")

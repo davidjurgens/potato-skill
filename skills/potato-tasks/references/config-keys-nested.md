@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 401 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 402 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -47,6 +47,7 @@ Cost estimate and spend cap for AI actions. The complaint about commercial platf
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `cap_usd` | number |  | Dollar ceiling for this project's AI spend. A run projected to cross it is refused BEFORE it starts rather than halted partway, so it does not leave a part-labelled dataset and a bill for it. Binds only a model Potato can price: an unpriced model logs a warning and runs, because a dollar ceiling has no dollar figure to compare against |
+| `prices` | object |  | Per-model prices, USD per million tokens, as {model_substring: [input, output]}. Merged over the built-in table and matched by the same longest-substring rule, so a family name or one dated snapshot both work. A table shipped in a release is stale the moment a vendor ships a model, and an unpriced model means cap_usd does not bind; this prices one without waiting for a release |
 
 ## `ai_support`
 

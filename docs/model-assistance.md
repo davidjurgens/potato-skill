@@ -369,39 +369,49 @@ drive it instead:
    aimed at metered providers; against your own GPU they measure tokens rather
    than money.
 
-   **The cap only binds a model Potato has a price for.** Prices are a
-   hardcoded table of about a dozen families -- the `gpt-4o`, `gpt-4.1`,
-   `o3-mini`, `claude-haiku/sonnet/opus` and `gemini-1.5/2.5` lines. A model
-   outside it has no dollar figure to compare against, so the run proceeds
-   uncapped and says so in the log:
+   **The cap only binds a model Potato has a price for.**
+   Prices come from a table of 59 rows compiled into `potato/ai/cost.py`,
+   matched by the longest substring of the model name. That gives five states, and they are not
+   equally loud:
 
-   ```
-   ai_budget.cap_usd is set but 'gpt-5' has no price on record, so this run
-   cannot be checked against it. Projected 875,000 tokens.
-   ```
-
-   Measured with `cap_usd: 1.00` on a 500-item batch: `gpt-4o` was projected at
-   $2.56 and refused; `gpt-5`, `o4` and `claude-fable-5` all ran with the cap
-   unenforced. The models most likely to be missing are the newest ones, which
-   is what a study starting today reaches for. A local endpoint is priced at
-   zero rather than unpriced, so it is capped correctly and always passes.
-
-   **Being absent from the table and being matched to the wrong row are
-   different failures, and only the first one warns.** Matching is by longest
-   substring, so a model whose family name is already listed is priced silently
-   at whatever that row says:
-
-   | Model | Priced as | Effect on the cap |
+   | State | Cap | Log |
    |---|---|---|
-   | `claude-opus-5` | `claude-opus` | a newer generation at the older rate |
-   | `claude-haiku-4-5` | `claude-haiku` | same |
-   | `gpt-4.1-nano` | `gpt-4.1` | a cheap variant at its expensive parent's rate |
-   | `gpt-5`, `o4-mini`, `gemini-3.0-pro` | nothing | unpriced, warns, runs |
+   | Its own row | binds | silent |
+   | A dated snapshot of a row (`<model>-20260901`) | binds | silent |
+   | Matched to a shorter row, so priced as a relative | binds, on that rate | warns, and names `ai_budget.prices` |
+   | No row contains it | does not bind, run proceeds | warns |
+   | Local endpoint | binds, at zero | silent |
 
-   The first three produce no warning at all, and the error runs in both
-   directions: an unlisted new generation can be under-priced, so the cap lets
-   spend through, while an unlisted cheap variant is over-priced, so the cap
-   refuses runs that were affordable.
+   Measured on 2026-09-07 against Potato at `1f8dab21`, 500 items of about 100
+   words: an unpriced model projected 107,500 tokens and no dollar figure, and
+   ran through a `cap_usd: 0.10` untouched --
+
+   ```
+   ai_budget.cap_usd is set but 'gemini-3.0-pro' has no price on record, so
+   this run cannot be checked against it. Projected 107,500 tokens.
+   ```
+
+   The third row of that table is the one that used to be silent, and it is
+   the more dangerous of the two: an absent price gives you no number, while a
+   price taken from a shorter row gives you a confident one. It runs in both
+   directions -- an unlisted new generation picks up an older, cheaper rate and
+   the cap lets spend through; an unlisted cheap variant picks up its expensive
+   parent's rate and the cap refuses runs you could afford.
+
+   **Fix it in the config rather than waiting for a release.**
+   `ai_budget.prices` is merged over the built-in table by the same matching
+   rule, so a family name or a dated snapshot both work:
+
+   ```yaml
+   ai_budget:
+     cap_usd: 0.10
+     prices:
+       gemini-3.0-pro: [1.0, 8.0]   # USD per million tokens, input then output
+   ```
+
+   Measured on the same run: without it the batch above was unpriced and ran;
+   with it the batch was projected at $0.46 and refused. The warning stops
+   too, because it was only ever saying the cap had nothing to bind.
 
    No rate is written down here, and none should be: the next repricing makes
    it wrong without making it look wrong. Ask at the moment you need it:
@@ -412,12 +422,20 @@ drive it instead:
 
    It finds every model the config names, including one that lives only in
    `ai_config_file`, fetches a catalogue when it runs, and puts the live rate
-   next to what Potato would charge. It names the row the charge came from, and
-   which way the cap will be wrong. Run it before choosing a `cap_usd`, not
-   after. Self-hosted endpoints are skipped rather than reported as unpriced,
-   because zero is already the right answer for them. With no network it says
-   so and falls back, which is a different sentence from "that model is not
-   listed"; do not read one as the other.
+   next to what Potato would charge. It names the row the charge came from,
+   whether that row was the model's own or a relative's, and whether the number
+   came from your `ai_budget.prices` rather than the table. Run it before
+   choosing a `cap_usd`, not after. Self-hosted endpoints are skipped rather
+   than reported as unpriced, because zero is already the right answer for
+   them. With no network it says so and falls back, which is a different
+   sentence from "that model is not listed"; do not read one as the other.
+
+   **A disagreement it reports is a question, not a verdict.** The catalogue is
+   a router's published rate, which is not always the vendor's list price.
+   Measured on 2026-09-07: OpenAI lists `gpt-5.6-sol` at $4/$20 per million and
+   the catalogue publishes $2/$10, while `gpt-5.6-terra` and `gpt-5.6-luna`
+   agree exactly across both. Potato was right about sol. Check the vendor's
+   own page before you change a number on the strength of this.
 
    Watch `/admin/api/ai-cost` as well. The cap is checked against a projection,
    and the projection is the only thing the running total is made of.
@@ -456,11 +474,16 @@ reading the response body and the rendered DOM:
 - `icl_labeling` collecting examples once a second annotator agreed — 0 across 0
   on one annotator, 6 across 2 schemas on two
 - `arena` running two models against one prompt and recording a preference
-- the price table against a live catalogue, row by row. Every row that names a
-  model the catalogue still lists agrees with it exactly; the rest name a family
-  (`claude-opus`) or a model that has been retired, and nothing can confirm
-  those. The table is not stale, it is partial, and the partial rows are the
-  ones the substring rule prices from
+- the price table against a live catalogue, row by row, on 2026-09-07: 52 of
+  the 59 rows name a model the catalogue still lists, and 51 of those agree
+  with it to the cent. The one that does not is `gpt-5.6-sol`, where the vendor
+  and the router publish different rates and the vendor's page backs the table.
+  The 7 unresolvable rows are models the router no longer carries
+  (`gemini-1.5-*`, `gpt-3.5-turbo-1106`, both `claude-haiku-3-5` spellings),
+  never carried (`claude-mythos-5`), or carried only as a preview
+  (`gemini-3.1-pro`). The table is accurate where it is confirmable; what it is
+  not is complete, and an absent model is the case `ai_budget.prices` exists
+  for
 - `cost.record_spend` having one caller outside the tests
   (`server_utils/judge_alignment.py`), which passes the projection with
   `estimated=True`. The `estimated` column anticipates measured figures and

@@ -55,6 +55,12 @@ def _counts():
         if _entries:
             _kw_shapes.add(str(_shape).split(" (", 1)[0])
 
+    # Not a registry, but it rots the same way and faster: a vendor ships a
+    # model and the row count moves. `model-assistance.md` states it because
+    # an author deciding whether to write `ai_budget.prices` needs to know
+    # roughly how much the table covers.
+    from potato.ai.cost import PRICE_TABLE as price_table
+
     key_docs = dict(iter_key_docs())
     top_docs = {p: d for p, d in key_docs.items() if "." not in p}
     sub_docs = {p: d for p, d in key_docs.items() if "." in p}
@@ -88,6 +94,7 @@ def _counts():
         "unchecked_blocks": len(unchecked),
         "examples": load_manifest()["count"],
         "keyword_shapes": len(_kw_shapes),
+        "price_rows": len(price_table),
     }
 
 
@@ -115,6 +122,12 @@ CLAIMS = [
 
     ("AGENTS.md", r"There are (\d+) example projects", "examples"),
     ("AGENTS.md", r"There are (\d+) of them", "annotation_types"),
+
+    # How much of the price table an author can rely on, which is what decides
+    # whether they need to write `ai_budget.prices` at all. It moves whenever a
+    # vendor ships a model, faster than any registry count here.
+    ("references/model-assistance.md",
+     r"a\s+table of (\d+) rows compiled into", "price_rows"),
 
     ("references/building-the-ui.md",
      r"### The (\d+) display types", "display_types"),

@@ -246,18 +246,20 @@ place to catch a design nobody can afford.
 
 If the task also calls a model, the other half of the bill is per token, and
 Potato prices it from a table compiled into the package that matches on the
-longest substring of the model name. A model the table does not list is priced,
-silently, from whatever family row its name happens to contain, and
-`ai_budget.cap_usd` then refuses or permits work on that number.
+longest substring of the model name. A model the table does not list is priced
+from whatever shorter row its name happens to contain, and `ai_budget.cap_usd`
+then refuses or permits work on that number. Potato logs a warning when that
+happens, but the projection it warns about is still the one the cap uses.
 
 ```bash
 python .claude/skills/potato-tasks/scripts/model_prices.py config.yaml
 ```
 
 fetches current prices when you run it, puts them next to what Potato would
-charge, and names the row the charge came from. Do this rather than writing a rate
-into `DESIGN.md`: a price copied into a document is wrong at the next repricing
-and goes on reading as though somebody had checked it.
+charge, and names the row the charge came from. Where they disagree, set the
+right figure in `ai_budget.prices` rather than editing Potato. Do this rather
+than writing a rate into `DESIGN.md`: a price copied into a document is wrong at
+the next repricing and goes on reading as though somebody had checked it.
 
 `references/recording-decisions.md` has the `DESIGN.md` template and what moves
 the estimate.
@@ -400,7 +402,7 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 ## Config keys
 
 `references/config-keys.md` lists the 157 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 401 documented **sub-keys** — the
+`references/config-keys-nested.md` lists the 402 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 23 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -681,7 +683,7 @@ Three that decide whether a deployment is safe to hand over:
 | `getting-the-data-out.md` | The 29 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
 | `config-keys.md` | 157 top-level keys *(generated)* |
-| `config-keys-nested.md` | 401 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys-nested.md` | 402 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, hosting, the preflight, bundles, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
