@@ -27,6 +27,39 @@ looks like it brackets coverage and does not. `num_annotators_per_item` is the
 enforced cap. (The key of the same name under `icl_labeling.example_selection`
 is a different setting, and that one is read.)
 
+#### `num_annotators_per_item.adaptive`
+
+`num_annotators_per_item` also takes a mapping, and the `adaptive` block under
+it reopens an item when the first annotators disagree:
+
+```yaml
+num_annotators_per_item:
+  default: 2
+  adaptive:
+    enabled: true
+    disagreement_threshold: 0.5
+    boost_to: 4
+```
+
+Measured on 8 items with two annotators who disagreed on `x0`-`x3` and agreed
+on `x4`-`x7`. The server logged four lines and only four:
+
+```
+Adaptive boost: x0 raised to 4 annotators (current=2)
+```
+
+The third and fourth annotators through the door were each served exactly
+`x0 x1 x2 x3`; the agreed half had retired at 2; the fifth got nothing. So the
+budget goes where the label is actually contested, and a study that would have
+cost 8 x 4 = 32 annotations cost 24.
+
+Worth knowing before you reach for it: this is a cap being raised, so the
+arithmetic in the section above stops holding. `items x num_annotators_per_item`
+is no longer the ceiling on how much work exists — with `boost_to: 4` on a
+`default: 2` study the true ceiling is twice what `default` suggests, and how
+close you get depends on how much your annotators disagree, which is the thing
+you do not know yet. Recruit against `boost_to`, not against `default`.
+
 #### `instance_per_annotator`
 
 Measured on 10 items, reading the assignment the server actually built:

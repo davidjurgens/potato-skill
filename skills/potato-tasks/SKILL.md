@@ -402,7 +402,7 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 ## Config keys
 
 `references/config-keys.md` lists the 157 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 402 documented **sub-keys** — the
+`references/config-keys-nested.md` lists the 408 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 23 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -683,7 +683,7 @@ Three that decide whether a deployment is safe to hand over:
 | `getting-the-data-out.md` | The 29 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
 | `config-keys.md` | 157 top-level keys *(generated)* |
-| `config-keys-nested.md` | 402 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys-nested.md` | 408 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, hosting, the preflight, bundles, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
