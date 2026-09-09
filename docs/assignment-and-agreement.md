@@ -483,9 +483,13 @@ of the event stream carries who has voted and not what they voted.
 
 **Set `rooms.schema` rather than leaving it to the autopick.** With the key
 absent, the vote target is the first `radio` or `likert` scheme in the config,
-which moves when you reorder the file. With neither an explicit schema nor a
-radio or likert scheme to fall back on, rooms switch themselves off at boot: the
-log says so, and `/rooms` answers 404 while the config still reads as enabled.
+which moves when you reorder the file. `potato validate` covers both ways of
+getting it wrong, and `--strict` fails on either: nothing to vote on at all
+warns that "rooms will be disabled and /rooms will return 404", and a
+`rooms.schema` naming a scheme that does not exist warns that "rooms will refuse
+to open" and lists the names it did find. That second one is the dangerous
+shape, because a misspelling boots looking healthy and only fails when somebody
+tries to open a room.
 
 ### What a room writes into each member's annotations
 
