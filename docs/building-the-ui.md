@@ -39,6 +39,25 @@ instance_display:
 `fields` is required and cannot be empty. Each entry needs `key` and `type`.
 An unknown `type` fails validation with the valid list in the message.
 
+**The default path collapses horizontal whitespace, and `instance_display`
+keeps it.** This is the one reason to declare the block on a task that is
+otherwise plain text. Same item, same server, only the config differing:
+
+```
+no instance_display    def f(x):\n if x > 0:\n return x\n return -x
+type: text             def f(x):<br/>    if x > 0:<br/>        return x<br/>    return -x
+```
+
+Runs of spaces and tabs are squeezed to one on the default path, so two
+levels of indentation become one, a diff loses its gutter and a
+column-aligned table loses its columns. Nothing is logged and the config
+validates either way. Declare `instance_display` for anything where
+horizontal position carries meaning — code, diffs, logs, transcripts with
+speaker columns, poetry — and the field is rendered inside a
+`preserve-whitespace` container with real line breaks. `type: text` is
+enough; you do not need `code` unless you want the copy button and the
+scroll container.
+
 ### Laying the item out
 
 `instance_display.layout` is the whole of it: `direction` (`vertical` or
