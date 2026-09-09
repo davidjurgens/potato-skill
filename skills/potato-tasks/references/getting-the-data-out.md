@@ -108,6 +108,22 @@ looks plausible and is wrong — a stroke of mine came back at [289,0,321,399]
 instead of [390,180,473,200]. The `coco` exporter does the conversion, so
 `annToMask` on its output is correct.
 
+**A composite scheme's answer arrives as a JSON string, one level in.** Types
+that record a structure rather than a label store the whole answer under a
+single `(schema, schema)` label, so the `jsonl` export nests it as a string.
+Measured on `code_review` and `text_edit`; the geometry schemes do the same
+thing through a `_data` label, as the mask note below describes:
+
+```json
+{"instance_id": "t1", "user_id": "r@example.com",
+ "labels": {"review": {"review": "{\"verdict\": \"request_changes\", \"comments\": [...]}"}}}
+```
+
+A consumer has to `json.loads` the inner value before it is data. Worth knowing
+before you write the analysis script, and worth checking on your own schemes:
+which of them land as a label and which land as a blob is decided by the type,
+not by anything in your config.
+
 The vision and linguistics formats are the reason to ask early: a researcher who
 says "we'll train a detector on this" wants `coco` or `yolo`, and a task designed
 without that in mind can produce geometry that does not survive the conversion.
