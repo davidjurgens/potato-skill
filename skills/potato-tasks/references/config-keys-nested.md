@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 402 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 408 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -248,6 +248,12 @@ Route items to annotators by the item's category, optionally gated on a qualific
 |---|---|---|---|
 | `category_key` | string |  | Item field holding the category. Must be a non-empty string |
 | `dynamic` | object |  | Probabilistic expertise routing, which learns who is good at what from agreement instead of a fixed qualification. Carries its own `enabled` |
+| `dynamic.agreement_method` | string | `majority_vote` | How consensus is decided: `majority_vote`, `super_majority` (two thirds) or `unanimous` |
+| `dynamic.base_probability` | number | `0.1` | Floor on the routing probability of any category, so an annotator who scores badly in one is still sent some of it |
+| `dynamic.enabled` | boolean | `False` | Turn expertise routing on. Starts a background worker that scores annotations against consensus |
+| `dynamic.learning_rate` | number | `0.1` | How far one agreement or disagreement moves a score, as an exponential moving average. Scores start at the neutral 0.5 |
+| `dynamic.min_annotations_for_consensus` | integer | `2` | How many annotators must have answered an item before it is used to score anyone. Below this the item is skipped, not counted as agreement |
+| `dynamic.update_interval_seconds` | integer | `60` | Seconds between scoring passes. The default is the difference between routing that responds within a session and routing that does not |
 | `enabled` | boolean | `False` | Turn category routing on. Also gates the qualification scoring that runs when someone finishes training |
 | `fallback` | string | `uncategorized` | What an annotator with no matching qualification is given |
 | `qualification` | object |  | How training performance becomes a per-category qualification: `source` (training, prestudy or both), `threshold` (0-1, default 0.7) and `min_questions` (default 1) |

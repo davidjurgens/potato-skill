@@ -203,7 +203,14 @@ gold_standards:
     enabled: false
 ```
 
-`mode` must be one of `training`, `mixed`, `separate`; the error names them.
+**`mode` takes three values and `mixed` is the one that is implemented.**
+`separate` behaves identically to it and says so at boot —
+`gold_standards.mode 'separate' behaves as 'mixed': 3 gold items are injected
+into the annotation stream every 2 items` — and `training` serves nothing at
+all, because no code path delivers gold during the training phase. That last
+one fails `--strict` and warns twice at boot, naming the count that will never
+be served. Grade a training phase with its own practice questions instead.
+
 
 **`accuracy` and `auto_promote` must both be dictionaries**, even though the key
 documentation types them `number|object` and `boolean|object`. `accuracy: 0.7`
@@ -211,6 +218,14 @@ and `auto_promote: false` both fail with `must be a dictionary`. Their documente
 sub-keys are `min_threshold` / `evaluation_count` and `min_annotators` /
 `agreement_threshold` — and nothing checks those, because validation stops one
 level in. A wrong sub-key here validates clean and does nothing.
+
+**The accuracy threshold reports to you, not to the annotator.** Crossing it
+logs `<user> is below the gold standard accuracy threshold: 0.50 over 2
+evaluated items, threshold 0.90` and puts the annotator in
+`gold_standards.below_accuracy_threshold` on the admin route. It does not block
+them and there is no setting that does — attention checks block, gold standards
+never do. If you need underperformers stopped rather than counted, that is
+`attention_checks.failure_handling` or your own procedure.
 
 ### How many gold items an annotator sees
 

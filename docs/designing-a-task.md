@@ -309,17 +309,18 @@ spending the budget on 10,000.
 
 `assignment_strategy` takes: `random`, `fixed_order`, `active_learning`,
 `llm_confidence`, `max_diversity`, `least_annotated`, `category_based`,
-`diversity_clustering`, `batch`, `priority`, `psychometric`.
+`diversity_clustering`, `batch`, `priority`, `model_review`, `psychometric`.
 
 `random` is right unless there is a reason. Reasons: `fixed_order` when items
 are a narrative and order carries meaning; `least_annotated` when you care most
 about finishing every item; `active_learning` when a model is in the loop and
 the point is to spend annotator time where it changes something.
 
-`llm_confidence` is in the list and assigns at random. It is a placeholder that
-takes no model into account, and nothing at boot or in the log says so. I got a
-shuffled order out of it on a server with a fitted classifier. Use
-`active_learning`.
+`llm_confidence` is in the list and is not implemented: it assigns at random and
+takes no model into account — I got a shuffled order out of it on a server with
+a fitted classifier sitting unused. It warns at boot now and names the two
+strategies that do the job: `active_learning`, or `model_review` when the model
+has already produced labels for people to check.
 
 Set `random_seed` if the ordering ever needs to be reproduced.
 

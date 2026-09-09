@@ -86,7 +86,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `alert_time_each_instance` | integer |  | `10000000` | Seconds an annotator may spend on one item before being warned. The default is effectively no limit |
-| `assignment_strategy` | string |  | `fixed_order` | How items are handed out: random, fixed_order, active_learning, llm_confidence, max_diversity, least_annotated, category_based, diversity_clustering, batch, priority, or psychometric |
+| `assignment_strategy` | string |  | `fixed_order` | How items are handed out: random, fixed_order, active_learning, max_diversity, least_annotated, category_based, diversity_clustering, batch, priority, model_review or psychometric. `llm_confidence` is accepted and assigns at random -- it is not implemented |
 | `automatic_assignment` | object |  |  | Assign items to annotators automatically as they arrive |
 | `batch_assignment` | object |  |  | Split items into named groups and assign whole batches |
 | `instance_reclaim` | object |  |  | Take assignments back from annotators who abandoned them so the items can go out again. `enabled` (false) and `timeout_hours` (24), plus optional `stale`, `manual`, `quality_control` and `prolific` sections each carrying `preserve_completed_annotations` |

@@ -309,7 +309,7 @@ and say what it costs.
 
 `assignment_strategy` takes: `random`, `fixed_order`, `active_learning`,
 `llm_confidence`, `max_diversity`, `least_annotated`, `category_based`,
-`diversity_clustering`, `batch`, `priority`, `psychometric`.
+`diversity_clustering`, `batch`, `priority`, `model_review`, `psychometric`.
 
 `random` with a `random_seed` is right unless there is a reason:
 
@@ -320,9 +320,10 @@ and say what it costs.
 - `active_learning` when a model is in the loop and the point is to spend
   annotator time where it changes something. It needs
   `assignment_strategy: active_learning`. With `active_learning.enabled: true`
-  on its own the classifier is still fitted and its ordering serves nobody, and
-  the log and the admin report read the same either way. `llm_confidence` sits
-  beside it in the list and assigns at random
+  on its own the classifier is still fitted and its ordering serves nobody; the
+  reorder log line and `ordering_is_served` in `/admin/active-learning/stats`
+  both name which case you are in. `llm_confidence` sits beside it in the list,
+  is not implemented, and assigns at random
 
 ## The response format decides the metric
 

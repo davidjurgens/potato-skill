@@ -287,16 +287,25 @@ the log. The accepted values are the three classifiers above plus
 `sklearn.feature_extraction.text.CountVectorizer` or `sentence-transformers` for
 the vectorizer.
 
-The log will show `Trained classifier for schema <name> with N instances,
-accuracy: ...` followed by `Reordered N instances`. **That pair proves the
-classifier was fitted, not that anybody is being served its ordering.** Set
-`assignment_strategy: fixed_order` and leave `active_learning.enabled: true`
-and both lines still appear, with the same counts; so does everything
-`/admin/active-learning/stats` reports. The check that separates them is to
-compare the order an annotator was actually served against the order in the
-data file. On 24 items the two arms diverged from position 12:
-`n0 n1 n2 n5 a1 n4 …` under `active_learning` against `n0 n1 n2 n3 n4 n5 …`
-under `fixed_order`. Nothing else in the two runs differed.
+Two log lines tell you it is working, and they say different things. The first
+is `Trained classifier for schema <name> with N instances, accuracy: ...`,
+which proves a classifier was fitted. The second names the strategy, because a
+fitted classifier and a served ordering are separate questions:
+
+```
+Reordered 2 instances (2 ranked, 0 exploration); assignment_strategy:
+active_learning, so this is the order annotators get
+
+Reordered 2 instances (2 ranked, 0 exploration); assignment_strategy is
+'fixed_order', NOT active_learning, so this ordering is computed and never
+served
+```
+
+`/admin/active-learning/stats` carries the same fact as `assignment_strategy`
+and `ordering_is_served`. Read one of those two rather than the training line:
+`active_learning.enabled: true` with the wrong strategy trains a classifier
+whose ordering reaches nobody, and until this pair existed the two cases were
+indistinguishable in the log, in the admin report and in `--strict`.
 
 **`icl_labeling`** builds few-shot prompts out of annotations you already have.
 Its sub-keys are **three levels deep**, and the block is one of those `--strict`
