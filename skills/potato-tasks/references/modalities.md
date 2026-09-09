@@ -63,6 +63,32 @@ s = schema_registry.get("temporal_grounding")
 sorted(set(s.required_fields) | set(s.optional_fields))
 ```
 
+**Naming the field is half of it. Declare `instance_display` too.** The key
+above tells the scheme which field holds the media; the widget then looks for
+the URL on the page, and the places it looks are all built by
+`instance_display`. Two servers differing only in that block:
+
+```
+audio_annotation, source_field: clip
+  without    data-field-key: none, data-source-url: none, no <source>
+  with       data-field-key="clip", data-source-url="/media/clip.flac"
+
+image_annotation, source_field: image_url
+  without    no data-field-key, no data-source-url, no <img>
+  with       all three, /media/plain.png
+```
+
+Both configs pass `--strict`, and the item's fields are in the page either way
+— in a `<script type="application/json">` block the widgets do not read. So
+give every media scheme a matching display field:
+
+```yaml
+instance_display:
+  fields:
+    - key: clip          # the same name source_field points at
+      type: audio
+```
+
 Two names collide. **`video` is both an annotation type and a display type**,
 with different required fields — the scheme wants `video_path`, the display field
 wants `key`. It is also the one annotation type with no example config anywhere,
