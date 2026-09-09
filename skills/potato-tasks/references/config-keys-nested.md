@@ -146,7 +146,7 @@ Insert items with a known answer to detect inattentive annotators
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | boolean |  | Turn attention checks on |
-| `failure_handling` | string|object |  | What to do when an annotator fails a check. A bare action name, or a mapping with warn/block thresholds and messages |
+| `failure_handling` | object |  | Warn and block thresholds, and the messages shown at each |
 | `frequency` | integer |  | Insert a check every N items |
 | `geometry_iou_tolerance` | number |  | Overlap a drawn answer must reach to count as correct, as a fraction |
 | `items_file` | string |  | File holding the attention-check items |

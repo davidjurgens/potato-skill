@@ -150,8 +150,7 @@ attention_checks:
     block_threshold: 5      # block at the fifth
 ```
 
-`failure_handling` must be a dictionary despite the key reference typing it
-`string|object`, and it reads four keys and no others: `warn_threshold`,
+`failure_handling` reads four keys and no others: `warn_threshold`,
 `warn_message`, `block_threshold`, `block_message`. There is no `action` key.
 A sub-key it does not know is a warning rather than an error, so a config
 naming one validates without `--strict` and does nothing. The thresholds then
