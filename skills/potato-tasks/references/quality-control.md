@@ -41,9 +41,16 @@ training:
 ```
 
 Recognized sub-keys: `enabled`, `data_file`, `allow_retry`, `feedback`,
-`passing_criteria`. That is all of them. `min_accuracy`, `max_attempts`,
-`num_items`, `show_feedback`, `threshold` and every other plausible name is
-rejected by `--strict`, which is how you find the real ones.
+`passing_criteria`, `failure_action`, `annotation_schemes`. That is all seven.
+`min_accuracy`, `max_attempts`, `num_items`, `show_feedback`, `threshold` and
+every other plausible name is rejected by `--strict`, which is how you find the
+real ones.
+
+`failure_action` is `move_to_done` (default) or `repeat_training`, and any
+other value is a fatal error. `annotation_schemes` lets the practice questions
+use different schemes from the real task; omit it and training uses the task's
+own.
+
 `feedback` and `passing_criteria` must be dictionaries; a bare `true` or `0.6`
 is a fatal error.
 

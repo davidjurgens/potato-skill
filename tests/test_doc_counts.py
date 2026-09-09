@@ -206,3 +206,44 @@ def test_display_registry_reports_every_renderer_option():
         f"{drifted}. An author reading list_displays() will not find these, so "
         "restore the warning in references/building-the-ui.md."
     )
+
+
+class TestEnumeratedSubKeyListsAreComplete:
+    """A sentence that says "that is all of them" is a claim about a registry.
+
+    `test_skill_sync` checks that every key NAMED in prose exists. It cannot
+    check the other direction, so a list that omits a real key passes every
+    guard while telling an agent the key does not exist. The training list said
+    five and omitted `failure_action` (which decides whether a failing
+    annotator is removed or repeats) and `annotation_schemes` (which lets
+    practice use different questions from the task).
+
+    Only lists that claim completeness are pinned here. A sentence naming a few
+    keys as examples is not making this claim and is not listed.
+    """
+
+    #: (file, regex capturing the backticked list, the block in KNOWN_CONFIG_KEYS)
+    ENUMERATIONS = [
+        ("references/quality-control.md",
+         r"Recognized sub-keys: (.+?)\. That is all seven\.",
+         "training"),
+    ]
+
+    @pytest.mark.parametrize("rel_path,pattern,block", ENUMERATIONS)
+    def test_the_list_is_exactly_the_registry(self, rel_path, pattern, block):
+        from potato.server_utils.config_module import KNOWN_CONFIG_KEYS
+
+        with open(pack_path(rel_path), encoding="utf-8") as f:
+            text = f.read()
+        match = re.search(pattern, text, re.S)
+        assert match, (
+            f"{rel_path}: nothing matched {pattern!r}. The sentence claiming a "
+            f"complete sub-key list was reworded; update the regex rather than "
+            f"dropping the claim.")
+
+        named = set(re.findall(r"`([^`]+)`", match.group(1)))
+        real = set(KNOWN_CONFIG_KEYS[block])
+        assert named == real, (
+            f"{rel_path} says these are all of `{block}`'s sub-keys, and they "
+            f"are not.\n  missing from the prose: {sorted(real - named)}"
+            f"\n  named but not real:      {sorted(named - real)}")
