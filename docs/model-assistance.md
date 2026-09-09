@@ -296,9 +296,18 @@ name is a string, and then falls back to LogisticRegression with an ERROR line i
 the log. The accepted values are the three classifiers above plus
 `sklearn.ensemble.RandomForestClassifier` and `sklearn.svm.SVC`, and
 `sklearn.feature_extraction.text.CountVectorizer` or `sentence-transformers` for
-the vectorizer. Watch the log for `Trained classifier for schema <name> with N
-instances, accuracy: ...` followed by `Reordered N instances` — that pair is the
-only evidence the feature is doing anything.
+the vectorizer.
+
+The log will show `Trained classifier for schema <name> with N instances,
+accuracy: ...` followed by `Reordered N instances`. **That pair proves the
+classifier was fitted, not that anybody is being served its ordering.** Set
+`assignment_strategy: fixed_order` and leave `active_learning.enabled: true`
+and both lines still appear, with the same counts; so does everything
+`/admin/active-learning/stats` reports. The check that separates them is to
+compare the order an annotator was actually served against the order in the
+data file. On 24 items the two arms diverged from position 12:
+`n0 n1 n2 n5 a1 n4 …` under `active_learning` against `n0 n1 n2 n3 n4 n5 …`
+under `fixed_order`. Nothing else in the two runs differed.
 
 **`icl_labeling`** builds few-shot prompts out of annotations you already have.
 Its sub-keys are **three levels deep**, and the block is one of those `--strict`
@@ -471,6 +480,12 @@ reading the response body and the rendered DOM:
   `/admin/judge-alignment` reporting agreement against the human labels
 - `active_learning` training and reordering a twenty-item queue, and the dotted
   sklearn paths above being the names it accepts
+- `active_learning` retraining as annotations arrive (six fits across 24 items
+  at `update_frequency: 2`) and the reordered pool actually reaching the
+  annotator — and the same log and the same `/admin/active-learning/stats`
+  appearing on a `fixed_order` arm where it reaches nobody
+- `llm_confidence` assigning at random, on 24 items, with a fitted classifier
+  available to it
 - `icl_labeling` collecting examples once a second annotator agreed — 0 across 0
   on one annotator, 6 across 2 schemas on two
 - `arena` running two models against one prompt and recording a preference
@@ -501,8 +516,4 @@ conclude anything about your config.
 Not run, and not claimed: every commercial provider; `ollama` and the rest of the
 endpoint list; `icl_labeling`, `judge_calibration`, `arena` and `solo_mode`, all
 of which take the same endpoint config and so inherit whatever is true of it
-above. `active_learning` starts its training thread and logs
-`Active learning manager initialized (query_strategy=..., ...)` on
-`enabled: true` alone, without `assignment_strategy: active_learning`; whether
-the reordered pool is then served is the strategy's decision, and I did not
-annotate far enough to watch it retrain.
+above.

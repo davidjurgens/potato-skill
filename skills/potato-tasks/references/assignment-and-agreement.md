@@ -284,8 +284,12 @@ and say what it costs.
 - `least_annotated` when finishing every item matters more than annotator
   experience — the one to reach for when the quota trap above is biting and you
   cannot raise the cap
-- `active_learning` / `llm_confidence` when a model is in the loop and the point
-  is to spend annotator time where it changes something
+- `active_learning` when a model is in the loop and the point is to spend
+  annotator time where it changes something. It needs
+  `assignment_strategy: active_learning`. With `active_learning.enabled: true`
+  on its own the classifier is still fitted and its ordering serves nobody, and
+  the log and the admin report read the same either way. `llm_confidence` sits
+  beside it in the list and assigns at random
 
 ## The response format decides the metric
 

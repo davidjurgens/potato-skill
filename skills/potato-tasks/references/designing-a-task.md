@@ -302,9 +302,13 @@ spending the budget on 10,000.
 
 `random` is right unless there is a reason. Reasons: `fixed_order` when items
 are a narrative and order carries meaning; `least_annotated` when you care most
-about finishing every item; `active_learning` or `llm_confidence` when a model
-is in the loop and the point is to spend annotator time where it changes
-something.
+about finishing every item; `active_learning` when a model is in the loop and
+the point is to spend annotator time where it changes something.
+
+`llm_confidence` is in the list and assigns at random. It is a placeholder that
+takes no model into account, and nothing at boot or in the log says so. I got a
+shuffled order out of it on a server with a fitted classifier. Use
+`active_learning`.
 
 Set `random_seed` if the ordering ever needs to be reproduced.
 
