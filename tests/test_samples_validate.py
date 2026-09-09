@@ -32,11 +32,42 @@ PACK = Path(SKILL_DIR)
 GENERATED = {"annotation-types.md", "config-keys.md", "config-keys-nested.md"}
 
 #: Blocks that are deliberately wrong: the pack shows them as the mistake being
-#: described. Keyed by the file and a snippet that identifies the block.
+#: described. Matched as whole words, not as substrings.
+#:
+#: `key_binding` was matched as a bare substring and so also matched
+#: `sequential_key_binding`, which is a real key (`bws.py:74` reads it). The
+#: only block it hit was the 2964-byte worked-example config -- the pack's
+#: largest and most-copied sample -- which was therefore skipped by this guard
+#: entirely, and had a key Potato ignores sitting in it.
 KNOWN_BAD_ON_PURPOSE = (
-    "key_binding",                                   # the typo'd form of key_value
-    "with top-level annotation_schemes present",     # shown as the conflict itself
+    r"\bkey_binding\b",                              # the typo'd form of key_value
+    r"with top-level annotation_schemes present",     # shown as the conflict itself
 )
+
+
+#: Sub-keys a sample names that Potato does not read, where the sample is a
+#: mirror of a file in the Potato repo and so cannot be fixed here. Keyed by
+#: (file, block index) -> the substring of the warning. Asserted to still fire,
+#: so a fix upstream makes this stale entry fail rather than rot.
+#:
+#: worked-example.md block 0 mirrors examples/advanced/full-study-skeleton/
+#: config.yaml, whose line 79 is `failure_handling: {action: warn}`.
+#: `failure_handling` reads warn_threshold / warn_message / block_threshold /
+#: block_message and nothing else (quality_control.py:375), so `action` is
+#: dropped and the thresholds fall back to 2 and 5.
+MIRRORS_AN_UPSTREAM_BUG = {
+    ("worked-example.md", 0): "attention_checks.failure_handling: 'action'",
+}
+
+
+def _shown_as_a_mistake(body: str) -> bool:
+    """Is this block one the prose displays as the error being described?
+
+    Whole-word, because a substring test cannot tell `key_binding` from
+    `sequential_key_binding` and silently excused the worked example for
+    months.
+    """
+    return any(re.search(pattern, body) for pattern in KNOWN_BAD_ON_PURPOSE)
 
 
 def _hand_written():
@@ -85,6 +116,52 @@ def _host_config(work_dir: str) -> dict:
              "description": "A question?", "labels": ["Yes", "No"]},
         ],
     }
+
+
+
+#: Extensions a config names when it points at a side file.
+_SIDE_FILE_SUFFIXES = (".json", ".jsonl", ".csv", ".tsv", ".txt", ".html")
+
+
+def _stub_side_files(work_dir: str, node, _seen=None) -> None:
+    """Create a plausible empty file for every relative path a config names.
+
+    A sample naming `data/attention.json` is partial, not wrong -- the pack does
+    not ship the side files. But a missing file is a *fatal* validation error,
+    and validation stops there, so filtering the error out afterwards (which
+    this test did) still leaves everything below it unread. Stubbing the paths
+    is what lets the run get to the keys the sample is actually demonstrating.
+    """
+    if isinstance(node, dict):
+        for value in node.values():
+            _stub_side_files(work_dir, value)
+        return
+    if isinstance(node, list):
+        for value in node:
+            _stub_side_files(work_dir, value)
+        return
+    if not isinstance(node, str):
+        return
+    if os.path.isabs(node) or not node.lower().endswith(_SIDE_FILE_SUFFIXES):
+        return
+    if ".." in node.split("/"):
+        return
+    target = os.path.join(work_dir, node)
+    if os.path.exists(target):
+        return
+    os.makedirs(os.path.dirname(target) or work_dir, exist_ok=True)
+    if node.lower().endswith(".jsonl"):
+        body = '{"id": "p1", "text": "A page."}\n'
+    elif node.lower().endswith(".json"):
+        body = ('[{"id": "s1", "text": "An item.", "body": "An item.", '
+                '"title": "A title."}]')
+    elif node.lower().endswith((".csv", ".tsv")):
+        sep = "," if node.lower().endswith(".csv") else "\t"
+        body = sep.join(["id", "text"]) + "\n" + sep.join(["s1", "An item."]) + "\n"
+    else:
+        body = "sample\n"
+    with open(target, "w", encoding="utf-8") as handle:
+        handle.write(body)
 
 
 def _has_elision(value) -> bool:
@@ -152,7 +229,7 @@ def _splice(host: dict, sample) -> str:
 @pytest.mark.parametrize("name,index,body", _yaml_samples(),
                          ids=lambda v: str(v)[:40])
 def test_every_yaml_sample_validates(name, index, body):
-    if any(bad in body for bad in KNOWN_BAD_ON_PURPOSE):
+    if _shown_as_a_mistake(body):
         pytest.skip("shown as the mistake, not as advice")
 
     try:
@@ -178,6 +255,13 @@ def test_every_yaml_sample_validates(name, index, body):
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(host, f, sort_keys=False)
 
+        # Validation stops at the first error, so one missing side file left
+        # every key below it unchecked -- which is how
+        # `failure_handling: {action: warn}` sat in the worked example, and in
+        # this file's own attention-check sample, without either being flagged.
+        # Stub every path the sample names so the run reaches the rest.
+        _stub_side_files(work_dir, host)
+
         from potato.validate_cli import validate_config_file
 
         cwd = os.getcwd()
@@ -191,6 +275,35 @@ def test_every_yaml_sample_validates(name, index, body):
             f"{name} block {index} uses keys Potato does not recognise: "
             f"{report.unknown_keys}. An unrecognised key is silently ignored, "
             f"so a reader who copies this gets no feature and no warning.")
+
+        # `unknown_keys` only reaches the top level. A key inside a block --
+        # `attention_checks.failure_handling.action`, say -- comes back as a
+        # warning instead, and this test used to ignore those, so a sample
+        # could name a sub-key Potato reads nothing from and still pass.
+        # Only the "not recognized" class is asserted on: the other warnings a
+        # spliced fragment produces (a `rooms.schema` naming a scheme the
+        # surrounding prose defines, a `phases.order` listing phases whose
+        # blocks are shown separately) are artefacts of the splice, not of the
+        # sample.
+        ignored_subkeys = [w for w in report.other_warnings
+                           if "not recognized" in w and "will be ignored" in w]
+        expected_bad = MIRRORS_AN_UPSTREAM_BUG.get((name, index))
+        if expected_bad is not None:
+            # The block is a byte-for-byte mirror of a file in Potato, checked
+            # by TestTheWorkedExampleIsTheExample. Diverging to fix the key
+            # here would break that guard, so the fix belongs upstream and this
+            # asserts the bug is STILL THERE -- when Potato fixes it, this
+            # fails and the exemption comes out.
+            assert any(expected_bad in w for w in ignored_subkeys), (
+                f"{name} block {index} no longer produces {expected_bad!r}. "
+                f"If Potato fixed it, drop the MIRRORS_AN_UPSTREAM_BUG entry "
+                f"and re-sync the block with the file it mirrors.")
+            ignored_subkeys = [w for w in ignored_subkeys
+                               if expected_bad not in w]
+
+        assert not ignored_subkeys, (
+            f"{name} block {index} names a sub-key Potato does not read:\n  "
+            + "\n  ".join(ignored_subkeys))
 
         if _has_elision(sample):
             # `...` stands in for content the prose is not about. The key check

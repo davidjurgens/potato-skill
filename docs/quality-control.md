@@ -156,11 +156,19 @@ attention_checks:
   items_file: data/attention.json
   min_response_time: 8    # a faster answer fails the check
   failure_handling:
-    action: warn
+    warn_threshold: 2       # warn from the second failure
+    warn_message: "Please read each item before answering."
+    block_threshold: 5      # block at the fifth
 ```
 
 `failure_handling` must be a dictionary despite the key reference typing it
-`string|object`. Setting both `frequency` and `probability` is a fatal error.
+`string|object`, and it reads four keys and no others: `warn_threshold`,
+`warn_message`, `block_threshold`, `block_message`. There is no `action` key.
+A sub-key it does not know is a warning rather than an error, so a config
+naming one validates without `--strict` and does nothing. The thresholds then
+fall back to 2 and 5 (`quality_control.py:375`).
+
+Setting both `frequency` and `probability` is a fatal error.
 
 `min_response_time` fails a check answered faster than the threshold, whatever
 the content was. Set it well under a plausible reading time — the point is to
