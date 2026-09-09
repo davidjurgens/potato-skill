@@ -132,6 +132,7 @@ agent traces are their own family, in `agent-traces.md`.
 | "new data keeps arriving" | `data_sources` polling, `watch_data_directory`, `automation` |
 | "it's a big corpus" | `partial_loading`, `item_store: {backend: paged}` |
 | "show me the corpus shape" | `corpus_map`, `embedding_visualization`, `diversity_ordering` |
+| "find the ones like this", "a group that keeps updating", "what is even in here" | `curation` — the catalog at `/admin/catalog`, below |
 | "publish the dataset" | `publish`, `dataset_metadata` |
 | "pay people on Prolific / MTurk" | `crowdsourcing` (+ `completion_code`, `auto_redirect_on_completion`) |
 | "different groups see different items" | `batch_assignment` + `scheme_sets`, or `category_assignment` |
@@ -220,6 +221,7 @@ annotation page, so tell the researcher they exist:
 | `/sessions` | `sessions` |
 | `/rooms` | `rooms` |
 | `/corpus` | `corpus_map` |
+| `/admin/catalog` | `curation` |
 | `/datasets/admin` | `datasets` (`/datasets` itself is not a route) |
 | `/pocket` | `pocket` (phones auto-route here) |
 | `/adjudicate` | `adjudication` |
@@ -294,6 +296,51 @@ added to the config later does not appear: run `potato codebook config.yaml`.
 That gate is per codebook rather than per scheme, and it is applied after every
 codebook-backed scheme has contributed, so a label declared only on a second
 scheme is seeded too.
+
+## Deciding what to annotate: the catalog
+
+`curation` builds an embedding index over the loaded items and serves
+`/admin/catalog`. It is the answer to "which of these thousands should we
+label", which is a question the annotation config itself cannot ask.
+
+```yaml
+curation:
+  enabled: true
+  model_name: all-MiniLM-L6-v2   # the default
+  embed_on_ingest: true          # off by default; costs boot time and memory
+```
+
+Everything below is an admin JSON route under `/admin/catalog/api/`, so it needs
+the `X-API-Key` header. **The catalog routes reject an unauthenticated request
+without generating the key file**, unlike `/admin/iaa`, so make the first
+unauthenticated request somewhere else and read `admin_api_key.txt` after that.
+
+Build the index once with `POST api/build`, which answers `{"indexed": 12}`.
+Then, on twelve short complaint texts:
+
+- **`POST api/search`** takes a `query` and returns instance ids by cosine
+  similarity. "my train never showed up and nobody told us anything" put the two
+  train items at 0.64 and 0.59 and everything else below 0.22. **The parameter is
+  `top_k`, not `k`** — `k` is accepted and ignored, so you get the default ten
+  results back, which looks like the model failing to discriminate.
+- **`POST api/slices`** saves a named query as a dynamic slice, and
+  `GET api/slices/<name>/resolve` returns what currently matches. A slice named
+  `transport-complaints` over "delayed or cancelled travel" at `threshold: 0.2`
+  resolved to six ids. Pick the threshold by resolving and reading the list;
+  0.2 is loose enough to pull in neighbouring complaints.
+- **`POST api/topics/refresh`** clusters the index, and `GET api/topics/<name>/members`
+  lists each cluster. On twelve items written as six near-duplicate pairs it
+  recovered all six pairs exactly. Clusters are named `topic-1`, `topic-2` and so
+  on with empty descriptions unless something supplies a label, so read the
+  members rather than the name.
+- **`GET api/duplicates`** is **perceptual-hash duplicate detection over images**,
+  not text. On a text-only project it returns zeros and says so in a `note`
+  field: "No item could be perceptually hashed … This is NOT a finding of zero
+  duplicates." Read the note before you quote the number. For text overlap, the
+  topic clusters above are what you have.
+
+Slices and topics both have a `to_dataset` route, so a slice can become the thing
+you actually hand to annotators.
 
 ## When you cannot find the feature
 
