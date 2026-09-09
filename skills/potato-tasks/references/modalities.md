@@ -63,24 +63,25 @@ s = schema_registry.get("temporal_grounding")
 sorted(set(s.required_fields) | set(s.optional_fields))
 ```
 
-**Naming the field is half of it. Declare `instance_display` too.** The key
-above tells the scheme which field holds the media; the widget then looks for
-the URL on the page, and the places it looks are all built by
-`instance_display`. Two servers differing only in that block:
+**The key alone is enough to get the media to the widget**, as of Potato
+0fec4013. I ran one study with three schemes and no `instance_display` block,
+so the page carried zero `[data-field-key]` elements, and measured what each
+widget actually got:
 
 ```
-audio_annotation, source_field: clip
-  without    data-field-key: none, data-source-url: none, no <source>
-  with       data-field-key="clip", data-source-url="/media/clip.flac"
-
-image_annotation, source_field: image_url
-  without    no data-field-key, no data-source-url, no <img>
-  with       all three, /media/plain.png
+audio_annotation  source_field: clip        <audio> src=/media/mono44.wav
+                                            decodes: 5.000s, mono, 48 kHz
+video_annotation  source_field: vid         <video> src=/media/h264.mp4
+image_annotation  source_field: image_url   plain.png fetched 200,
+                                            painted onto canvas-boxes
 ```
 
-Both configs pass `--strict`, and the item's fields are in the page either way
-— in a `<script type="application/json">` block the widgets do not read. So
-give every media scheme a matching display field:
+Older checkouts need the display block for the media to arrive at all, so if
+you are pinned to one, declare it.
+
+Declare it anyway. Not for the URL, but because the `instance_display` path is
+the one that preserves your text as written (the default path collapses runs of
+spaces), gives the field a label, and decides the order things appear in:
 
 ```yaml
 instance_display:
