@@ -45,19 +45,6 @@ KNOWN_BAD_ON_PURPOSE = (
 )
 
 
-#: Sub-keys a sample names that Potato does not read, where the sample is a
-#: mirror of a file in the Potato repo and so cannot be fixed here. Keyed by
-#: (file, block index) -> the substring of the warning. Asserted to still fire,
-#: so a fix upstream makes this stale entry fail rather than rot.
-#:
-#: worked-example.md block 0 mirrors examples/advanced/full-study-skeleton/
-#: config.yaml, whose line 79 is `failure_handling: {action: warn}`.
-#: `failure_handling` reads warn_threshold / warn_message / block_threshold /
-#: block_message and nothing else (quality_control.py:375), so `action` is
-#: dropped and the thresholds fall back to 2 and 5.
-MIRRORS_AN_UPSTREAM_BUG = {
-    ("worked-example.md", 0): "attention_checks.failure_handling: 'action'",
-}
 
 
 def _shown_as_a_mistake(body: str) -> bool:
@@ -287,20 +274,6 @@ def test_every_yaml_sample_validates(name, index, body):
         # sample.
         ignored_subkeys = [w for w in report.other_warnings
                            if "not recognized" in w and "will be ignored" in w]
-        expected_bad = MIRRORS_AN_UPSTREAM_BUG.get((name, index))
-        if expected_bad is not None:
-            # The block is a byte-for-byte mirror of a file in Potato, checked
-            # by TestTheWorkedExampleIsTheExample. Diverging to fix the key
-            # here would break that guard, so the fix belongs upstream and this
-            # asserts the bug is STILL THERE -- when Potato fixes it, this
-            # fails and the exemption comes out.
-            assert any(expected_bad in w for w in ignored_subkeys), (
-                f"{name} block {index} no longer produces {expected_bad!r}. "
-                f"If Potato fixed it, drop the MIRRORS_AN_UPSTREAM_BUG entry "
-                f"and re-sync the block with the file it mirrors.")
-            ignored_subkeys = [w for w in ignored_subkeys
-                               if expected_bad not in w]
-
         assert not ignored_subkeys, (
             f"{name} block {index} names a sub-key Potato does not read:\n  "
             + "\n  ".join(ignored_subkeys))
