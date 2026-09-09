@@ -136,3 +136,44 @@ class TestThePluginMetadataAgreesWithItself:
             f"plugin.json names {name!r} but skills/{name}/ does not exist, so "
             f"installing the plugin installs no skill.")
         assert os.path.isfile(os.path.join(skill_dir, "SKILL.md"))
+
+
+class TestThePinnedPotatoRefIsUsable:
+    """CI resolves `.github/potato-ref` for pushes. A bad value fails late.
+
+    The generated references, the pinned counts and the worked-example mirror
+    are all checked against whatever Potato CI clones. Pinning that made pushes
+    deterministic; it also means a typo here fails after the install step
+    rather than before it, with a checkout error rather than a message about
+    this file.
+    """
+
+    REF_FILE = os.path.join(ROOT, ".github", "potato-ref")
+
+    def _ref(self):
+        with open(self.REF_FILE, encoding="utf-8") as f:
+            lines = [l.strip() for l in f
+                     if l.strip() and not l.lstrip().startswith("#")]
+        assert len(lines) == 1, (
+            f".github/potato-ref must hold exactly one ref line outside "
+            f"comments; found {len(lines)}: {lines}")
+        return lines[0]
+
+    def test_it_is_a_full_commit_sha(self):
+        ref = self._ref()
+        assert re.fullmatch(r"[0-9a-f]{40}", ref), (
+            f".github/potato-ref is {ref!r}. Pin a full 40-character commit "
+            f"SHA: a branch or tag moves, which is the thing the pin exists to "
+            f"stop.")
+
+    def test_the_workflow_reads_it_and_the_cron_does_not(self):
+        with open(os.path.join(ROOT, ".github", "workflows", "checks.yml"),
+                  encoding="utf-8") as f:
+            workflow = f.read()
+        assert ".github/potato-ref" in workflow, (
+            "checks.yml no longer reads .github/potato-ref, so the pin does "
+            "nothing and pushes are back to resolving a moving branch.")
+        assert "github.event_name" in workflow and "schedule" in workflow, (
+            "checks.yml must still float to Potato's default branch on the "
+            "schedule; pinning every event turns the weekly drift check into a "
+            "second copy of the push build.")

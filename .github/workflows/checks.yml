@@ -16,6 +16,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Which Potato to check against. A push says "this pack is correct
+      # against the commit it was written against"; the weekly cron asks the
+      # different question "is it still correct against Potato today". Running
+      # both against a moving default branch answered only the second, and made
+      # every push fail whenever Potato moved first -- five of six failures in
+      # sixty runs were exactly that.
+      - name: Pick the Potato ref
+        id: potato_ref
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "ref=" >> "$GITHUB_OUTPUT"
+            echo "Floating to Potato's default branch (weekly drift check)."
+          else
+            pinned="$(grep -vE '^\s*(#|$)' .github/potato-ref | head -1 | tr -d '[:space:]')"
+            if [ -z "$pinned" ]; then
+              echo "::error file=.github/potato-ref::no ref found in .github/potato-ref"
+              exit 1
+            fi
+            echo "ref=$pinned" >> "$GITHUB_OUTPUT"
+            echo "Pinned to Potato $pinned (see .github/potato-ref)."
+          fi
+
       # Not `pip install potato-annotation`: the reference generator imports
       # modules that are not in any release yet, and the guards need
       # `examples/advanced/full-study-skeleton`, which is not in the wheel.
@@ -23,6 +45,7 @@ jobs:
         with:
           repository: davidjurgens/potato
           path: potato
+          ref: ${{ steps.potato_ref.outputs.ref }}
 
       - uses: actions/setup-python@v5
         with:

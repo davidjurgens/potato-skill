@@ -1,0 +1,20 @@
+# The Potato commit this pack is known to be correct against.
+#
+# Half of this repository's content is generated from Potato's registries and
+# checked against them: the three generated references, twelve pinned counts,
+# ~140 identifiers named in prose, and the worked-example config, which is a
+# byte-for-byte mirror of examples/advanced/full-study-skeleton/config.yaml.
+#
+# Resolving Potato at its default branch made every one of those a moving
+# target. Five of six CI failures in the last sixty runs were that and nothing
+# else: "SKILL.md claims 408 documented sub keys, but the registry has 402" and
+# "the config.yaml block in worked-example.md has drifted" -- both true of
+# Potato-then and false of Potato-now, on commits that were correct when pushed.
+#
+# So push and pull_request builds resolve this ref, and the weekly cron floats
+# to the default branch instead. The cron failing is the signal this file is
+# stale; a push failing is now about the push.
+#
+# To move it: update the SHA, run `python scripts/generate_references.py`,
+# `pytest`, and commit the regenerated files together with this change.
+b9f404f02dbba539f0673eb67f18d7dc7a341d23
