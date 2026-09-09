@@ -60,7 +60,7 @@ answers that a scale cannot hold:
 | "a reviewer signs off", "a queue with states" | `review_workflow` | Kanban at `/admin/review` |
 | "go as fast as possible", "just keyboard" | `review_mode` | Advances by itself once the item is complete |
 | "score the whole conversation, not each turn" | `sessions` + `session_level: true` on the scheme | Warns at validate if no scheme opts in |
-| "on their phone" | `pocket` | PWA at `/pocket` with an offline queue |
+| "on their phone" | `pocket` | PWA at `/pocket` with an offline queue. Seven answer types work there and one other scheme takes the task off the phone — `designing-a-task.md` |
 | "annotators should pick their own items" | `search.annotator_claim` | Admin search is always on; claiming is the opt-in |
 
 ### What they brought

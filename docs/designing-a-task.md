@@ -95,6 +95,32 @@ then: the selection event the coreference manager waited for was never
 dispatched, and chains never reached the server. On anything earlier, check that
 clicking a span enables *New Chain* before you plan around it.
 
+### If it has to work on a phone
+
+`pocket` puts a touch surface at `/pocket`, and with `pocket.auto_redirect` left
+at its default it sends phones and tablets there when they open `/annotate`. It
+constrains this decision rather than following it. Seven of Potato's 61
+annotation types are touch-capable — `radio`, `multiselect`, `likert`, `slider`,
+`number`, `text` and `pure_display` — and the check is all-or-nothing: one scheme
+outside that list takes the whole task off the phone. The surface then serves a
+page naming the offender, "This task isn't phone-sized. The scheme *cue* needs a
+desktop. Open the regular interface at `/annotate`", rather than dropping the
+scheme or degrading it onto touch. So a study that has to run on phones is
+designed inside those seven from the first decision; a `span` scheme added in
+month two costs the phone surface for everybody.
+
+`pocket.batch_size` is how many items are fetched at once, which makes it the
+depth of the offline queue: an annotator who loses their connection can work
+through that many and no further. It defaults to 25 and is clamped to 1–200.
+Unsent answers wait in the phone's own storage and go up when the connection
+returns, through the same `/updateinstance` the desktop page posts to.
+
+That storage is the reason to **set `secret_key` before you put a study on
+phones.** Without it a server restart ends every session, and an annotator whose
+session ended part-way through a batch is holding answers your server has never
+seen. On a desktop that costs a re-login; on a phone it puts the only copy of
+somebody's work behind one.
+
 ### Eleven types the table skips
 
 The table above covers the common asks. Reach past it when the researcher
