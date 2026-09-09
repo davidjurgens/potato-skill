@@ -18,6 +18,7 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | A region and a phrase for it | `image` | `image_annotation` **+** `region_caption` | Without the canvas scheme there is nothing to describe; agreement is over *matched* regions |
 | "Did the model point at the right thing" | `image` | `image_annotation` **+** `grounding_eval` | Same pairing; `region_type: point` scores differently from boxes |
 | Video, judge the whole clip | `video` | any classification scheme | Nothing special |
+| Several videos per item — camera views of one action, model rollouts side by side | one `video` field per clip | any classification scheme, or `rubric_eval` | **Not `gallery`.** It writes every url into an `<img>`, so three `.mp4`s render as three broken images and nothing warns |
 | Video, mark moments or objects | *(none needed)* | `video_annotation` | Five modes, and `labels` is required in every one |
 | "Find the interval this sentence describes" | *(none needed)* | `temporal_grounding` | Reads `video_key`/`events_key`, **not** `source_field` |
 | Audio, judge the whole clip | `audio` | any classification scheme | Nothing special |
