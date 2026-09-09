@@ -85,3 +85,54 @@ class TestTheReadmeCountsAreRight:
         match = re.search(r"all (\d+) types", self._readme())
         assert match, "README no longer states how many annotation types there are"
         assert int(match.group(1)) == len(schema_registry.get_supported_types())
+
+
+class TestThePluginMetadataAgreesWithItself:
+    """`plugin.json` and the marketplace entry are two copies of one record.
+
+    Nine fields are duplicated verbatim between them, and only one of the two
+    is the file a person edits when they bump a version or reword a
+    description. Nothing here or in Claude Code reconciles them: the plugin
+    loads from `plugin.json` and the marketplace serves its own copy, so a
+    stale entry advertises a version that is not what installs.
+
+    Written after Potato was found shipping a packaged JSON schema that had
+    been fixed in the docs copy three commits earlier. Same shape, invisible
+    for the same reason.
+    """
+
+    @staticmethod
+    def _pair():
+        import json
+        root = os.path.join(ROOT, ".claude-plugin")
+        with open(os.path.join(root, "plugin.json"), encoding="utf-8") as f:
+            plugin = json.load(f)
+        with open(os.path.join(root, "marketplace.json"), encoding="utf-8") as f:
+            market = json.load(f)
+        entries = [e for e in market.get("plugins", [])
+                   if e.get("name") == plugin.get("name")]
+        assert entries, (
+            f"marketplace.json lists no plugin named {plugin.get('name')!r}. "
+            f"It lists: {[e.get('name') for e in market.get('plugins', [])]}")
+        return plugin, entries[0]
+
+    def test_every_shared_field_matches(self):
+        plugin, entry = self._pair()
+        shared = sorted(k for k in plugin if k in entry)
+        assert shared, "the two records share no fields; one of them is empty"
+        mismatched = {k: (plugin[k], entry[k])
+                      for k in shared if plugin[k] != entry[k]}
+        assert not mismatched, (
+            "plugin.json and the marketplace entry disagree: "
+            + "; ".join(f"{k}: {a!r} != {b!r}"
+                        for k, (a, b) in mismatched.items())
+            + ". Both are published; whichever you edited, edit the other.")
+
+    def test_the_skill_it_names_is_the_one_that_ships(self):
+        plugin, _ = self._pair()
+        name = plugin.get("name")
+        skill_dir = os.path.join(ROOT, "skills", name)
+        assert os.path.isdir(skill_dir), (
+            f"plugin.json names {name!r} but skills/{name}/ does not exist, so "
+            f"installing the plugin installs no skill.")
+        assert os.path.isfile(os.path.join(skill_dir, "SKILL.md"))
