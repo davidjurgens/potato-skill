@@ -533,6 +533,15 @@ agreement among people who are looking at each other's answers. Quote the lift
 out of a norming room. Out of a huddle, quote `final_alpha` and the conformity
 counts and say where they came from.
 
+**A room raises the study's own agreement score, and the report cannot see why.**
+A room-written vote registers its annotator against the item like any other
+annotation, so a room can carry an item to its cap and put it into the agreement
+report above. Measured: two annotators who voted `Sarcastic` and `Sincere` blind,
+argued, and converged left `/admin/iaa` reporting `fleiss_kappa: 1.0` for that
+item, with nothing anywhere in the report to say they had been in a room
+together. Norm on items you are willing to spend, and keep them out of the set
+you report agreement on.
+
 ## Related
 
 - `quality-control.md` — the checks that consume the quota
