@@ -66,7 +66,7 @@ answers that a scale cannot hold:
 | "a shared codebook", "the label set will change" | `codebook` + scheme-level `codebook: true` | Edited at `/codebook`. The first boot seeds it from the config; later config edits need `potato codebook config.yaml` |
 | "a participant", "an interview", "count codes per person not per excerpt" | `cases` | The unit of analysis becomes the case |
 | "it's just me", "I want to find my own inconsistencies" | `solo_mode` | LLM labels, you review where it is least sure, prompt is refined from your corrections |
-| "several people discussing an item together", "a norming session" | `rooms` | Live multiplayer at `/rooms` over a shared event log |
+| "several people discussing an item together", "a norming session" | `rooms` | Live multiplayer at `/rooms`. What it writes back is the post-discussion vote — `assignment-and-agreement.md` |
 | "one final label per item, not a distribution" | `adjudication` | Needs `adjudicator_users` |
 | "a reviewer signs off", "a queue with states" | `review_workflow` | Kanban at `/admin/review` |
 | "go as fast as possible", "just keyboard" | `review_mode` | Advances by itself once the item is complete |

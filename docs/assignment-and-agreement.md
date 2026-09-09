@@ -453,6 +453,97 @@ use `/admin/iaa`.
 
 An empty report on a fresh task means "no overlapping annotations yet".
 
+## Norming a codebook in a live room
+
+`rooms` is a live multiplayer session at `/rooms`. It belongs in this file rather
+than in a feature list because its output is annotations and its headline number
+is Krippendorff's alpha, computed twice.
+
+```yaml
+rooms:
+  enabled: true
+  schema: sarcasm          # the radio or likert scheme members vote on
+  persist_votes: true
+  who_can_create: any
+```
+
+Members join, vote blind on the current item, the host reveals, everyone argues,
+anyone may change their vote, the host advances. Three kinds of room:
+
+| `room_type` | Items come from | Who votes |
+|---|---|---|
+| `norming` | the `item_ids` the creator passes, or a random sample | every active member |
+| `huddle` | items the team already disagrees on, found live | every active member |
+| `shadow` | as for norming | the host; everyone else joins as an observer |
+
+Only the host reveals, advances and closes — a member who asks gets `Only the
+host can do that` — and observers cannot vote. The blind phase is genuinely
+blind on the room page: before the reveal, a member's poll of the room state and
+of the event stream carries who has voted and not what they voted.
+
+**Set `rooms.schema` rather than leaving it to the autopick.** With the key
+absent, the vote target is the first `radio` or `likert` scheme in the config,
+which moves when you reorder the file. With neither an explicit schema nor a
+radio or likert scheme to fall back on, rooms switch themselves off at boot: the
+log says so, and `/rooms` answers 404 while the config still reads as enabled.
+
+### What a room writes into each member's annotations
+
+With `persist_votes: true` (the default), each member's vote is written into
+their own annotations for the room's schema, at the moment **the host advances
+past a revealed item, or closes the room on one**. An item nobody revealed is
+marked skipped and writes nothing, so a room abandoned mid-discussion leaves that
+item's votes only in the log.
+
+Two properties to say out loud to a researcher before they run one:
+
+- **What lands is the vote after the discussion, not the blind one.** A member
+  who voted `Sincere`, watched the room go the other way and changed to
+  `Sarcastic` has `Sarcastic` in her annotations. Her blind vote survives only in
+  `<output_annotation_dir>/rooms/room-<id>.jsonl`. A study that needs independent
+  judgements cannot source them from a room.
+- **The write replaces that member's existing answer for the room's schema, and
+  touches no other schema.** Measured on a config carrying `sarcasm` and a `text`
+  scheme called `notes`: the room overwrote both members' `sarcasm` answer for
+  the item and left both `notes` entries as they were.
+
+### The two alphas
+
+The room state carries a `metrics` block that computes nominal Krippendorff's
+alpha over revealed items twice, on the blind votes and on the current ones. The
+gap between them is the room's norming lift. Three annotators, two revealed
+items, one of whom changed her vote after both reveals:
+
+```
+blind_alpha       -0.111
+final_alpha        1.000
+alpha_lift         1.111
+total_changes          2
+toward_majority        2
+```
+
+`toward_majority` counts a post-reveal change that landed on the majority of
+*everyone else*: the changer's own vote is excluded from the count, so a
+two-person room can record conformity instead of sitting at a permanent tie.
+
+Both alphas are `null` until two items have been revealed. A room one item in
+reports `n_revealed: 1` and three nulls, which is undefined rather than broken.
+
+**In a huddle those two numbers do not mean what they mean in a norming room.** A
+huddle seeds itself from the team's live disagreements and shows every member's
+original annotation, by name, as context, before anyone in the room has voted.
+Measured: a member's state during the voting phase, no votes cast, already
+carried
+
+```
+seed_votes  {"frank@example.com": "Sincere", "gina@example.com": "Sarcastic"}
+```
+
+That is what a huddle is for, and it is not blind, so `blind_alpha` there is
+agreement among people who are looking at each other's answers. Quote the lift
+out of a norming room. Out of a huddle, quote `final_alpha` and the conformity
+counts and say where they came from.
+
 ## Related
 
 - `quality-control.md` — the checks that consume the quota
