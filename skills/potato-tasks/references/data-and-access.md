@@ -234,8 +234,9 @@ restart.
 |---|---|---|
 | `port` | Port; `-p` overrides | 8000 |
 | `host` | Interface to bind; `0.0.0.0` exposes beyond localhost | localhost |
-| `secret_key` | Flask session signing key. Set it for anything that must keep sessions across a restart | — |
-| `persist_sessions`, `session_lifetime_days` | Keep annotator sessions across a restart | false, 2 |
+| `secret_key` | Flask session signing key, and the key that decides whether a login survives a restart: unset, every boot signs with a fresh random key and everyone is logged out | — |
+| `session_lifetime_days` | How long a session lasts. The login response carries it as an explicit cookie `Expires` | 2 |
+| `persist_sessions` | Asks for sessions to be kept across a restart; refuses to start without `secret_key` | false |
 | `admin_api_key` | Admin API key, sent as `X-API-Key`. Generated into `{task_dir}/admin_api_key.txt` when unset | — |
 
 **`debug: true` disables admin authentication and skips login entirely.** It is
