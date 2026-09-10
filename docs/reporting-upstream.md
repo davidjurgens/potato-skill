@@ -90,10 +90,19 @@ It writes `potato-issue-<kind>.md`, prints the body, and prints a GitHub URL
 with the title and body already filled in. What it adds on top of what you
 typed:
 
-- **The version, with the commit.** There is no `potato --version`; the
-  distribution metadata says 2.7.0, which has covered hundreds of commits. When
-  Potato is installed from a clone the helper reads pip's own record of where
-  that clone is and reports the SHA, which is the version a maintainer needs.
+- **The version, asked of Potato rather than reconstructed.** If the installed
+  Potato answers `potato --version`, that output goes into the report verbatim.
+  Nothing outside Potato can work the answer out reliably: on one machine on
+  2026-09-09 the installed metadata said 2.7.0 while the source said 2.8.2,
+  because dist-info is only rewritten on install; the same call answered 2.8.2
+  from inside the Potato repository, where a local `potato_annotation.egg-info`
+  shadows the site-packages record; and `potato.__version__` was absent from
+  every other directory, because a stale `site-packages/potato/` holding only
+  `templates/` made `potato` resolve as a namespace package while each submodule
+  still imported fine. Releases up to 2.7 have no `--version` -- it exits 2 with
+  an argparse usage block -- and the helper then falls back to the metadata
+  version plus the commit, which pip records for an editable install, and says
+  in the report that the number may lag the source.
 - **Whether the config passes `--strict`**, with the output. This is the check
   above, done for you and shown to the reader.
 - **The data by shape** — field names and value types of the first record, with
@@ -147,8 +156,11 @@ Run against Potato 2.7.0 on 2026-09-09, with `gh` 2.85.0:
 - Redaction, on a config carrying `secret_key`, an `api_key`, an authorized-user
   list of email addresses, a bearer token in the log, and absolute paths under
   the home directory. None of the five appears in the report.
-- The version line, on an editable install: `2.7.0, editable checkout at
-  <sha>`. The SHA is the one `git rev-parse HEAD` prints in the clone.
+- Both version branches. Against a Potato that answers `potato --version`, the
+  report carries that output unchanged. Against one that does not -- a stub on
+  `PATH` exiting 2 with a usage block, which is what 2.7 and earlier do -- the
+  fallback gives the metadata version, the commit from pip's editable record,
+  and a line saying the number can lag the source.
 - The duplicate search, both ways. A title sharing three words with an existing
   issue returned it; four titles with no duplicate returned nothing rather than
   filler. Rate-limited and offline both report themselves.

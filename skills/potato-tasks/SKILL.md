@@ -49,10 +49,16 @@ in.
 python -c "import potato" || pip install potato-annotation
 ```
 
-There is no `potato --version`, so do not use one as the guard: it exits 2 with
-a usage message, the `||` branch fires every time, and a released wheel lands on
-top of whatever was already installed. The version, when a report needs it, is
-`importlib.metadata.version("potato-annotation")`.
+Do not use `potato --version` as that guard. Releases up to 2.7 have no such
+flag and exit 2 with a usage message, so the `||` branch fires every time and a
+released wheel lands on top of whatever was already installed, an editable
+checkout included. An import is the version-independent check.
+
+For the version itself, ask Potato: `potato --version` where it exists, and
+`report_issue.py` otherwise. Neither `importlib.metadata.version` nor
+`potato.__version__` is reliable on its own -- each gives a different answer
+depending on which directory you run it from. `references/reporting-upstream.md`
+has the measurements.
 
 The browser walk in `scripts/walk_task.py` additionally needs Playwright:
 `pip install 'potato-annotation[preview]' && playwright install chromium`.

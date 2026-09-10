@@ -134,21 +134,42 @@ def _run(argv: list[str], cwd: str | None = None, timeout: int = 90):
 
 
 def potato_version() -> str:
-    """The version string, plus the commit when Potato is an editable checkout.
+    """What `potato --version` says, or the best reconstruction when it has none.
 
-    There is no `potato --version`. The distribution metadata is the only
-    source, and on its own it is not enough for a bug report: 2.7.0 has covered
-    hundreds of commits, so anyone running from a clone needs the SHA. Pip
-    records the clone's location in `direct_url.json` (PEP 610) for an editable
-    install, which is what makes the SHA reachable without asking.
+    Ask Potato, because the answer is not reconstructable from outside. Three
+    things measured on one machine on 2026-09-09, all at once:
+    `importlib.metadata.version("potato-annotation")` said 2.7.0 while the
+    source said 2.8.2, because dist-info is only rewritten on install and the
+    checkout had moved on; the same call answered 2.8.2 from inside the Potato
+    repository, where a local `potato_annotation.egg-info` shadows the
+    site-packages record; and `potato.__version__` was absent entirely from any
+    other directory, because a stale `site-packages/potato/` holding nothing but
+    `templates/` made `potato` resolve as a namespace package with no
+    `__init__.py` while every submodule still imported through the editable
+    finder.
+
+    So `potato --version` is the only answer that is not a property of the
+    directory you happened to be standing in, and its output goes into the
+    report verbatim. Releases up to 2.7 do not have it -- it exits 2 with an
+    argparse usage block -- and for those this falls back to the metadata
+    version plus the commit, which pip records for an editable install in
+    `direct_url.json` (PEP 610).
     """
+    ok, out = _run(["potato", "--version"], timeout=60)
+    if ok and out and "usage:" not in out.splitlines()[0]:
+        return out.strip()
+
     try:
         import importlib.metadata as metadata
         dist = metadata.distribution("potato-annotation")
         version = dist.version
     except Exception:
         return ("potato-annotation is not installed in the Python running this "
-                "script")
+                "script, and `potato --version` did not answer")
+
+    detail = [version]
+    note = ("This build has no `potato --version`, so it is 2.7 or older and "
+            "the version above comes from the installed metadata.")
     try:
         direct = json.loads(dist.read_text("direct_url.json") or "{}")
         if direct.get("dir_info", {}).get("editable"):
@@ -159,16 +180,31 @@ def potato_version() -> str:
                 ok, sha = _run(["git", "-C", checkout, "rev-parse", "HEAD"],
                                timeout=20)
                 if ok and re.fullmatch(r"[0-9a-f]{40}", sha.strip()):
-                    return f"{version}, editable checkout at {sha.strip()[:12]}"
-                return f"{version}, editable checkout (commit unknown)"
+                    detail.append(f"editable checkout at {sha.strip()[:12]}")
+                else:
+                    detail.append("editable checkout, commit unknown")
+                note += (" That metadata is only rewritten on install, so on "
+                         "an editable checkout it can lag the source.")
     except Exception:
         pass
-    return version
+    return ", ".join(detail) + "\n@note@" + note
 
 
 def environment() -> dict[str, str]:
+    version = potato_version()
+    note = ""
+    if "\n@note@" in version:
+        version, note = version.split("\n@note@", 1)
+    if "\n" in version:
+        # `potato --version` answers on more than one line. A multi-line value
+        # inside a bullet list renders as a broken list, so it gets a block.
+        potato = "```\n" + version + "\n```\n"
+    else:
+        potato = f"- Potato: {version}"
+    if note:
+        potato += f"\n- {note}"
     return {
-        "potato": potato_version(),
+        "potato_block": potato,
         "python": platform.python_version(),
         "platform": f"{platform.system()} {platform.release()} ({platform.machine()})",
     }
@@ -364,7 +400,7 @@ BUG_BODY = """\
 {data}{config}{log}
 ## Environment
 
-- Potato: {potato}
+{potato_block}
 - Python: {python}
 - Platform: {platform}
 """
@@ -384,7 +420,7 @@ FEATURE_BODY = """\
 {data}{config}
 ## Environment
 
-- Potato: {potato}
+{potato_block}
 - Python: {python}
 - Platform: {platform}
 """

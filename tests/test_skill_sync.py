@@ -82,6 +82,12 @@ PROSE_IDENTIFIERS = {
     # two levels deep, so `breakpoints.mobile` resolves and `mobile` alone does
     # not; config_module.py's layout entry is where both are declared
     "mobile", "tablet",
+    # Python's stdlib call for a distribution version, named in the note about
+    # where a version number comes from. It is not a Potato identifier and
+    # deliberately so: the point of that passage is that the stdlib answer and
+    # `potato.__version__` disagree depending on the directory you run them in,
+    # which is why the pack tells you to ask `potato --version` instead
+    "importlib.metadata.version",
     # The data key the `spreadsheet` display reads its column names from, named
     # in prose in the note about {columns, rows}. Like the display_options
     # below it lives in no registry -- the display types' data contracts are

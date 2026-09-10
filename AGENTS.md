@@ -179,9 +179,10 @@ and before filing one, name the closest existing annotation type or config key
 and say why it does not fit, because it exists more often than people expect.
 
 Issues go to <https://github.com/davidjurgens/potato/issues>. A useful report
-carries the version (there is no `potato --version`; use
-`importlib.metadata.version("potato-annotation")`, plus the commit if you run
-from a clone), the `--strict` result, the shortest config that shows it, the
+carries the version (ask `potato --version`; releases up to 2.7 have no such
+flag, and neither `importlib.metadata.version("potato-annotation")` nor
+`potato.__version__` answers the same way from every directory, so say which
+you used and name the commit if you run from a clone), the `--strict` result, the shortest config that shows it, the
 shape of one data record rather than the records, and what you measured against
 what you expected. Strip `secret_key`, `ai_support.ai_config.api_key`, crowd
 credentials and annotator email addresses first. The Claude Code skill installed
