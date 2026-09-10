@@ -123,7 +123,7 @@ yourself if your annotators rely on assistive technology.
 | `depth_map` | Depth data with windowing and a colormap |
 | `video` | Video player |
 | `audio` | Audio player |
-| `audio_dialogue` | Interview or podcast turns with per-turn playback |
+| `audio_dialogue` | Interview or podcast turns; one recording, per-turn play buttons that seek into it |
 | `dialogue` | Conversation turns, optionally threaded |
 | `conversation_tree` | Branching conversations, collapsible |
 | `multi_agent_discussion` | Several agents, colour-coded, filterable |
