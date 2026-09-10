@@ -86,12 +86,20 @@ EMPTY_SCHEMES_JS = """
 """
 
 
-def _schemes_holding_nothing(page) -> list:
-    """Which schemes on this page have no answer in them at all."""
+def _schemes_holding_nothing(page):
+    """Which schemes on this page have no answer in them at all.
+
+    Returns a list, or None when the probe could not run. The distinction is
+    the whole point: this used to return `[]` on any exception, and `[]` is
+    what the caller prints "every scheme on the page holds an answer" for. A
+    page that had closed, or one where the evaluate threw, produced that
+    sentence -- which tells the reader to stop looking at the widgets -- on no
+    evidence at all.
+    """
     try:
         return page.evaluate(EMPTY_SCHEMES_JS) or []
     except Exception:
-        return []
+        return None
 
 
 def _output_dir(config_path: str) -> str:
@@ -608,7 +616,12 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                     hint = ("The config names no training data, so this is "
                             "not a graded answer.")
                 empty = _schemes_holding_nothing(page)
-                if empty:
+                if empty is None:
+                    hint += (" The walker could not read the page to see which "
+                             "schemes hold an answer, so that question is "
+                             "unanswered rather than answered no. Open the item "
+                             "and check the widgets by hand.")
+                elif empty:
                     named = ", ".join(
                         f"{item['name']}"
                         + (f" ({item['type']})" if item.get("type") else "")

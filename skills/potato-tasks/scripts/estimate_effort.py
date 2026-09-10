@@ -133,22 +133,25 @@ def estimate(config: dict, base: str, wpm: int, rate: float) -> dict:
     detail = []
     training = config.get("training") or {}
     if isinstance(training, dict) and training.get("enabled"):
-        n_training = _count_training(training, base)
+        n_training, problem = _count_training(training, base)
         cost = n_training * (seconds_per_item + 15)      # + reading the feedback
         overhead_seconds += cost
-        detail.append(f"training: {n_training} practice items per annotator")
+        detail.append(f"training: {n_training} practice items per annotator"
+                      + (f" -- counted 0 because {problem}" if problem else ""))
     checks = config.get("attention_checks") or {}
     if isinstance(checks, dict) and checks.get("enabled"):
-        n_checks = _count_array(checks.get("items_file"), base)
+        n_checks, problem = _count_array(checks.get("items_file"), base)
         overhead_seconds += n_checks * seconds_per_item
-        detail.append("attention checks: %d extra item%s per annotator"
-                      % (n_checks, "" if n_checks == 1 else "s"))
+        detail.append("attention checks: %d extra item%s per annotator%s"
+                      % (n_checks, "" if n_checks == 1 else "s",
+                         f" -- counted 0 because {problem}" if problem else ""))
     gold = config.get("gold_standards") or {}
     if isinstance(gold, dict) and gold.get("enabled"):
-        n_gold = _count_array(gold.get("items_file"), base)
+        n_gold, problem = _count_array(gold.get("items_file"), base)
         overhead_seconds += n_gold * seconds_per_item
-        detail.append("gold standards: %d extra item%s per annotator"
-                      % (n_gold, "" if n_gold == 1 else "s"))
+        detail.append("gold standards: %d extra item%s per annotator%s"
+                      % (n_gold, "" if n_gold == 1 else "s",
+                         f" -- counted 0 because {problem}" if problem else ""))
 
     annotator_seconds = quota * seconds_per_item + overhead_seconds
     total_seconds = judgements * seconds_per_item + annotators * overhead_seconds
@@ -181,35 +184,47 @@ def estimate(config: dict, base: str, wpm: int, rate: float) -> dict:
     }
 
 
-def _count_array(path, base) -> int:
+def _read_side_file(path, base):
+    """Return (parsed, problem). `problem` is None only when parsing worked.
+
+    These counts used to be a bare int, and every failure returned 0 -- which
+    is also what a genuinely empty file returns, and what a feature that is off
+    contributes. Each of the three callers has already checked `enabled: true`,
+    so a zero here is never a choice: it is a path that does not resolve, or a
+    file Potato will also refuse at boot. Saying which costs one line and is the
+    difference between an estimate that is low and an estimate that is low for a
+    reason you can fix.
+    """
     if not path:
-        return 0
+        return None, "no file is named"
     full = path if os.path.isabs(path) else os.path.join(base, path)
     if not os.path.isfile(full):
-        return 0
+        return None, f"{path} does not exist (looked in {base})"
     try:
         with open(full, encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
-        return 0
-    return len(data) if isinstance(data, list) else 0
+            return json.load(f), None
+    except Exception as exc:
+        return None, f"{path} could not be read: {exc}"
 
 
-def _count_training(training: dict, base: str) -> int:
-    path = training.get("data_file")
-    if not path:
-        return 0
-    full = path if os.path.isabs(path) else os.path.join(base, path)
-    if not os.path.isfile(full):
-        return 0
-    try:
-        with open(full, encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
-        return 0
-    if isinstance(data, dict):
-        return len(data.get("training_instances") or [])
-    return 0
+def _count_array(path, base):
+    data, problem = _read_side_file(path, base)
+    if problem:
+        return 0, problem
+    if not isinstance(data, list):
+        return 0, f"{path} holds a {type(data).__name__}, not a list of items"
+    return len(data), None
+
+
+def _count_training(training: dict, base: str):
+    data, problem = _read_side_file(training.get("data_file"), base)
+    if problem:
+        return 0, problem
+    if not isinstance(data, dict):
+        return 0, (f"{training.get('data_file')} holds a "
+                   f"{type(data).__name__}; a training file is an object with "
+                   f"`training_instances`")
+    return len(data.get("training_instances") or []), None
 
 
 def main(argv=None) -> int:
