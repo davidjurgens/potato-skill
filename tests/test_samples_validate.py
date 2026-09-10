@@ -40,7 +40,6 @@ GENERATED = {"annotation-types.md", "config-keys.md", "config-keys-nested.md"}
 #: largest and most-copied sample -- which was therefore skipped by this guard
 #: entirely, and had a key Potato ignores sitting in it.
 KNOWN_BAD_ON_PURPOSE = (
-    r"\bkey_binding\b",                              # the typo'd form of key_value
     r"with top-level annotation_schemes present",     # shown as the conflict itself
 )
 
@@ -55,6 +54,26 @@ def _shown_as_a_mistake(body: str) -> bool:
     months.
     """
     return any(re.search(pattern, body) for pattern in KNOWN_BAD_ON_PURPOSE)
+
+
+def test_every_exemption_still_has_a_block():
+    """An exemption matching nothing excuses nothing -- until it excuses a bug.
+
+    `KNOWN_BAD_ON_PURPOSE` names blocks the prose shows as the mistake being
+    described, so they are skipped rather than validated. When the block is
+    reworded or removed the pattern stays, doing nothing, and on the day a
+    sample really does contain that string it is skipped instead of caught.
+    `key_binding` -- the typo'd form of `key_value`, and precisely the mistake
+    someone would make -- sat here matching zero of 80 blocks.
+    """
+    bodies = [body for _, _, body in _yaml_samples() + _json_samples()]
+    assert bodies, "no samples were extracted; this guard would pass vacuously"
+    orphaned = [p for p in KNOWN_BAD_ON_PURPOSE
+                if not any(re.search(p, body) for body in bodies)]
+    assert not orphaned, (
+        f"these exemptions match none of the {len(bodies)} sample blocks: "
+        f"{orphaned}. Delete them -- an exemption for a block that is gone "
+        f"skips the next block that happens to contain the string.")
 
 
 def _hand_written():

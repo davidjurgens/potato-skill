@@ -73,10 +73,6 @@ PROSE_IDENTIFIERS = {
     # YAML booleans because its message is what the boot log prints, and a
     # reader grepping for it needs the real module name
     "identifier_utils",
-    # potato/static/annotation.js -- the client file that owns saving,
-    # restoring and requiredness. Named where a warning is only actionable if
-    # the reader can open the file
-    "annotation.js",
     # `layout.breakpoints` sub-keys, named bare in the table that says what
     # each threshold does to a grouped form. KNOWN_CONFIG_KEYS records `layout`
     # two levels deep, so `breakpoints.mobile` resolves and `mobile` alone does
@@ -114,44 +110,38 @@ PROSE_IDENTIFIERS = {
     # it; potato/adjudication.py:312 among many
     "instance_id_to_label_to_value",
     # display options the registry table does not list, though the renderer
-    # classes declare them: `caption_key`/`url_key` on gallery_display,
-    # `ocr`/`link_schema` on pdf_display. Named in the warning that
-    # `list_displays()` under-reports, which is only checkable against the
-    # classes -- `display_registry.get(name).renderer.optional_fields`
-    "caption_key", "url_key", "ocr", "link_schema",
+    # classes declare them: `caption_key`/`url_key` on gallery_display. Named
+    # in the warning that `list_displays()` under-reports, which is only
+    # checkable against the classes --
+    # `display_registry.get(name).renderer.optional_fields`
+    "caption_key", "url_key",
     # the default `speaker_key` reads, multi_agent_discussion_display.py:85. A
     # field name in the annotator's data, so no registry claims it
     "speaker",
-    # a key on one entry of `event_types` on an event_annotation scheme, two
-    # levels inside a scheme entry; event_annotation.py:70
-    "trigger_labels",
     # the HTML attribute card_sort puts on its cards, named because the
     # accessibility warning is about that attribute being the only affordance
     "draggable",
-    # potato/server_utils/displays/registry.py, named so a reader can open the
-    # file where the display table is hardcoded
-    "registry.py",
     # structural keys inside a scheme or an instance_display field
     "annotation_type", "name", "description", "type", "key", "label",
-    "fields", "required", "value", "labels", "direction", "gap",
+    "fields", "required", "labels", "direction", "gap",
     # item_properties
     "id_key", "text_key",
     # type-specific fields named in the response-format table
-    "target_schema", "key_binding", "max_choices", "max_selections",
+    "target_schema", "key_binding",
     # instance_display field keys, validated by validate_instance_display_config
-    "span_target", "display_options", "resizable",
+    "span_target", "display_options",
     # display_logic structure
-    "show_when", "schema", "operator",
+    "show_when", "schema",
     # phase names
     "consent", "instructions", "training", "annotation", "poststudy",
     # literals and example values
-    "true", "false", "y", "n", "not_relevant", "json",
+    "true", "false", "y", "n", "not_relevant",
     # what a pairwise scheme stores, alongside "A" and "B". A data value rather
     # than a config key, and the reason a display_logic condition written
     # against the label string never matches
     "tie",
     # filenames and prose
-    "config.yaml", "console.error", "text-content", "project.sqlite",
+    "config.yaml", "console.error", "project.sqlite",
     # deliberately named as non-types; a separate test proves they are not
     "sentiment", "classification", "qa",
     # side-file fields the loaders require, which are not config keys:
@@ -160,16 +150,12 @@ PROSE_IDENTIFIERS = {
     "id", "correct_answers", "expected_answer", "gold_label",
     # phases.order, read in flask_server.py; `phases` has no recorded sub-keys
     "order",
-    # the field /admin/iaa reports the inferred schema kind under
-    "kind",
     # the per-item data field dynamic_options reads when the scheme does not
     # name one, defaulted in flask_server.filter_dynamic_options. A data-file
     # field, so it is in neither the config keys nor the scheme registry.
     "visible_labels",
     # real commands and a provider name, not config keys
     "preview", "destroy", "huggingface",
-    # a public API of config_key_docs, named in the pack so an agent calls it
-    "get_key_doc",
     # cross-references between the pack's own files
     "deploying.md", "troubleshooting.md",
     # files a running task writes, or the pack tells you to create
@@ -182,9 +168,6 @@ PROSE_IDENTIFIERS = {
     "source_field",
     # the other stage-1 command, named beside `preview`
     "validate",
-    # The ten interface languages ui_language bundles, quoted in
-    # building-the-ui.md. Language codes, not config keys.
-    "ar", "de", "es", "fr", "hi", "ja", "ko", "pt", "ru", "zh",
     # The MCP control surface a live task exposes through `potato mcp connect`,
     # named in SKILL.md so an agent can call them. They are tool names on the
     # bridge, not config keys -- `mcp.tools` names them without the `live_`
@@ -194,9 +177,6 @@ PROSE_IDENTIFIERS = {
     "live_list_items", "live_get_item", "live_list_annotators",
     "live_get_agreement", "live_submit_annotation", "live_assign_items",
     "live_export_data",
-    # the single parameter each live MCP tool declares, and a key passed inside
-    # it -- both JSON-RPC argument names rather than anything in a registry
-    "arguments", "limit",
     # the file the MCP surface writes its call log to, default of mcp.audit_log
     "mcp_audit.jsonl",
     # the top-level key in user_state.json that spans are stored under, beside
@@ -231,7 +211,7 @@ PROSE_IDENTIFIERS = {
     # what the generated form gives an assistive reader (`fieldset`, `legend`,
     # `alt`, `lang`) and what a CSS length looks like (`px`), because the
     # accessibility claim is about rendered HTML rather than about config.
-    "fieldset", "legend", "alt", "lang", "px",
+    "fieldset", "legend", "alt", "lang",
     # the two values instance_display.layout.direction accepts. Enum values
     # rather than keys, so iter_key_docs does not carry them.
     "vertical",
@@ -442,6 +422,19 @@ class TestEveryIdentifierInProseIsReal:
     Deliberately not a list of approved strings: an allowlist would have
     accepted `textbox` as readily as `text`. The point is to compare the prose
     against the registries and enums the server actually reads.
+
+    SCOPE, because it is narrower than the name suggests and reads as pack-wide
+    everywhere it is described: this reads the seven files in HAND_WRITTEN --
+    AGENTS.md, SKILL.md and the five design/UI references -- and 362
+    identifiers. The other twenty hand-written references hold 730 more, 489 of
+    which nothing here has ever looked at. Widening it is not simply a matter
+    of adding files: a sweep over those twenty leaves 310 tokens unresolved,
+    and they are overwhelmingly legitimate -- sub-keys two levels past where
+    any registry describes a config, field names in someone's data, shell
+    commands, JSON response fields. Checking them would need an allowlist
+    larger than the signal, and would flag correct prose. `modalities.md` calls
+    `box` a `region_type` value for `grounding_eval`, which it is, in the same
+    passage that warns `tools: [box]` is refused.
     """
 
     @staticmethod
@@ -519,6 +512,29 @@ class TestEveryIdentifierInProseIsReal:
         vocab |= set(SCRIPTS)
         vocab |= {name[:-3] for name in SCRIPTS}
         return vocab
+
+    def test_every_allowlisted_identifier_still_appears(self):
+        """An allowlist entry whose token is no longer in the prose is a hole.
+
+        It does no work today, and on the day someone writes that name it
+        excuses it instead of checking it -- and the names in here are exactly
+        the plausible-sounding ones: `max_choices`, `operator`, `resizable`.
+        A stale exemption turns into a silent pass at the moment the mistake it
+        names actually occurs.
+
+        Found by sweeping this list against the prose after a session spent
+        cataloguing guards that measured something smaller than their claim.
+        27 of 135 entries had no subject; several named tokens the comment
+        beside them still said were "quoted in building-the-ui.md".
+        """
+        prose = self._identifiers()
+        orphaned = sorted(name for name in PROSE_IDENTIFIERS if name not in prose)
+        assert not orphaned, (
+            "PROSE_IDENTIFIERS excuses names the prose no longer uses:\n  "
+            + "\n  ".join(orphaned)
+            + "\n\nDelete them. Each one is a standing permission for a name "
+              "nobody has checked, and this guard only reads "
+            + ", ".join(os.path.basename(n) for n in HAND_WRITTEN) + ".")
 
     def test_no_invented_identifiers(self):
         def known_key(path):
