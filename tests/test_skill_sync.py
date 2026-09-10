@@ -90,17 +90,10 @@ PROSE_IDENTIFIERS = {
     # documented only in their own module docstrings
     "headers",
 
-    # `display_options` accepted by the `document` display, named in prose in the
-    # note about what a string-valued document field does. The vocabulary is
-    # built from the config-key registry and the schema/display type names, and
-    # display_options live in neither -- they are enumerated only in the
-    # validator's own error message (config_module.py, the display_options
-    # branch), which is where these three came from
-    "preserve_structure", "show_outline", "style_theme",
     # `cell_width` is a pairwise_display option and `auto` is its default;
     # pairwise_display.py:28 and 54. `auto` is a bare word rather than a key,
     # so nothing in the registries claims it
-    "cell_width", "auto",
+    "auto",
     # the id `bws_config` gives a generated tuple, measured off a running
     # server. bws_tuple_generator.py's own docstring says `bws_tuple_001`, one
     # digit short of what it emits, so the code is the only source for this
@@ -109,12 +102,6 @@ PROSE_IDENTIFIERS = {
     # about widgets that store what nobody chose are only checkable by reading
     # it; potato/adjudication.py:312 among many
     "instance_id_to_label_to_value",
-    # display options the registry table does not list, though the renderer
-    # classes declare them: `caption_key`/`url_key` on gallery_display. Named
-    # in the warning that `list_displays()` under-reports, which is only
-    # checkable against the classes --
-    # `display_registry.get(name).renderer.optional_fields`
-    "caption_key", "url_key",
     # the default `speaker_key` reads, multi_agent_discussion_display.py:85. A
     # field name in the annotator's data, so no registry claims it
     "speaker",
@@ -122,20 +109,20 @@ PROSE_IDENTIFIERS = {
     # accessibility warning is about that attribute being the only affordance
     "draggable",
     # structural keys inside a scheme or an instance_display field
-    "annotation_type", "name", "description", "type", "key", "label",
-    "fields", "required", "labels", "direction", "gap",
+    "type",
+    "fields", "direction", "gap",
     # item_properties
-    "id_key", "text_key",
+    "id_key",
     # type-specific fields named in the response-format table
-    "target_schema", "key_binding",
+    "key_binding",
     # instance_display field keys, validated by validate_instance_display_config
     "span_target", "display_options",
     # display_logic structure
-    "show_when", "schema",
+    "show_when",
     # phase names
-    "consent", "instructions", "training", "annotation", "poststudy",
+    "consent", "instructions", "annotation", "poststudy",
     # literals and example values
-    "true", "false", "y", "n", "not_relevant",
+    "y", "n", "not_relevant",
     # what a pairwise scheme stores, alongside "A" and "B". A data value rather
     # than a config key, and the reason a display_logic condition written
     # against the label string never matches
@@ -155,17 +142,13 @@ PROSE_IDENTIFIERS = {
     # field, so it is in neither the config keys nor the scheme registry.
     "visible_labels",
     # real commands and a provider name, not config keys
-    "preview", "destroy", "huggingface",
-    # cross-references between the pack's own files
-    "deploying.md", "troubleshooting.md",
+    "preview", "destroy",
     # files a running task writes, or the pack tells you to create
     "server.log", "user_state.json",
     # the key the training file must be wrapped in (flask_server.py:1072)
     "training_instances",
     # deploy provider names
     "render",
-    # a scheme field six geometry/media types declare
-    "source_field",
     # the other stage-1 command, named beside `preview`
     "validate",
     # The MCP control surface a live task exposes through `potato mcp connect`,
@@ -185,11 +168,11 @@ PROSE_IDENTIFIERS = {
     # list_as_text's three sub-keys and the values text_list_prefix_type takes.
     # The key doc describes them in prose rather than registering each one, so
     # iter_key_docs has no entry for `list_as_text.text_list_prefix_type`
-    "text_list_prefix_type", "alternating_shading",
+    "text_list_prefix_type",
     "alphabet", "bullet", "none",
     # column names keyword_highlights_file accepts in its CSV/TSV header, and
     # the accepted spellings of the first one. File-format strings, not config
-    "keyword", "word", "pattern", "term", "color",
+    "keyword", "word", "pattern", "term",
     # the argument names the live MCP tools publish in their own schemas,
     # quoted in SKILL.md so an agent can call them without a round trip
     "instance_id", "username",
@@ -448,7 +431,7 @@ class TestEveryIdentifierInProseIsReal:
         return tokens
 
     @staticmethod
-    def _vocabulary():
+    def _registry_vocabulary():
         from potato.server_utils.config_module import _VALID_ASSIGNMENT_STRATEGIES
         from potato.server_utils.display_logic import SUPPORTED_OPERATORS
         from potato.server_utils.schemas.registry import (
@@ -461,7 +444,6 @@ class TestEveryIdentifierInProseIsReal:
         vocab |= set(SUPPORTED_OPERATORS)
         vocab |= {s.lower() for s in _VALID_ASSIGNMENT_STRATEGIES}
         vocab |= set(UNIVERSAL_OPTIONAL_FIELDS) | set(UNIVERSAL_REQUIRED_FIELDS)
-        vocab |= PROSE_IDENTIFIERS
         # MCP tool names. The local ones are functions in `tools_local`;
         # `render_task_screenshot` is defined on the server itself, so it is
         # taken from the tool list the server advertises rather than guessed.
@@ -513,6 +495,18 @@ class TestEveryIdentifierInProseIsReal:
         vocab |= {name[:-3] for name in SCRIPTS}
         return vocab
 
+    @classmethod
+    def _vocabulary(cls):
+        """Everything a backticked name may legitimately be.
+
+        The allowlist is added HERE and nowhere inside `_registry_vocabulary`,
+        so that a check asking "do the registries already cover this?" can ask
+        it without the answer being yes by construction. It was not separated
+        before, and a sweep for redundant entries came back 108 of 108 --
+        measuring its own arithmetic.
+        """
+        return cls._registry_vocabulary() | set(PROSE_IDENTIFIERS)
+
     def test_every_allowlisted_identifier_still_appears(self):
         """An allowlist entry whose token is no longer in the prose is a hole.
 
@@ -532,9 +526,35 @@ class TestEveryIdentifierInProseIsReal:
         assert not orphaned, (
             "PROSE_IDENTIFIERS excuses names the prose no longer uses:\n  "
             + "\n  ".join(orphaned)
-            + "\n\nDelete them. Each one is a standing permission for a name "
-              "nobody has checked, and this guard only reads "
+            + "\n\nEach one is a standing permission for a name nobody has "
+              "checked. Two cures, and the diagnosis decides which: delete it "
+              "if the prose really stopped using it, or move it if it belongs "
+              "in a different list -- an entry can have no subject here and "
+              "still be doing real work somewhere else. This guard reads only "
             + ", ".join(os.path.basename(n) for n in HAND_WRITTEN) + ".")
+
+    def test_the_allowlist_holds_nothing_the_registries_already_cover(self):
+        """An entry the registries vouch for is not an exemption at all.
+
+        `PROSE_IDENTIFIERS` exists for real words that no registry claims. A
+        name the registries DO claim, sitting in here, is inert today and
+        harmful later: if Potato drops `source_field` or `text_key`, the
+        allowlist keeps the pack's prose passing and the weekly drift run stops
+        noticing that a documented key went away. That is the whole thing the
+        cron exists to catch.
+
+        25 of 108 entries were in this state, found after the debugging session
+        pointed out that its own two orphans were not dead but filed in the
+        wrong list. Same error, opposite cure: theirs needed moving, these
+        needed removing.
+        """
+        covered = sorted(name for name in PROSE_IDENTIFIERS
+                         if name in self._registry_vocabulary())
+        assert not covered, (
+            "PROSE_IDENTIFIERS lists names the registries already resolve:\n  "
+            + "\n  ".join(covered)
+            + "\n\nRemove them. While they sit here the guard cannot notice "
+              "the day Potato stops defining them.")
 
     def test_no_invented_identifiers(self):
         def known_key(path):
