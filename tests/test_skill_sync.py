@@ -289,11 +289,21 @@ class TestTheScannedCollectionsAreNotEmpty:
             "skillpack.REFERENCES is empty. Check REFERENCES_DIR.")
 
     def test_the_samples_were_extracted(self):
-        """The same shape one file over: no blocks means no validation."""
+        """The same shape one file over: no blocks means no validation.
+
+        Both extractors, because the first version of this guarded
+        `_yaml_samples` and not `_json_samples` -- one of two, which is the
+        error it exists to catch. Found by widening the sweep to follow a
+        function that calls a scanning function rather than only one that
+        scans directly; that step took the count from four sites to six.
+        """
         import test_samples_validate as samples
         assert samples._yaml_samples(), (
             "no yaml blocks were extracted from the hand-written pack, so "
             "every sample-validation case collects nothing and skips.")
+        assert samples._json_samples(), (
+            "no json blocks were extracted, so every json sample case "
+            "collects nothing and skips.")
 
 
 class TestPackIsComplete:
