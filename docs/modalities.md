@@ -34,10 +34,10 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | "Find the interval this sentence describes" | *(none needed)* | `temporal_grounding` | Reads `video_key`/`events_key`, **not** `source_field` |
 | Audio, judge the whole clip | `audio` | any classification scheme | Nothing special |
 | Audio, mark regions | *(none needed)* | `audio_annotation` | Use `mode: label`. The two modes that ask questions per region do not render |
-| ASR/TTS output against a reference | *(none needed)* | `speech_transcript` | Its own key names: `audio_key`, `segments_key`, `turns_key` |
+| ASR/TTS output against a reference | *(none needed)* | `speech_transcript` | Segments come from **`segments_key`**. `turns_key`, `speaker_key` and `text_key` are in the key reference and the generator reads none of them — name your field with `turns` and the widget renders zero cards, silently |
 | ELAN-style tiers over audio or video | *(none needed)* | `tiered_annotation` | `media_type` defaults to `audio` — set it for video |
 | A podcast or interview, turn by turn | `audio_dialogue` | spans, ratings, links | **One recording plus per-turn `start`/`end`.** The play buttons seek into that one file; they do not each load their own |
-| A voice agent, one recording per utterance | one `audio` field per turn, or `speech_transcript` | `voice_interaction` | `audio_dialogue` takes the FIRST turn's url for the whole call and seeks the rest of the timestamps into it. On a 5s clip, turns starting at 6.3s and 9.1s play nothing |
+| A voice agent, one recording per utterance | **concatenate to one recording first** | `speech_transcript`, `voice_interaction` | No display plays a file per turn. `audio_dialogue` and `speech_transcript` both take one source — the item's `audio_key`, else the first turn's url — and the per-turn controls carry timestamps into it. Join the utterances, write global `start`/`end`, and both work properly |
 | A chat log or conversation | `dialogue` | anything, often `turn_level` | Span target; threading is a display option |
 | A branching conversation | `conversation_tree` | `tree_annotation` | **Not** a span target |
 | Several agents talking | `multi_agent_discussion` | `failure_attribution`, ratings | Span target; see `agent-traces.md` |
