@@ -261,6 +261,41 @@ def _all_pack_text() -> str:
     return "\n".join(_read(name) for name in HAND_WRITTEN)
 
 
+class TestTheScannedCollectionsAreNotEmpty:
+    """`skillpack` SCANS directories, so a path change empties them silently.
+
+    Four guards are parametrized over `SCRIPTS` -- every helper ships, runs,
+    is executable, and is named in SKILL.md. With an empty scan they collect as
+    `[NOTSET]` and SKIP: four dots become four `s`, nothing fails, and the four
+    claims they carry are unmade. Measured by emptying the scan: the suite went
+    red only through collateral, the README count and the identifier
+    vocabulary, both of which a directory rename would plausibly update in the
+    same commit.
+
+    This is the strongest form of the pattern the guards here are meant to
+    resist. A guard that measures something smaller than its claim at least
+    measures. A parametrized guard over an empty collection measures nothing
+    and reports it as a skip.
+    """
+
+    def test_scripts_were_found(self):
+        assert SCRIPTS, (
+            "skillpack.SCRIPTS is empty, so every guard parametrized over it "
+            "collects nothing and skips. Check SCRIPTS_DIR still points at the "
+            "helpers.")
+
+    def test_references_were_found(self):
+        assert REFERENCES, (
+            "skillpack.REFERENCES is empty. Check REFERENCES_DIR.")
+
+    def test_the_samples_were_extracted(self):
+        """The same shape one file over: no blocks means no validation."""
+        import test_samples_validate as samples
+        assert samples._yaml_samples(), (
+            "no yaml blocks were extracted from the hand-written pack, so "
+            "every sample-validation case collects nothing and skips.")
+
+
 class TestPackIsComplete:
     @pytest.mark.parametrize("name", HAND_WRITTEN + GENERATED)
     def test_file_exists(self, name):
