@@ -34,6 +34,7 @@ nav:
       - After Annotators Start: after-annotators-start.md
       - Deploying a Task: deploying.md
       - When a Task Misbehaves: troubleshooting.md
+      - Reporting a Bug or Asking for a Feature: reporting-upstream.md
       - Interrogating Potato: interrogating-potato.md
   - A Worked Example: worked-example.md
 

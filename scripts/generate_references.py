@@ -407,6 +407,10 @@ MIRRORED_REFERENCES = {
         "Running a Task",
         "Booting a server, reading the startup log, and handing it over.",
     ),
+    "reporting-upstream.md": (
+        "Reporting a Bug or Asking for a Feature",
+        "Telling a config mistake from a defect, and filing the ones that are real.",
+    ),
     "troubleshooting.md": (
         "When a Task Misbehaves",
         "Symptoms that validate clean and then do something else.",

@@ -46,15 +46,20 @@ Neither works if the package is not in the environment you are running commands
 in.
 
 ```bash
-potato --version || pip install potato-annotation
+python -c "import potato" || pip install potato-annotation
 ```
+
+There is no `potato --version`, so do not use one as the guard: it exits 2 with
+a usage message, the `||` branch fires every time, and a released wheel lands on
+top of whatever was already installed. The version, when a report needs it, is
+`importlib.metadata.version("potato-annotation")`.
 
 The browser walk in `scripts/walk_task.py` additionally needs Playwright:
 `pip install 'potato-annotation[preview]' && playwright install chromium`.
 
 ## The scripts in this skill
 
-Eight of the procedures below are scripts rather than instructions, because they
+Nine of the procedures below are scripts rather than instructions, because they
 are long enough to get wrong by hand and they are what you will run repeatedly.
 They live beside this file in `scripts/`.
 
@@ -68,6 +73,7 @@ They live beside this file in `scripts/`.
 | `check_ui.py --url … --config config.yaml` | Renders every page and reports schemes below the fold, empty media, empty choice tiles, schemes with no control to answer with, answers nothing collects, what the widgets say went wrong, keybinding conflicts and schemes that never appeared. `--phase poststudy` measures a page the walk cannot reach |
 | `study_status.py --url … --task-dir .` | Progress, per-annotator pace, agreement, and what looks wrong on a **running** study |
 | `model_prices.py config.yaml` | Fetches live model prices and puts them beside what Potato's compiled table would charge, before you choose an `ai_budget.cap_usd` |
+| `report_issue.py bug --title …` | Assembles a bug report or a feature request against Potato: version and commit, whether the config passes `--strict`, the data's shape, a duplicate search, secrets redacted. Files nothing without `--submit --confirm` |
 
 Each takes `--help`, and `boot_and_check`, `walk_task`, `check_ui` and
 `study_status` take `--json` when you want to act on the result rather than read
@@ -656,6 +662,34 @@ Three that decide whether a deployment is safe to hand over:
 | Annotations look wrong after a restart | Something hand-edited `output_annotation_dir`. Never do that |
 | A codebook holds labels you already changed | The first run seeds `project.sqlite`. `potato codebook config.yaml` re-syncs |
 
+## Reporting a bug or asking for a feature
+
+Three things look the same from a chair: a config mistake, a bug, and something
+Potato was never built to do. Sort them before offering to file anything.
+
+- `--strict` fails, or the log says `Loaded 0 <something>` → a config mistake.
+  `troubleshooting.md`.
+- Potato does something other than what it documents → a bug.
+- Potato does exactly what it documents and that is not enough → a feature
+  request, once you have named the closest existing type or key and said why it
+  does not fit. It exists more often than people expect.
+
+For the last two, offer to file it. `references/reporting-upstream.md` has the
+checks and what a report needs; the helper assembles it:
+
+```bash
+python .claude/skills/potato-tasks/scripts/report_issue.py bug \
+    --title "Waveform never generates for media_directory audio" \
+    --observed "..." --expected "..." --repro "..." \
+    --config config.yaml --log server.log
+```
+
+It prints the report and a prefilled GitHub URL, redacts API keys, credentials,
+email addresses and home directories first, and says what it took out. **Show
+the body to whoever owns the study and get an answer before filing.** Filing is
+public and cannot be withdrawn, so `--submit` needs `--confirm` as well, and it
+refuses a body still holding a placeholder.
+
 ## Reference map
 
 | File | For |
@@ -687,6 +721,7 @@ Three that decide whether a deployment is safe to hand over:
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, hosting, the preflight, bundles, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
+| `reporting-upstream.md` | Telling a config mistake from a bug from a gap, and filing the last two |
 
 ## MCP
 

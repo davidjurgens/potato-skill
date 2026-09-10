@@ -165,6 +165,32 @@ potato mcp config --root .    # prints a client config block
 potato mcp tools              # the tool list, without starting anything
 ```
 
+## Reporting a bug or asking for a feature
+
+Sort it before reporting it. `potato validate config.yaml --strict` failing, or
+a boot log line reading `Loaded 0 <something>`, means a config mistake -- a key
+misspelled inside a block Potato treats as opaque is accepted, ignored, and
+never mentioned again. That is the usual cause of "the config is right and
+nothing happens", and it is not a defect.
+
+If Potato does something other than what it documents, that is a bug. If it does
+exactly what it documents and that is not enough, that is a feature request --
+and before filing one, name the closest existing annotation type or config key
+and say why it does not fit, because it exists more often than people expect.
+
+Issues go to <https://github.com/davidjurgens/potato/issues>. A useful report
+carries the version (there is no `potato --version`; use
+`importlib.metadata.version("potato-annotation")`, plus the commit if you run
+from a clone), the `--strict` result, the shortest config that shows it, the
+shape of one data record rather than the records, and what you measured against
+what you expected. Strip `secret_key`, `ai_support.ai_config.api_key`, crowd
+credentials and annotator email addresses first. The Claude Code skill installed
+alongside this file has a helper that assembles all of that:
+`.claude/skills/potato-tasks/scripts/report_issue.py`.
+
+Filing is public and cannot be withdrawn. Show the report to whoever owns the
+study and get an answer before you file it.
+
 ## Where to read more
 
 - Configuration reference: `docs/configuration/config_reference.md`

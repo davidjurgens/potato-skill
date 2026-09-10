@@ -64,7 +64,8 @@ class TestTheReadmeCountsAreRight:
         assert match, "README no longer states how many references ship"
         assert int(match.group(1)) == len(REFERENCES)
 
-    WORDS = {4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight"}
+    WORDS = {4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight",
+             9: "Nine", 10: "Ten"}
 
     def test_the_helper_count(self):
         assert f"{self.WORDS[len(SCRIPTS)]} helpers" in self._readme(), (
