@@ -136,8 +136,8 @@ them.
 
 Defaults to 800, which covers the multi-label formats. Rationale and Keyword both
 produce one entry per label, so a three-label scheme runs 300-500 tokens; the old
-default of 100 cut them off mid-object. If you lower it, or a scheme has many
-labels, the log says so:
+default of 100 cut them off mid-object. Lower it, or give a scheme many labels,
+and on `openai`, `openai_vision` and `vllm` the log says so:
 
 ```
 The model hit max_tokens (100) before finishing this response, so the reply is
@@ -148,6 +148,13 @@ Worth knowing because truncation and a genuinely broken endpoint share a symptom
 the salvage step returns whatever key-value pairs completed, so the renderer gets
 a plausible dict of the wrong type and the tooltip reads "No rationales
 available" either way.
+
+**Only those three.** `anthropic`, `anthropic_vision`, `gemini`, `huggingface`,
+`ollama`, `ollama_vision` and `openrouter` never check the finish reason, on any
+path, and no endpoint's chat method checks it even where its sibling assistant
+method does. On those seven a cut-off reply reaches the renderer with nothing in
+the log, and it produces the empty tooltip above — which is also what a broken
+endpoint produces. A silent log is not evidence the reply was complete.
 
 ## Which field the model gets
 
@@ -238,7 +245,7 @@ chat_support:
     base_url: "http://your-server:8001/v1"
     model: "google/gemma-4-12B-it-qat-w4a16-ct"
     temperature: 0.3
-    max_tokens: 400
+    max_tokens: 2000
   ui:
     title: Ask the model
     sidebar_width: 420
@@ -249,6 +256,16 @@ chat_support:
 `ai_support`, and `include.all` is not involved: the sidebar renders whenever
 the block is enabled. The boot log's line is
 `Chat endpoint initialized: <endpoint_type>`.
+
+**The sample sets `max_tokens` well above the 800 default, and should.** An
+assistant returns one entry per label, so the author knows roughly how long the
+reply will be. Chat length is set by whatever the annotator types. Asked a
+question covering three labels, this endpoint at 400 stopped on the bare heading
+`### 3. Unclear` with nothing under it; at 800 it reached the last section but
+not its closing sentence; at 2000 it finished. Nothing appeared in the log in
+any of those runs — the chat path never checks the finish reason — so an
+annotator reading a reply that stops mid-document is the only thing that will
+tell you. A cap costs nothing unless the model reaches it.
 
 **It is given far more than the assistants are.** The default prompt carries the
 task name, the task description, every scheme's name and its labels, and the
@@ -485,6 +502,12 @@ reading the response body and the rendered DOM:
   an image, and the answer changing when it is set
 - `chat_support` end to end against the same server: the sidebar, a reply, the
   `ui` keys, and a custom `system_prompt.template` reaching the model
+- the same chat question at `max_tokens` 400, 800 and 2000, reading each reply
+  back from `/api/chat/send` and each server log: cut at a heading, cut before
+  its closing sentence, complete — no truncation warning in any of the three
+- which endpoint modules call the truncation check, from the source: four call
+  sites in `openai_endpoint`, `openai_vision_endpoint` and `vllm_endpoint`, none
+  in any `chat_query`
 - `judge_alignment.inline` rendering a judge's suggestion beside the item, and
   `/admin/judge-alignment` reporting agreement against the human labels
 - `active_learning` training and reordering a twenty-item queue, and the dotted
