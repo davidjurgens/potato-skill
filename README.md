@@ -16,6 +16,17 @@ annotations back out.
 /plugin install potato-skill@potato
 ```
 
+For other agents, the [`skills`](https://github.com/vercel-labs/skills) CLI
+installs it from this repository:
+
+```bash
+npx skills add davidjurgens/potato-skill --agent codex cursor
+```
+
+`--agent` picks where it goes: `codex` and `cursor` put the skill in
+`.agents/skills/potato-skill/`, and `claude-code` puts it in
+`.claude/skills/potato-skill/`.
+
 Potato has to be installed in whatever environment runs the commands, because
 the skill's helpers import its registries and drive the `potato` CLI:
 
