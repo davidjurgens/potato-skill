@@ -344,7 +344,7 @@ def _github_search(query: str) -> tuple[str, list[dict]]:
            + urllib.parse.urlencode(params))
     request = urllib.request.Request(
         url, headers={"Accept": "application/vnd.github+json",
-                      "User-Agent": "potato-tasks-report-issue"})
+                      "User-Agent": "potato-skill-report-issue"})
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             return "ok", json.load(response).get("items", [])

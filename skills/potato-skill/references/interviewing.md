@@ -1,6 +1,6 @@
 # Interviewing the researcher
 
-When someone invokes this skill directly — `/potato-tasks`, with or without a
+When someone invokes this skill directly — `/potato-skill`, with or without a
 sentence after it — there may be no brief in the conversation to work from. Do
 not open with "what would you like to build?", and do not open with a
 questionnaire either.

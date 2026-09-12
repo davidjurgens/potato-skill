@@ -441,7 +441,7 @@ drive it instead:
    it wrong without making it look wrong. Ask at the moment you need it:
 
    ```bash
-   python .claude/skills/potato-tasks/scripts/model_prices.py config.yaml
+   python .claude/skills/potato-skill/scripts/model_prices.py config.yaml
    ```
 
    It finds every model the config names, including one that lives only in

@@ -1,6 +1,6 @@
 # Potato annotation tasks
 
-This is the reference material behind the `potato-tasks` Claude Code skill,
+This is the reference material behind the `potato-skill` Claude Code skill,
 published so it can be read without installing anything.
 
 [Potato](https://github.com/davidjurgens/potato) is a self-hosted annotation
@@ -13,7 +13,7 @@ goes wrong once real people start clicking.
 
 ```
 /plugin marketplace add davidjurgens/potato-skill
-/plugin install potato-tasks@potato
+/plugin install potato-skill@potato
 ```
 
 Potato has to be installed in whatever environment runs the commands:
@@ -43,4 +43,4 @@ Three more files ship with the skill and are generated from Potato's own
 registries, so they cannot drift from what the server enforces: every
 annotation type with a worked example, the documented top-level config keys,
 and the documented sub-keys. They are in the
-[repository](https://github.com/davidjurgens/potato-skill/tree/main/skills/potato-tasks/references).
+[repository](https://github.com/davidjurgens/potato-skill/tree/main/skills/potato-skill/references).

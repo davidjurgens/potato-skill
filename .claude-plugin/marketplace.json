@@ -8,11 +8,11 @@
   },
   "plugins": [
     {
-      "name": "potato-tasks",
+      "name": "potato-skill",
       "source": "./",
       "displayName": "Potato annotation tasks",
       "description": "Design, build, run and visually check Potato annotation tasks.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Potato Development Team",
         "email": "jurgens@umich.edu"

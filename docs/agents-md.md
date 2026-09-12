@@ -8,7 +8,7 @@ Claude Code, Codex and Cursor all read `AGENTS.md`, so it needs no install step.
 
 ```
 /plugin marketplace add davidjurgens/potato-skill
-/plugin install potato-tasks@potato
+/plugin install potato-skill@potato
 ```
 
 The skill is a plain directory, so it also travels:
@@ -17,14 +17,14 @@ The skill is a plain directory, so it also travels:
 python scripts/package_skill.py
 ```
 
-builds `dist/potato-tasks/` -- `SKILL.md`, the references, and the six
-executable helpers -- and `dist/potato-tasks.zip`. One build, three destinations:
+builds `dist/potato-skill/` -- `SKILL.md`, the references, and the six
+executable helpers -- and `dist/potato-skill.zip`. One build, three destinations:
 
 | Where | How |
 |---|---|
-| Claude Code, every project on the machine | `cp -r dist/potato-tasks ~/.claude/skills/`, or `--install-personal` |
+| Claude Code, every project on the machine | `cp -r dist/potato-skill ~/.claude/skills/`, or `--install-personal` |
 | Claude Agent SDK | Point the SDK's skill directory at `dist/`; it loads the skill the same way Claude Code does |
-| Claude API | Upload `dist/potato-tasks.zip` as a skill, then name it on the request. The endpoint is in beta -- check Anthropic's Agent Skills documentation for the current call |
+| Claude API | Upload `dist/potato-skill.zip` as a skill, then name it on the request. The endpoint is in beta -- check Anthropic's Agent Skills documentation for the current call |
 
 The scripts in the bundle drive the `potato` command and import Potato's
 registries, so wherever the skill runs, Potato has to be installed in the
@@ -86,7 +86,7 @@ Two that are easy to get wrong and expensive to discover late:
   a floor, `max_annotations_per_item` a cap.
 
 The Claude Code skill installed alongside this file has the full versions:
-`.claude/skills/potato-tasks/references/designing-a-task.md`,
+`.claude/skills/potato-skill/references/designing-a-task.md`,
 `asking-the-experimenter.md`, and `building-the-ui.md`.
 
 ## Start from a working example
@@ -219,7 +219,7 @@ shape of one data record rather than the records, and what you measured against
 what you expected. Strip `secret_key`, `ai_support.ai_config.api_key`, crowd
 credentials and annotator email addresses first. The Claude Code skill installed
 alongside this file has a helper that assembles all of that:
-`.claude/skills/potato-tasks/scripts/report_issue.py`.
+`.claude/skills/potato-skill/scripts/report_issue.py`.
 
 Filing is public and cannot be withdrawn. Show the report to whoever owns the
 study and get an answer before you file it.

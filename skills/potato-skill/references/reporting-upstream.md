@@ -59,7 +59,7 @@ report needs and a reporter never has to hand, and it will not file anything on
 its own.
 
 ```bash
-python .claude/skills/potato-tasks/scripts/report_issue.py bug \
+python .claude/skills/potato-skill/scripts/report_issue.py bug \
     --title "Waveform never generates for media_directory audio" \
     --observed "every POST to /api/waveform/generate returns use_client_fallback: true" \
     --expected "a cached waveform, as audio_annotation documents" \
@@ -68,7 +68,7 @@ python .claude/skills/potato-tasks/scripts/report_issue.py bug \
 ```
 
 ```bash
-python .claude/skills/potato-tasks/scripts/report_issue.py feature \
+python .claude/skills/potato-skill/scripts/report_issue.py feature \
     --title "Per-utterance audio in a dialogue display" \
     --goal "annotate a voice-agent call where each turn is its own recording" \
     --tried "audio_dialogue and speech_transcript both resolve one file per item" \
@@ -127,7 +127,7 @@ sees the form before anything is public.
 refuses to file a body still holding a `_(fill this in)_` placeholder.
 
 ```bash
-python .claude/skills/potato-tasks/scripts/report_issue.py bug \
+python .claude/skills/potato-skill/scripts/report_issue.py bug \
     --title "..." --observed "..." --expected "..." --repro "..." \
     --config config.yaml --submit --confirm
 ```

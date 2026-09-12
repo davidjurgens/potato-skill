@@ -49,7 +49,7 @@ item, confirm it loads, then drop half, boot, and keep the half that still works
 Six boots gets you a minimal set.
 
 ```bash
-python .claude/skills/potato-tasks/scripts/boot_and_check.py config.yaml -p 8123 --json
+python .claude/skills/potato-skill/scripts/boot_and_check.py config.yaml -p 8123 --json
 ```
 
 reports the `Loaded N` counts as data, which makes that loop scriptable rather

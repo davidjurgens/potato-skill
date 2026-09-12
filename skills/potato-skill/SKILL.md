@@ -1,5 +1,5 @@
 ---
-name: potato-tasks
+name: potato-skill
 description: Design, build, run, monitor and visually check Potato annotation tasks. Use when turning a research description into an annotation task, creating or editing a Potato config.yaml, choosing an annotation_type or scale, laying out the annotation interface with instance_display, setting up consent/instructions/training/survey phases, adding attention checks or gold standards, deciding how many annotators an item needs, importing existing annotations from COCO/CVAT/Label Studio or transcripts or a ConvoKit corpus, exporting annotations to CSV/COCO/CoNLL/Parquet or any other format, checking how a running study is going or why agreement is empty, changing a task after annotators have started, resetting an annotator's login, leaving a server running for a researcher, or debugging a task that will not start, renders wrong, or silently does nothing.
 ---
 
@@ -16,7 +16,7 @@ conventions on top of this.
 
 ## If you were invoked with no task described
 
-Someone typed `/potato-tasks` and there is no brief in the conversation. Do not
+Someone typed `/potato-skill` and there is no brief in the conversation. Do not
 start building, and do not open with "what would you like to make?" — a
 researcher who has not used Potato cannot answer that usefully.
 
@@ -249,7 +249,7 @@ Two files next to the config, neither of which the config can hold:
   answer; ship something that runs alongside the question.
 
 ```bash
-python .claude/skills/potato-tasks/scripts/estimate_effort.py config.yaml --rate 15
+python .claude/skills/potato-skill/scripts/estimate_effort.py config.yaml --rate 15
 ```
 
 reports how many annotators the design needs, how long each is working, total
@@ -264,7 +264,7 @@ then refuses or permits work on that number. Potato logs a warning when that
 happens, but the projection it warns about is still the one the cap uses.
 
 ```bash
-python .claude/skills/potato-tasks/scripts/model_prices.py config.yaml
+python .claude/skills/potato-skill/scripts/model_prices.py config.yaml
 ```
 
 fetches current prices when you run it, puts them next to what Potato would
@@ -281,8 +281,8 @@ the estimate.
 Before writing a scheme from a field list, look for one somebody already ran:
 
 ```bash
-python .claude/skills/potato-tasks/scripts/find_design.py --query "stance" --with-instructions
-python .claude/skills/potato-tasks/scripts/find_design.py --show text/argumentation-stance/argument-quality
+python .claude/skills/potato-skill/scripts/find_design.py --query "stance" --with-instructions
+python .claude/skills/potato-skill/scripts/find_design.py --show text/argumentation-stance/argument-quality
 ```
 
 The Potato Showcase is 440 annotation task designs, most built from a published
@@ -459,7 +459,7 @@ drops at boot, which is what `boot_and_check.py` is for.
 ## Then drive it
 
 ```bash
-python .claude/skills/potato-tasks/scripts/walk_task.py \
+python .claude/skills/potato-skill/scripts/walk_task.py \
     --url http://localhost:8000 --config config.yaml --task-dir .
 ```
 
@@ -491,7 +491,7 @@ a driver to adapt.
 a person can find the questions.
 
 ```bash
-python .claude/skills/potato-tasks/scripts/check_ui.py \
+python .claude/skills/potato-skill/scripts/check_ui.py \
     --url http://localhost:8000 --config config.yaml --shots ui/
 ```
 
@@ -518,7 +518,7 @@ twelve steps are annotation pages and a `poststudy` survey is hundreds of items
 out of reach. Measure that page on its own:
 
 ```bash
-python .claude/skills/potato-tasks/scripts/check_ui.py \
+python .claude/skills/potato-skill/scripts/check_ui.py \
     --config config.yaml --phase poststudy --phase consent
 ```
 
@@ -534,7 +534,7 @@ outlive your session or reach anyone else):
 
 ```bash
 pkill -f "potato start config.yaml -p 8000"        # wipe with it stopped
-python .claude/skills/potato-tasks/scripts/handover.py config.yaml \
+python .claude/skills/potato-skill/scripts/handover.py config.yaml \
     --url http://your-host:8000 --port 8000 --confirm
 ```
 
@@ -548,7 +548,7 @@ next annotator to arrive gets the completion page.
 ## Watching a live study
 
 ```bash
-python .claude/skills/potato-tasks/scripts/study_status.py \
+python .claude/skills/potato-skill/scripts/study_status.py \
     --url http://localhost:8000 --task-dir .
 ```
 
@@ -684,7 +684,7 @@ For the last two, offer to file it. `references/reporting-upstream.md` has the
 checks and what a report needs; the helper assembles it:
 
 ```bash
-python .claude/skills/potato-tasks/scripts/report_issue.py bug \
+python .claude/skills/potato-skill/scripts/report_issue.py bug \
     --title "Waveform never generates for media_directory audio" \
     --observed "..." --expected "..." --repro "..." \
     --config config.yaml --log server.log

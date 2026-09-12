@@ -10,7 +10,7 @@ import os
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
-SKILL_NAME = "potato-tasks"
+SKILL_NAME = "potato-skill"
 SKILL_DIR = os.path.join(ROOT, "skills", SKILL_NAME)
 REFERENCES_DIR = os.path.join(SKILL_DIR, "references")
 SCRIPTS_DIR = os.path.join(SKILL_DIR, "scripts")
@@ -68,7 +68,7 @@ def pack_path(name: str) -> str:
     """Resolve a pack-relative name against the layout a plugin requires.
 
     `AGENTS.md` sits at the repository root because every agent tool looks for
-    it there. Everything else lives under `skills/potato-tasks/`, which is where
+    it there. Everything else lives under `skills/potato-skill/`, which is where
     Claude Code looks for a skill.
     """
     if name == "AGENTS.md":

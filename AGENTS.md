@@ -54,7 +54,7 @@ Two that are easy to get wrong and expensive to discover late:
   a floor, `max_annotations_per_item` a cap.
 
 The Claude Code skill installed alongside this file has the full versions:
-`.claude/skills/potato-tasks/references/designing-a-task.md`,
+`.claude/skills/potato-skill/references/designing-a-task.md`,
 `asking-the-experimenter.md`, and `building-the-ui.md`.
 
 ## Start from a working example
@@ -187,7 +187,7 @@ shape of one data record rather than the records, and what you measured against
 what you expected. Strip `secret_key`, `ai_support.ai_config.api_key`, crowd
 credentials and annotator email addresses first. The Claude Code skill installed
 alongside this file has a helper that assembles all of that:
-`.claude/skills/potato-tasks/scripts/report_issue.py`.
+`.claude/skills/potato-skill/scripts/report_issue.py`.
 
 Filing is public and cannot be withdrawn. Show the report to whoever owns the
 study and get an answer before you file it.

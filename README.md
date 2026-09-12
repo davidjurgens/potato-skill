@@ -13,7 +13,7 @@ annotations back out.
 
 ```
 /plugin marketplace add davidjurgens/potato-skill
-/plugin install potato-tasks@potato
+/plugin install potato-skill@potato
 ```
 
 Potato has to be installed in whatever environment runs the commands, because
@@ -29,9 +29,9 @@ pip install potato-annotation
 
 | | |
 |---|---|
-| `skills/potato-tasks/SKILL.md` | What Claude Code loads when the skill fires |
-| `skills/potato-tasks/references/` | 28 reference files, loaded on demand |
-| `skills/potato-tasks/scripts/` | Nine helpers an agent runs rather than reconstructs |
+| `skills/potato-skill/SKILL.md` | What Claude Code loads when the skill fires |
+| `skills/potato-skill/references/` | 28 reference files, loaded on demand |
+| `skills/potato-skill/scripts/` | Nine helpers an agent runs rather than reconstructs |
 | `AGENTS.md` | The same guidance for Codex and Cursor, which read this filename directly |
 
 Three references are generated from Potato's registries by
@@ -52,7 +52,7 @@ A skill is a directory, so it travels:
 python scripts/package_skill.py
 ```
 
-builds `dist/potato-tasks/` and `dist/potato-tasks.zip`. The directory is what
+builds `dist/potato-skill/` and `dist/potato-skill.zip`. The directory is what
 the Claude Agent SDK loads; the zip is what the Claude API accepts as an
 uploaded skill. `--install-personal` copies it into `~/.claude/skills/`, making
 it available in every project on the machine without a marketplace.

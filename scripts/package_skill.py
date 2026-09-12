@@ -2,7 +2,7 @@
 """
 Package the skill for the routes that are not the plugin marketplace.
 
-    python scripts/package_skill.py                 # build dist/potato-tasks/ + .zip
+    python scripts/package_skill.py                 # build dist/potato-skill/ + .zip
     python scripts/package_skill.py --install-personal
     python scripts/package_skill.py --out /tmp/build
 
@@ -10,7 +10,7 @@ A Claude Code skill is a directory: `SKILL.md` plus whatever it references. The
 same directory is what the Agent SDK loads and what the Claude API accepts as an
 uploaded skill, so one build serves all three.
 
-For Claude Code itself, `/plugin install potato-tasks@potato` is simpler than any
+For Claude Code itself, `/plugin install potato-skill@potato` is simpler than any
 of this. Use the build when there is no marketplace in the picture -- the SDK and
 the API both take a directory or a zip.
 """
@@ -112,7 +112,7 @@ Three ways to use what was just built:
 Inside Claude Code, the marketplace is less work than any of these:
 
       /plugin marketplace add davidjurgens/potato-skill
-      /plugin install potato-tasks@potato
+      /plugin install potato-skill@potato
 """)
     return 0
 

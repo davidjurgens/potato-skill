@@ -46,7 +46,7 @@ The first thing a researcher asks about a design is what it costs, and the
 config already contains most of the answer:
 
 ```bash
-python .claude/skills/potato-tasks/scripts/estimate_effort.py config.yaml --rate 15
+python .claude/skills/potato-skill/scripts/estimate_effort.py config.yaml --rate 15
 ```
 
 It reads the item count, the schemes, `num_annotators_per_item`,

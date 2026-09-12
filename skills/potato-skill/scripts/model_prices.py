@@ -43,7 +43,7 @@ MODELS_URL = "https://openrouter.ai/api/v1/models"
 #: the number is fresh, so a working network is always preferred to it.
 def _cache_path() -> str:
     base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
-    return os.path.join(base, "potato-tasks", "model-prices.json")
+    return os.path.join(base, "potato-skill", "model-prices.json")
 
 
 # A trailing dated snapshot names the same model: "claude-haiku-4-5-20251001"
@@ -86,7 +86,7 @@ def _name_candidates(model: str) -> list:
 def fetch_catalogue(timeout: int = 20) -> dict:
     """`{id_tail: row}` from the live feed, plus where it came from."""
     request = urllib.request.Request(
-        MODELS_URL, headers={"User-Agent": "potato-tasks/model_prices"})
+        MODELS_URL, headers={"User-Agent": "potato-skill/model_prices"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         payload = json.loads(response.read().decode("utf-8"))
     return {"fetched_at": time.time(), "source": MODELS_URL,
