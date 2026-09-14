@@ -126,7 +126,7 @@ them.
 Defaults to 800, which covers the multi-label formats. Rationale and Keyword both
 produce one entry per label, so a three-label scheme runs 300-500 tokens; the old
 default of 100 cut them off mid-object. Lower it, or give a scheme many labels,
-and on `openai`, `openai_vision` and `vllm` the log says so:
+and from Potato 2.9.0 the log says so:
 
 ```
 The model hit max_tokens (100) before finishing this response, so the reply is
@@ -138,12 +138,15 @@ the salvage step returns whatever key-value pairs completed, so the renderer get
 a plausible dict of the wrong type and the tooltip reads "No rationales
 available" either way.
 
-**Only those three.** `anthropic`, `anthropic_vision`, `gemini`, `huggingface`,
-`ollama`, `ollama_vision` and `openrouter` never check the finish reason, on any
-path, and no endpoint's chat method checks it even where its sibling assistant
-method does. On those seven a cut-off reply reaches the renderer with nothing in
-the log, and it produces the empty tooltip above — which is also what a broken
-endpoint produces. A silent log is not evidence the reply was complete.
+**From 2.9.0, all ten text and vision endpoints warn for the assistants**, on
+text and image items alike, and the chat methods of `anthropic`, `ollama`,
+`openai` and `vllm` warn too, with `this chat reply` where an assistant's warning
+says `this response`. Before 2.9.0 only `openai`, `openai_vision` and `vllm`
+warned, and never from chat. On `anthropic`, `anthropic_vision`, `gemini`,
+`huggingface`, `ollama`, `ollama_vision` and `openrouter` a cut-off reply reached
+the renderer with nothing in the log and produced the empty tooltip above, which
+is also what a broken endpoint produces. A quiet log is evidence the reply was
+complete only on 2.9.0 or later, and for chat only on those four endpoints.
 
 ## Which field the model gets
 
@@ -180,17 +183,26 @@ about it — the hint reads like a hint, and the label it suggests is highlighte
 in the form either way. One `/api/get_ai_suggestion` call on one multimodal
 item settles which field reached the model; nothing in the config does.
 
-## Images have to be publicly reachable
+## Which images the model can reach
 
-The AI path fetches the image itself, server-side, and refuses any URL resolving
-to a private, loopback or link-local address. That is deliberate — it is SSRF
-protection on a URL that comes from your data file — but it means images served
-by your own Potato instance, or sitting behind `media_directory`, cannot reach
-the model. When the fetch is refused the code falls back to a plain text query on
-the URL string, so you get an answer about a filename.
+The AI path loads the image itself, server-side. From 2.8.2-29 a bare filename,
+or a `media/...` or `/media/...` path, under `media_directory` is read off disk
+and sent as base64. Anything else has to be an http(s) URL, and one resolving to
+a private, loopback or link-local address is refused. That refusal is SSRF
+protection on a URL that comes from your data file, and it means a full URL to
+your own Potato instance (`http://localhost:8000/media/cat.png`) never reaches
+the model, even though the same file written as `/media/cat.png` does. A
+`data:` URI is refused too: the page displays one (`modalities.md`), and the
+model never gets it. Annotators see the image in every one of these cases, so
+checking the page will not catch it.
+Write media paths in the data as `/media/<path>`, the form the page serves, and
+the model gets the same file.
 
-Annotators see local images fine; only the model cannot. If a study needs both,
-the images have to be somewhere public.
+When the image cannot be loaded, the request goes to the model as text only, and
+the answer comes back in the same shape as an answer about the picture. From
+2.9.0 the log says `so the model is being sent TEXT ONLY`, and by the source the
+`/api/get_ai_suggestion` response carries `image_attached: false`. Before 2.9.0
+nothing said so.
 
 A separate detail: whether an item counts as an image at all is decided by
 sniffing the text for an extension (`.jpg`, `.png`, `.gif`, `.webp`, `.bmp`), a
@@ -251,10 +263,12 @@ assistant returns one entry per label, so the author knows roughly how long the
 reply will be. Chat length is set by whatever the annotator types. Asked a
 question covering three labels, this endpoint at 400 stopped on the bare heading
 `### 3. Unclear` with nothing under it; at 800 it reached the last section but
-not its closing sentence; at 2000 it finished. Nothing appeared in the log in
-any of those runs — the chat path never checks the finish reason — so an
-annotator reading a reply that stops mid-document is the only thing that will
-tell you. A cap costs nothing unless the model reaches it.
+not its closing sentence; at 2000 it finished. Those runs were on a build before
+2.9.0, whose chat path never checked the finish reason, and nothing appeared in
+the log. From 2.9.0 this endpoint logs `before finishing this chat reply`, but
+the sidebar still shows the reply with nothing to mark it as cut off, because
+only its text reaches the browser, so the log is the only place a cut-off shows.
+A cap costs nothing unless the model reaches it.
 
 **It is given far more than the assistants are.** The default prompt carries the
 task name, the task description, every scheme's name and its labels, and the
@@ -471,8 +485,8 @@ is not waiting on the first token.
 
 ## What I have and have not verified
 
-Run against a Potato checkout at v2.8.2 plus the endpoint fixes that followed it,
-and a vLLM 0.24.0 server on a 12B text+vision model, in headless Chromium,
+Run against a Potato checkout at v2.8.2 plus the endpoint fixes that followed
+it (the bullets naming 2.9.0 were run on that release), and a vLLM 0.24.0 server on a 12B text+vision model, in headless Chromium,
 reading the response body and the rendered DOM:
 
 - the `ai_config` nesting, and what `--strict` says when you get it wrong
@@ -491,12 +505,25 @@ reading the response body and the rendered DOM:
   an image, and the answer changing when it is set
 - `chat_support` end to end against the same server: the sidebar, a reply, the
   `ui` keys, and a custom `system_prompt.template` reaching the model
-- the same chat question at `max_tokens` 400, 800 and 2000, reading each reply
-  back from `/api/chat/send` and each server log: cut at a heading, cut before
-  its closing sentence, complete — no truncation warning in any of the three
-- which endpoint modules call the truncation check, from the source: four call
-  sites in `openai_endpoint`, `openai_vision_endpoint` and `vllm_endpoint`, none
-  in any `chat_query`
+- on a build before 2.9.0, the same chat question at `max_tokens` 400, 800 and
+  2000, reading each reply back from `/api/chat/send` and each server log: cut
+  at a heading, cut before its closing sentence, complete — no truncation
+  warning in any of the three
+- on 2.9.0, the `vllm` and `openai` chat methods against the same server at
+  `max_tokens` 40 and 2000, called directly rather than through
+  `/api/chat/send`: the `this chat reply` warning at 40 on both, nothing at 2000
+- which endpoint methods call the truncation check on 2.9.0, from the source:
+  `query` on all ten text and vision endpoints, `query_with_image` on the three
+  vision ones, and `chat_query` on `anthropic`, `ollama`, `openai` and `vllm`;
+  and `chat_manager` sending the browser only the reply's text
+- on 2.9.0, the vision loader against a `media_directory` holding one PNG:
+  `cat.png`, `media/cat.png` and `/media/cat.png` read off disk,
+  `http://localhost:8000/media/cat.png` and a `data:` URI of the same PNG
+  refused, and `http://127.0.0.1:8000/media/cat.png` sent through
+  `resolve_vision_image` logging the `TEXT ONLY` warning; from the source,
+  `get_ai_help` returning the `image_attached` stamp to the route unchanged;
+  from Potato's history, the disk read arriving in `v2.8.2-29-g39173a45`, and
+  the warning and the stamp later, in `2b24a056`
 - `judge_alignment.inline` rendering a judge's suggestion beside the item, and
   `/admin/judge-alignment` reporting agreement against the human labels
 - `active_learning` training and reordering a twenty-item queue, and the dotted

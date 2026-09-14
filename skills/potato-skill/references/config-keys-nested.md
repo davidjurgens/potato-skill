@@ -77,7 +77,7 @@ Model-backed label suggestions shown alongside each item
 | `ai_config.model` | string |  | Model name as the backend spells it |
 | `ai_config.temperature` | number | `0.1` | Sampling temperature, 0 to 2 |
 | `ai_config.think` | boolean | `False` | Let a reasoning model emit its thinking block. Off keeps the reply to the answer (vllm) |
-| `ai_config.timeout` | integer | `30` | Seconds to wait for the model |
+| `ai_config.timeout` | integer |  | Seconds to wait for the model. Left out, each endpoint applies its own: 30 for openai, anthropic, gemini, huggingface and vllm, 60 for ollama and the openai/anthropic vision endpoints, 120 for ollama_vision. There is no single default to quote here |
 | `ai_config_file` | string |  | Path to a separate YAML file holding the endpoint settings, so keys stay out of the repo. Its keys are merged FLAT into ai_config, so the file holds model/base_url/api_key directly — a nested ai_config: block inside it becomes ai_config.ai_config and is ignored. endpoint_type is the one key lifted to the ai_support level. A missing file disables AI support with a warning, which `validate --strict` treats as an error |
 | `cache_config` | object |  | Disk cache and prefetch for model replies, so an annotator does not wait for a generation the study has already paid for |
 | `enabled` | boolean | `False` | Turn AI assistance on. Without an endpoint that starts, the boot log says so and no assistant appears |

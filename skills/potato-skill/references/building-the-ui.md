@@ -119,7 +119,7 @@ yourself if your annotators rely on assistive technology.
 | `pdf` | PDF via PDF.js |
 | `spreadsheet` | Tables, annotated by row or cell |
 | `image` | Images, optionally zoomable |
-| `gallery` | Several images with captions |
+| `gallery` | Several images with captions; from 2.9.0, videos too |
 | `depth_map` | Depth data with windowing and a colormap |
 | `video` | Video player |
 | `audio` | Audio player |
