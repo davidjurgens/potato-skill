@@ -152,8 +152,8 @@ available" either way.
 **From 2.9.0, all ten text and vision endpoints warn for the assistants**, on
 text and image items alike. Their chat methods warn too, with `this chat reply`
 where an assistant's warning says `this response`: on 2.9.0 only `anthropic`,
-`ollama`, `openai` and `vllm`, and on all ten at commit `111dbd2c` (2.9.1,
-untagged, not on PyPI). Before 2.9.0 only `openai`, `openai_vision` and `vllm`
+`ollama`, `openai` and `vllm`, and on all ten from 2.9.1. Before 2.9.0 only
+`openai`, `openai_vision` and `vllm`
 warned, and never from chat. On `anthropic`, `anthropic_vision`, `gemini`,
 `huggingface`, `ollama`, `ollama_vision` and `openrouter` a cut-off reply reached
 the renderer with nothing in the log and produced the empty tooltip above, which
@@ -499,8 +499,8 @@ is not waiting on the first token.
 ## What I have and have not verified
 
 Run against a Potato checkout at v2.8.2 plus the endpoint fixes that followed
-it (bullets naming 2.9.0 were run on that release, and those naming 2.9.1 on
-the untagged commit `111dbd2c`, except where a bullet says "from the source"),
+it (bullets naming 2.9.0 or 2.9.1 were run on that release, except where a
+bullet says "from the source"),
 and a vLLM 0.24.0 server on a 12B text+vision model, in headless Chromium,
 reading the response body and the rendered DOM:
 
@@ -527,9 +527,8 @@ reading the response body and the rendered DOM:
 - on 2.9.0, the `vllm` and `openai` chat methods against the same server at
   `max_tokens` 40 and 2000, called directly rather than through
   `/api/chat/send`: the `this chat reply` warning at 40 on both, nothing at 2000
-- on 2.9.1 (`111dbd2c`, untagged), the `openai_vision`, `vllm` and `openai`
-  chat methods called the same way: the `this chat reply` warning at 40 on all
-  three, nothing at 2000
+- on 2.9.1, the `openai_vision`, `vllm` and `openai` chat methods called the
+  same way: the `this chat reply` warning at 40 on all three, nothing at 2000
 - which endpoint methods call the truncation check, from the source: on 2.9.0,
   `query` on all ten text and vision endpoints, `query_with_image` on the three
   vision ones, and `chat_query` on `anthropic`, `ollama`, `openai` and `vllm`;
