@@ -20,9 +20,45 @@ Four things it exists to catch, each of which has shipped broken:
   3. a workflow that cannot reach its own last page
   4. answers that are on the screen and not in `user_state.json`
 
-It is deliberately generic: it picks the first available option for every
-question rather than annotating meaningfully. It proves the machinery works,
-not that the labels make sense.
+By default it is deliberately generic: it picks the first available option for
+every question rather than annotating meaningfully. That proves the machinery
+works, not that the labels make sense. Two flags go further.
+
+`--grade` answers the gold and attention items from the files the config names,
+waits out `attention_checks.min_response_time`, and reports the verdict Potato
+recorded for each. The verdict is read out of
+`<output_annotation_dir>/quality_control_results.json` rather than recomputed
+here: Potato already grades geometry at 0.5 IoU, accepts two payload shapes and
+both key separators, and a second implementation of that comparison could only
+disagree with Potato's own.
+
+It keeps three outcomes apart, because they send you to three different places:
+
+  * graded wrong -- the answer never reached the grader, or the labels in the
+    side file are not the labels in `annotation_schemes`
+  * too fast -- `min_response_time` refused the answer for arriving quickly,
+    whatever it said. That is the walker's speed, not a fault in the task
+  * never served -- the walk did not meet the item. Checks are injected on a
+    frequency, so a short walk can finish having seen none, and an empty
+    results file otherwise reads exactly like a study running with quality
+    control switched off
+
+The wait happens BEFORE answering rather than before Next. The clock starts
+when `/annotate` renders the item and stops on an `/updateinstance` POST, and
+the page posts one as soon as an option is selected, so the graded save has
+already happened by the time Next is clicked. Dwelling before Next left a check
+recorded at 1.62s against a 5s floor; dwelling before the answer recorded 7.11s
+and passed.
+
+`--answers FILE` takes `{instance id: {scheme: label}}` and annotates with those
+instead of picking first options. This is the half a script cannot do for
+itself: an agent that has read the items and the guidelines supplies real
+judgements, and the walk becomes an annotation pass that can catch a label set
+nothing fits or an instruction that contradicts it.
+
+Either way the walk compares what it submitted against what `user_state.json`
+came back holding. Counting stored instances, which is all it used to do, never
+caught a study that kept a different value than the one it was sent.
 
 Radios, checkboxes, selects, numbers, sliders and tiles it drives directly. The
 schemes that answer through a hidden JSON input and a row of buttons -- the whole
@@ -43,6 +79,7 @@ import os
 import random
 import string
 import sys
+import time
 
 #: Console output every healthy Potato phase page produces, because a phase page
 #: has no instance and the span layer asks for one anyway. Not signal.
@@ -153,6 +190,316 @@ def _training_answers(config_path: str) -> dict:
     instances = data.get("training_instances") if isinstance(data, dict) else None
     return {str(item.get("id")): (item.get("correct_answers") or {})
             for item in (instances or []) if item.get("id") is not None}
+
+
+def _config(config_path: str | None) -> dict:
+    """The parsed config, or `{}`."""
+    if not config_path or not os.path.isfile(config_path):
+        return {}
+    try:
+        import yaml
+        with open(config_path, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
+
+def _side_file_answers(config_path: str, block_name: str, answer_key: str) -> dict:
+    """`id -> expected answer`, from a quality-control side file.
+
+    `gold_standards.items_file` and `attention_checks.items_file` are both a
+    JSON **array**, which is why this cannot be folded into
+    `_training_answers` -- training's file is an object with a
+    `training_instances` key.
+
+    A gold item may write `gold_label` as a bare string rather than a
+    `{scheme: label}` dict. That form names no scheme, so the walker cannot
+    drive it; it is returned as-is and only the verdict Potato recorded for it
+    can be read.
+    """
+    block = _config(config_path).get(block_name) or {}
+    if not isinstance(block, dict):
+        return {}
+    data_file = block.get("items_file")
+    if not data_file:
+        return {}
+    base = os.path.dirname(os.path.abspath(config_path))
+    path = data_file if os.path.isabs(data_file) else os.path.join(base, data_file)
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            items = json.load(f)
+    except Exception:
+        return {}
+    if not isinstance(items, list):
+        return {}
+    return {str(item.get("id")): item.get(answer_key)
+            for item in items
+            if isinstance(item, dict)
+            and item.get("id") is not None
+            and item.get(answer_key) is not None}
+
+
+def _supplied_answers(answers_path: str | None) -> dict:
+    """`{instance_id: {scheme: label}}` an agent wrote, or `{}`.
+
+    This is the half of the walk a script cannot do for itself. Picking the
+    first option proves the machinery works; it cannot notice that two labels
+    mean the same thing, that the guidelines contradict the label set, or that
+    an item has no right answer in it. An agent that has read the items and the
+    codebook writes those judgements here and the walker types them in, which
+    turns the walk from a smoke test into an annotation pass.
+
+    Values are label strings exactly as they appear in `labels:` -- the stored
+    value, not the humanized display form -- and a list ticks one box per
+    label, the same shape `training.data_file` uses for `correct_answers`.
+    """
+    if not answers_path:
+        return {}
+    if not os.path.isfile(answers_path):
+        raise SystemExit(f"No answers file at {answers_path}")
+    try:
+        with open(answers_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as exc:
+        raise SystemExit(f"Could not read {answers_path}: {exc}")
+    if not isinstance(data, dict):
+        raise SystemExit(
+            f"{answers_path} must be a JSON object mapping instance id to "
+            f"{{scheme: label}}, not a {type(data).__name__}.")
+    return {str(k): v for k, v in data.items() if isinstance(v, dict)}
+
+
+def _min_response_time(config_path: str) -> float:
+    """`attention_checks.min_response_time`, or 0.
+
+    The walker fills a page in well under a second, and the save route measures
+    serve-to-save on the **server** rather than trusting the client's claimed
+    time. So on a study setting this, every attention check the walker answers
+    is recorded `too_fast` however right the answer was -- a failure belonging
+    to the walker rather than to the task. `--grade` waits this long on a
+    check instead, which is the only way the recorded verdict means anything.
+    """
+    block = _config(config_path).get("attention_checks") or {}
+    if not isinstance(block, dict):
+        return 0.0
+    try:
+        return float(block.get("min_response_time") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _qc_results(task_dir: str, config_path: str, user: str) -> dict:
+    """What Potato recorded for this annotator, read rather than recomputed.
+
+    Potato already grades both kinds -- geometry at 0.5 IoU, both wire-key
+    separators, and the two payload shapes `/updateinstance` accepts -- and
+    writes the verdict to
+    `<output_annotation_dir>/quality_control_results.json`. Grading again here
+    would be a second implementation of a question that already has an answer,
+    and the only thing a disagreement between them could prove is that this
+    file is wrong.
+    """
+    path = os.path.join(task_dir, _output_dir(config_path),
+                        "quality_control_results.json")
+    if not os.path.isfile(path):
+        return {"path": path, "found": False, "gold": [], "attention": []}
+    try:
+        with open(path, encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return {"path": path, "found": False, "gold": [], "attention": []}
+    return {
+        "path": path,
+        "found": True,
+        "gold": (payload.get("gold_results") or {}).get(user) or [],
+        "attention": (payload.get("attention_results") or {}).get(user) or [],
+    }
+
+
+def _grade_report(qc: dict, gold: dict, attention: dict, problems: list) -> dict:
+    """Potato's recorded verdicts, per item, with three outcomes kept apart.
+
+    They are kept apart because they send you to three different places:
+
+      * **graded wrong** -- under `--grade` the walker submitted the file's own
+        expected answer, so a wrong verdict means the answer never reached the
+        grader or the labels in the side file do not match `annotation_schemes`.
+      * **too fast** -- `min_response_time` refused the answer for arriving
+        quickly, whatever it said. That is the walker's speed rather than a
+        fault in the task, and reporting it as a content failure sends someone
+        to rewrite a check item that was fine.
+      * **never served** -- an item in the file the walk never met. Checks are
+        injected on a frequency, so a short walk can finish having seen none,
+        and an empty results file then reads exactly like a study running with
+        quality control switched off. Those two must never print the same line.
+    """
+    graded = {"results_file": qc.get("path"), "found": qc.get("found", False),
+              "gold": [], "attention": [], "too_fast": [], "never_served": []}
+    seen_gold, seen_attention = set(), set()
+
+    for record in qc.get("gold", []):
+        seen_gold.add(record.get("item_id"))
+        graded["gold"].append({"item_id": record.get("item_id"),
+                               "correct": bool(record.get("correct")),
+                               "gold_label": record.get("gold_label"),
+                               "user_response": record.get("user_response")})
+    for record in qc.get("attention", []):
+        seen_attention.add(record.get("item_id"))
+        entry = {"item_id": record.get("item_id"),
+                 "passed": bool(record.get("passed")),
+                 "too_fast": bool(record.get("too_fast")),
+                 "response_time_seconds": record.get("response_time_seconds"),
+                 "expected": record.get("expected"),
+                 "actual": record.get("actual")}
+        graded["attention"].append(entry)
+        if entry["too_fast"]:
+            graded["too_fast"].append(entry["item_id"])
+
+    graded["never_served"] = sorted(
+        (set(gold) - seen_gold) | (set(attention) - seen_attention))
+
+    wrong_gold = [r["item_id"] for r in graded["gold"] if not r["correct"]]
+    wrong_checks = [r["item_id"] for r in graded["attention"]
+                    if not r["passed"] and not r["too_fast"]]
+
+    if wrong_gold:
+        problems.append(
+            f"Gold item(s) graded wrong after the walker submitted the answer "
+            f"from gold_standards.items_file: {', '.join(wrong_gold)}. Either "
+            f"the answer did not reach the grader, or the labels in that file "
+            f"are not the labels in annotation_schemes.")
+    if wrong_checks:
+        problems.append(
+            f"Attention check(s) failed on content rather than speed: "
+            f"{', '.join(wrong_checks)}. The walker submitted the file's own "
+            f"expected_answer, so the check cannot be passed as written -- "
+            f"usually a required scheme the item never tells the annotator to "
+            f"answer.")
+    if graded["too_fast"]:
+        problems.append(
+            f"{len(graded['too_fast'])} attention check(s) recorded too_fast. "
+            f"That is the walker answering faster than "
+            f"attention_checks.min_response_time, not a fault in the task, and "
+            f"the verdict on those items says nothing about their content.")
+    if (gold or attention) and not qc.get("found"):
+        problems.append(
+            f"No {qc.get('path')}, but the config declares {len(gold)} gold "
+            f"item(s) and {len(attention)} attention check(s). Nothing was "
+            f"graded at all. Check the boot log for 'Loaded N gold standard "
+            f"items' before believing the study is checking anyone.")
+    elif graded["never_served"]:
+        problems.append(
+            f"Never served during this walk: "
+            f"{', '.join(graded['never_served'])}. Those items were not "
+            f"graded, so a clean result here is not evidence about them.")
+    return graded
+
+
+def _split_key(key: str):
+    """`<scheme>:::<label>` or `<scheme>:<label>` -> `(scheme, label)`, else None.
+
+    `:::` is tried first because a `:::` key also contains a `:`: splitting on
+    the first colon turns `stance:::Sincere` into the label `"::Sincere"`,
+    which matches nothing and says nothing. Mirrors Potato's own
+    `split_annotation_key`; a phase-page answer such as `{"age_consent": "Yes"}`
+    names no label and returns None.
+    """
+    if not isinstance(key, str):
+        return None
+    if ":::" in key:
+        scheme, _, label = key.partition(":::")
+        return scheme, label
+    if ":" in key:
+        scheme, _, label = key.partition(":")
+        return scheme, label
+    return None
+
+
+#: Values meaning "the key names the answer" rather than being it. A checked
+#: radio posts the browser's own default, `"on"`.
+_SELECTED = {"on", "true", "yes", "1", "checked", "selected"}
+
+
+#: Stored values meaning "this option was not chosen" rather than being an
+#: answer. Copied from Potato's `annotation_values.FALSEY`, which is what its
+#: own `selected_labels` filters on.
+_FALSEY = (False, None, "", "false", "False", 0, "0")
+
+
+def _stored_readings(stored) -> dict:
+    """`scheme -> set of label names that could be its stored answer`.
+
+    **What is on disk is not what went over the wire**, and confusing the two
+    is why this function existed for a while without ever running. The page
+    posts `{"category:::B": "B"}`; `user_state.json` holds
+    `[[{"schema": "category", "name": "B"}, "B"], ...]` -- a list of
+    `[Label, value]` pairs, because the in-memory container is keyed by `Label`
+    objects and JSON has nowhere to put them. A reader written for the wire
+    shape iterates `.items()` on a list, finds nothing, and reports every
+    answer as matching.
+
+    Potato's own `annotation_values.group_by_schema` cannot be borrowed here:
+    it reads `Label` keys off a live `UserState`, and raises `AttributeError`
+    on the list this file actually contains. The pair form below is that same
+    regrouping after serialization.
+
+    The **name** carries the answer, not the value -- radio stores
+    `{"positive": True}` and likert `{"2": "2"}` -- so a name is collected
+    whenever its value is not falsey. The flat `{"<scheme>:::<label>": value}`
+    form is still read, because a phase page and a hand-built payload both use
+    it.
+    """
+    readings: dict = {}
+
+    def keep(scheme, name):
+        if scheme and name is not None:
+            readings.setdefault(str(scheme), set()).add(str(name))
+
+    # The on-disk form: a list of [{"schema": ..., "name": ...}, value] pairs.
+    if isinstance(stored, list):
+        for pair in stored:
+            if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+                continue
+            label, value = pair
+            if not isinstance(label, dict):
+                continue
+            scheme, name = label.get("schema"), label.get("name")
+            if value in _FALSEY:
+                continue
+            # A geometry or temporal scheme stores one JSON blob under `_data`
+            # rather than a chosen label, so there is no label name to compare
+            # and pretending otherwise reports a mismatch on every drawn
+            # answer. Left out: absent is honest, a false mismatch is not.
+            if name == "_data":
+                continue
+            keep(scheme, name)
+            # A free-text answer keeps the typed string in the value and a
+            # widget name (`text_box`) in the name, so the value is the answer.
+            if isinstance(value, str) and value.strip() and value != name:
+                keep(scheme, value)
+        return readings
+
+    # The wire form, and anything already grouped as {scheme: {name: value}}.
+    for key, value in (stored or {}).items():
+        parsed = _split_key(key)
+        if parsed:
+            scheme, name = parsed
+            if value not in _FALSEY:
+                keep(scheme, name)
+            if isinstance(value, str) and value.strip():
+                keep(scheme, value)
+        elif isinstance(value, dict):
+            for name, inner in value.items():
+                if inner not in _FALSEY:
+                    keep(key, name)
+        elif isinstance(value, list):
+            for item in value:
+                keep(key, item)
+        elif value not in _FALSEY:
+            keep(key, value)
+    return readings
 
 
 def _group_of(element, name: str) -> str:
@@ -503,15 +850,46 @@ def _is_finished(page) -> bool:
 
 
 def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
-         config_path: str | None = None) -> dict:
+         config_path: str | None = None, grade: bool = False,
+         answers_path: str | None = None) -> dict:
     from playwright.sync_api import sync_playwright
 
     user = _fresh_user()
     console: list = []
     where = ["register"]
     training = _training_answers(config_path) if config_path else {}
+
+    # Answers the walker can be told rather than guess. Training is always
+    # read, because without it a practice round dead-ends the walk. Gold and
+    # attention answers are only *driven* under --grade: driving them by
+    # default would make every study score 100%, which is a fixture that
+    # cannot fail and so measures nothing.
+    known: dict = dict(training)
+    gold = _side_file_answers(config_path, "gold_standards", "gold_label") \
+        if config_path else {}
+    attention = _side_file_answers(config_path, "attention_checks",
+                                   "expected_answer") if config_path else {}
+    supplied = _supplied_answers(answers_path)
+    if grade:
+        for source in (gold, attention):
+            for item_id, value in source.items():
+                # A bare-string `gold_label` names no scheme, so it cannot be
+                # typed into a form. Its verdict is still read below.
+                if isinstance(value, dict):
+                    known[item_id] = value
+    # An agent's own answers outrank every file: they are the whole point of
+    # --answers, and on a gold item they are what is being tested.
+    known.update(supplied)
+
+    dwell = _min_response_time(config_path) if (grade and config_path) else 0.0
+
     report = {"user": user, "steps": [], "console_errors": console, "problems": [],
-              "training_items_known": len(training)}
+              "training_items_known": len(training),
+              "gold_items_known": len(gold),
+              "attention_items_known": len(attention),
+              "supplied_answers": len(supplied),
+              "graded": bool(grade),
+              "dwell_seconds": dwell}
 
     def note_error(text: str):
         if "Failed to load resource" in text:
@@ -555,6 +933,7 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
         first_instance = None
         for step in range(max_steps):
             where[0] = f"step{step}"
+            served = time.monotonic()
             instance = page.query_selector("#instance_id")
             instance_id = instance.get_attribute("value") if instance else None
             if instance_id and first_instance is None:
@@ -566,11 +945,23 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                 page.screenshot(path=os.path.join(shots, f"{step:02d}.png"),
                                 full_page=True)
 
+            # Wait BEFORE answering, not before Next. The clock starts when
+            # `/annotate` renders the item and stops on an `/updateinstance`
+            # POST, and the page posts one as soon as an option is selected --
+            # so on a check the graded save has already happened by the time
+            # the Next button is clicked, and a wait placed there cannot move
+            # a number that is already recorded. Measured: dwelling before
+            # Next left `chk1` at 1.62s against a 5s floor.
+            if dwell:
+                remaining = (dwell + 0.5) - (time.monotonic() - served)
+                if remaining > 0:
+                    page.wait_for_timeout(int(remaining * 1000))
+
             answered = 0
-            if instance_id and instance_id in training:
-                # The graded answer first: _answer_everything skips groups that
+            if instance_id and instance_id in known:
+                # The told answer first: _answer_everything skips groups that
                 # already have a selection, so it cannot overwrite it.
-                answered += _answer_as_told(page, training[instance_id])
+                answered += _answer_as_told(page, known[instance_id])
             answered += _answer_everything(page)
             # Long enough for a `display_logic` reveal to finish. The container
             # animates its max-height over 300ms and the scheme inside is not
@@ -591,16 +982,40 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                 # available. Telling someone to pass --config when they already
                 # did sends them to a fix they have applied and hides the real
                 # one, which is that the answer was submitted and graded wrong.
-                if recent[0] in training:
+                if recent[0] in supplied:
+                    hint = (f"Its answer came from --answers: "
+                            f"{supplied[recent[0]]}. The walker submitted that "
+                            f"and the page still would not advance, so either "
+                            f"one of those labels is not one the scheme offers, "
+                            f"or a required scheme on the page has no answer in "
+                            f"the file.")
+                elif recent[0] in gold or recent[0] in attention:
+                    source = ("gold_standards.items_file" if recent[0] in gold
+                              else "attention_checks.items_file")
+                    hint = (f"{recent[0]} is a quality-control item from "
+                            f"{source}, answered from that file under --grade. "
+                            f"A check item has to instruct every required "
+                            f"scheme, spans included; when it does not the page "
+                            f"refuses to advance and the only feedback is a "
+                            f"small toast naming the internal scheme name.")
+                elif recent[0] in training:
                     hint = (f"Its model answer is {training[recent[0]]}. The "
                             f"walker submitted that and training still refused "
                             f"it, so the labels in training.data_file do not "
                             f"match the labels in annotation_schemes, or a "
                             f"required scheme on the page has no model answer.")
                 elif training:
-                    hint = (f"There is no model answer for {recent[0]} in "
-                            f"training.data_file. If this is a practice item, "
-                            f"add one; the walker cannot guess a graded answer.")
+                    # Rules the graded answer out rather than recommending a
+                    # fix for it. This used to read "There is no model answer
+                    # for <id> in training.data_file. If this is a practice
+                    # item, add one" on any item the walk stalled on, which on
+                    # an ordinary item blocked by a required span sends the
+                    # reader to add a practice answer for an item that is not
+                    # a practice item -- while the real cause was named in the
+                    # same paragraph.
+                    hint = (f"{recent[0]} is not one of the practice items in "
+                            f"training.data_file, so a graded practice answer "
+                            f"is not what is blocking it.")
                 elif config_path is None:
                     hint = ("If this is the practice round, the answer is "
                             "graded and the walker does not know it -- pass "
@@ -698,6 +1113,38 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                 state = json.load(f)
             annotations = state.get("instance_id_to_label_to_value") or {}
             report["stored_instances"] = len(annotations)
+
+            # What was stored, against what was submitted. `stored_instances`
+            # counts items and has never compared values, so a study that kept
+            # the wrong label passed this check for as long as it has existed.
+            # Only items the walker was *told* an answer for can be checked:
+            # for the rest it picked the first option and has nothing to
+            # compare against.
+            mismatches = []
+            for item_id, expected in known.items():
+                stored = annotations.get(item_id)
+                if not isinstance(expected, dict) or not isinstance(stored, dict):
+                    continue
+                readings = _stored_readings(stored)
+                for scheme, value in expected.items():
+                    wanted = {str(v) for v in
+                              (value if isinstance(value, list) else [value])}
+                    got = readings.get(scheme, set())
+                    if not (wanted & got):
+                        mismatches.append({"instance_id": item_id,
+                                           "scheme": scheme,
+                                           "submitted": sorted(wanted),
+                                           "stored": sorted(got)})
+            report["value_mismatches"] = mismatches
+            if mismatches:
+                named = "; ".join(
+                    f"{m['instance_id']}/{m['scheme']} submitted "
+                    f"{m['submitted']}, stored {m['stored'] or 'nothing'}"
+                    for m in mismatches[:5])
+                report["problems"].append(
+                    f"{len(mismatches)} answer(s) reached the server as a "
+                    f"different value than the one submitted: {named}.")
+
             if not annotations:
                 report["problems"].append(
                     f"{state_path} exists but holds no annotations. The page "
@@ -708,6 +1155,11 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                 f"No {state_path}. Nothing this walk did reached the server. "
                 f"(State is written when an annotation is submitted, so on a "
                 f"task with no annotation phase this is expected.)")
+
+        if grade:
+            report["quality_control"] = _grade_report(
+                _qc_results(task_dir, config_path or "", user),
+                gold, attention, report["problems"])
 
     if console:
         report["problems"].append(
@@ -728,8 +1180,26 @@ def main(argv=None) -> int:
     parser.add_argument("--shots", default=None,
                         help="Directory for a full-page screenshot of every step")
     parser.add_argument("--max-steps", type=int, default=25)
+    parser.add_argument("--grade", action="store_true",
+                        help="Answer the gold and attention items from their "
+                             "own files, wait out min_response_time, and "
+                             "report the verdict Potato recorded for each")
+    parser.add_argument("--answers", default=None,
+                        help="JSON file of {instance id: {scheme: label}} to "
+                             "annotate with, instead of picking first options")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
+
+    # --grade reads two things the other modes do not need, and without either
+    # it would report a clean run having graded nothing at all.
+    if args.grade and not args.task_dir:
+        print("--grade reads quality_control_results.json out of the task "
+              "directory, so it needs --task-dir as well.", file=sys.stderr)
+        return 2
+    if args.grade and not args.config:
+        print("--grade reads the gold and attention item files named in the "
+              "config, so it needs --config as well.", file=sys.stderr)
+        return 2
 
     try:
         import playwright  # noqa: F401
@@ -739,7 +1209,8 @@ def main(argv=None) -> int:
               "  playwright install chromium", file=sys.stderr)
         return 2
 
-    report = walk(args.url, args.task_dir, args.shots, args.max_steps, args.config)
+    report = walk(args.url, args.task_dir, args.shots, args.max_steps,
+                  args.config, grade=args.grade, answers_path=args.answers)
 
     if args.as_json:
         print(json.dumps(report, indent=2))
@@ -754,6 +1225,28 @@ def main(argv=None) -> int:
             print(f"Stored in user_state.json: {report['stored_instances']} instances")
         if "restored_on_revisit" in report:
             print(f"Restored on revisit: {report['restored_on_revisit']} selections")
+        if report.get("value_mismatches"):
+            print(f"Stored as a different value than submitted: "
+                  f"{len(report['value_mismatches'])}")
+        qc = report.get("quality_control")
+        if qc:
+            print(f"\nGraded, from {qc['results_file']}:")
+            for record in qc["gold"]:
+                print(f"  gold  {record['item_id']}: "
+                      f"{'correct' if record['correct'] else 'WRONG'}")
+            for record in qc["attention"]:
+                if record["too_fast"]:
+                    verdict = (f"too fast "
+                               f"({record['response_time_seconds']}s) -- "
+                               f"the walker's speed, not the item")
+                else:
+                    verdict = "passed" if record["passed"] else "FAILED"
+                print(f"  check {record['item_id']}: {verdict}")
+            if qc["never_served"]:
+                print(f"  never served, so ungraded: "
+                      f"{', '.join(qc['never_served'])}")
+            if not qc["gold"] and not qc["attention"]:
+                print("  nothing was graded")
         for text in report["console_errors"]:
             print(f"  console: {text}")
         if report["problems"]:

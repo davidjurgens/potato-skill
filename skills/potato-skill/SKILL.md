@@ -72,7 +72,7 @@ They live beside this file in `scripts/`.
 | Script | What it does |
 |---|---|
 | `boot_and_check.py config.yaml -p 8000` | Boots, waits for a 200, and names every feature that is configured but loaded nothing |
-| `walk_task.py --url … --config … --task-dir .` | Registers an annotator, walks the whole study, and checks the answers reached `user_state.json` |
+| `walk_task.py --url … --config … --task-dir .` | Registers an annotator, walks the whole study, and checks the answers reached `user_state.json` **as the values it submitted**. `--grade` answers the gold and attention items from their own files and reports the verdict Potato recorded; `--answers file.json` annotates with judgements you supply instead of first options |
 | `estimate_effort.py config.yaml --rate 15` | Items, annotators needed, minutes each, total hours and cost |
 | `find_design.py --type span --with-instructions` | Searches 440 published task designs in the Potato Showcase |
 | `handover.py config.yaml --confirm` | Removes the accounts you made while testing and writes `RUNNING.md` |
@@ -479,11 +479,36 @@ Four things it is checking, each of which has shipped broken:
 3. The workflow reaches its own last page.
 4. The answers are in `user_state.json`, not just on the screen.
 
-It answers generically — first option for everything — so it proves the machinery
-works, not that the labels make sense. For a real annotation, spans, or anything
-it cannot do, `references/running-a-task.md` has the selectors, the span-drag
-recipe including the scroll offset that stops the drag landing on the navbar, and
-a driver to adapt.
+Left alone it answers generically — first option for everything — so it proves
+the machinery works, not that the labels make sense. Two flags go further.
+
+**`--grade`** answers the gold and attention items from the files the config
+names and reports the verdict Potato recorded for each, read out of
+`annotation_output/quality_control_results.json` rather than recomputed. It
+needs `--config` and `--task-dir`, and it keeps three outcomes apart, because
+they send you to three different places:
+
+- **graded wrong** — the answer never reached the grader, or the labels in the
+  side file are not the labels in `annotation_schemes`
+- **too fast** — `attention_checks.min_response_time` refused the answer for
+  arriving quickly, whatever it said. That is the walker's speed, not a fault
+  in the item
+- **never served** — the walk did not meet the item at all. Checks are injected
+  on a frequency, so a short walk can finish having seen none, and an empty
+  results file otherwise reads exactly like a study running with quality
+  control switched off
+
+**`--answers file.json`** takes `{instance id: {scheme: label}}` and annotates
+with those. This is the half a script cannot do for itself: read the items and
+the guidelines, decide the labels yourself, and the walk types them in. A label
+set nothing fits and an instruction that contradicts the labels are both
+invisible to a first-option pass and obvious to this one.
+
+Spans, a drag-and-drop sort and a canvas region it still cannot drive; it names
+the schemes it left holding nothing when it stops. For those,
+`references/running-a-task.md` has the selectors, the span-drag recipe including
+the scroll offset that stops the drag landing on the navbar, and a driver to
+adapt.
 
 ## Then check the interface itself
 
