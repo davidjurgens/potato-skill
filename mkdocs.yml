@@ -1,7 +1,11 @@
-site_name: Potato Annotation Tasks
+site_name: potato-skill
 site_url: https://davidjurgens.github.io/potato-skill/
-site_description: The Claude Code skill for designing, building and running Potato annotation tasks.
+site_description: >-
+  potato-skill teaches Claude Code, Codex and Cursor to design, build, run and
+  check human annotation studies in Potato, the self-hosted annotation tool.
+site_author: Potato Development Team
 repo_url: https://github.com/davidjurgens/potato-skill
+repo_name: davidjurgens/potato-skill
 edit_uri: ""
 
 nav:
@@ -40,6 +44,9 @@ nav:
 
 theme:
   name: material
+  custom_dir: overrides
+  language: en
+  favicon: assets/images/favicon.png
   palette:
     - scheme: default
       primary: deep purple
@@ -62,6 +69,35 @@ theme:
 
 plugins:
   - search
+
+# llms.txt, llms-full.txt and a .md copy of every page. See the module docstring.
+hooks:
+  - scripts/mkdocs_hooks.py
+
+extra:
+  # Read by overrides/main.html (structured data) and the hooks (llms.txt).
+  announcement_url: https://www.potatoannotator.com/blog/potato-skill-claude-code-annotation-studies
+  potato_url: https://www.potatoannotator.com/
+  potato_repo_url: https://github.com/davidjurgens/potato
+  keywords:
+    - annotation
+    - human annotation study
+    - data labeling
+    - Potato annotation tool
+    - Claude Code skill
+    - AGENTS.md
+    - NLP
+    - crowdsourcing
+  social:
+    - icon: fontawesome/solid/newspaper
+      link: https://www.potatoannotator.com/blog/potato-skill-claude-code-annotation-studies
+      name: Announcement on the Potato blog
+    - icon: fontawesome/brands/github
+      link: https://github.com/davidjurgens/potato-skill
+      name: potato-skill on GitHub
+    - icon: fontawesome/solid/globe
+      link: https://www.potatoannotator.com/
+      name: Potato
 
 markdown_extensions:
   - admonition

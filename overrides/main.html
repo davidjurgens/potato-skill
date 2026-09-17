@@ -1,0 +1,84 @@
+{#-
+  Social cards and structured data for every page.
+
+  The 404 page has no `page`, so it gets none of this.
+
+  Material already writes the canonical link and the meta description (from
+  the page's `description` front matter, or `site_description`). This adds
+  what it does not: Open Graph and Twitter tags, a markdown alternate, and
+  schema.org JSON-LD. The card image comes from potatoannotator.com's /og
+  endpoint, the same one the Potato blog uses.
+-#}
+{% extends "base.html" %}
+
+{% block extrahead %}
+{%- if page and page.file %}
+  {%- set page_title = (page.meta.title if page.meta and page.meta.title else page.title) | striptags -%}
+  {%- set page_description = (page.meta.description if page.meta and page.meta.description else config.site_description) -%}
+  {%- set card_title = "Build Potato annotation studies with a coding agent" if page.is_homepage else page_title -%}
+  {%- set card_image = "https://www.potatoannotator.com/og?title=" ~ (card_title | urlencode) ~ "&eyebrow=potato-skill" -%}
+  {%- set site = config.site_url -%}
+  <meta property="og:type" content="{{ 'website' if page.is_homepage else 'article' }}">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_description }}">
+  <meta property="og:url" content="{{ page.canonical_url }}">
+  <meta property="og:image" content="{{ card_image | e }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title }}">
+  <meta name="twitter:description" content="{{ page_description }}">
+  <meta name="twitter:image" content="{{ card_image | e }}">
+  <link rel="alternate" type="text/markdown" href="{{ site }}{{ page.file.src_uri }}">
+  <link rel="apple-touch-icon" href="{{ 'assets/images/apple-touch-icon.png' | url }}">
+
+  {%- set software = {
+    "@type": "SoftwareSourceCode",
+    "@id": site ~ "#software",
+    "name": "potato-skill",
+    "alternateName": "Potato annotation tasks",
+    "description": config.site_description,
+    "url": site,
+    "codeRepository": config.repo_url,
+    "version": config.extra.plugin_version,
+    "license": "https://spdx.org/licenses/GPL-3.0-or-later.html",
+    "programmingLanguage": "Python",
+    "keywords": config.extra.keywords,
+    "author": {"@type": "Organization", "name": config.site_author},
+    "isBasedOn": {
+      "@type": "SoftwareApplication",
+      "name": "Potato",
+      "applicationCategory": "Annotation tool",
+      "url": config.extra.potato_url,
+      "sameAs": [config.extra.potato_repo_url]
+    },
+    "subjectOf": {"@type": "BlogPosting", "url": config.extra.announcement_url}
+  } -%}
+  {%- set website = {
+    "@type": "WebSite",
+    "@id": site ~ "#website",
+    "name": config.site_name,
+    "url": site,
+    "description": config.site_description,
+    "inLanguage": "en",
+    "about": {"@id": site ~ "#software"}
+  } -%}
+  {%- if page.is_homepage -%}
+    {%- set graph = [website, software] -%}
+  {%- else -%}
+    {%- set graph = [website, {
+      "@type": "TechArticle",
+      "headline": page_title,
+      "description": page_description,
+      "url": page.canonical_url,
+      "inLanguage": "en",
+      "isPartOf": {"@id": site ~ "#website"},
+      "about": {"@id": site ~ "#software"},
+      "author": {"@type": "Organization", "name": config.site_author}
+    }] -%}
+  {%- endif %}
+  <script type="application/ld+json">{{ {"@context": "https://schema.org", "@graph": graph} | tojson }}</script>
+{%- endif %}
+{% endblock %}

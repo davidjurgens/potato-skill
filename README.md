@@ -9,6 +9,11 @@ laying out the interface, wiring consent and training phases, adding attention
 checks, running the study, watching it while it runs, and getting the
 annotations back out.
 
+The Potato blog post [potato-skill: Build a Human Annotation Study with Claude
+Code](https://www.potatoannotator.com/blog/potato-skill-claude-code-annotation-studies)
+walks through what it does with example studies. The reference material is
+published at <https://davidjurgens.github.io/potato-skill/>.
+
 ## Install
 
 ```
