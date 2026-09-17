@@ -69,6 +69,13 @@ Nine of the procedures below are scripts rather than instructions, because they
 are long enough to get wrong by hand and they are what you will run repeatedly.
 They live beside this file in `scripts/`.
 
+The commands below write this file's directory as `<skill-dir>`; put the real
+path in its place. Claude Code shows it as "Base directory for this skill" when
+the skill loads. An `npx skills add` install puts it at `.agents/skills/potato-skill/`
+for Codex and Cursor and at `.claude/skills/potato-skill/` for Claude Code. A `/plugin install`
+keeps it in Claude Code's plugin cache, so read the path rather than assume
+one.
+
 | Script | What it does |
 |---|---|
 | `boot_and_check.py config.yaml -p 8000` | Boots, waits for a 200, and names every feature that is configured but loaded nothing |
@@ -161,8 +168,8 @@ expensive to discover after the config is written:
 | Ask | Because |
 |---|---|
 | What format is the data in, and where is the media? | Transcripts and conversation corpora have their own converters |
-| Do you already have annotations? | `potato import` reads fourteen formats and writes a runnable project |
-| What has to come out at the end? | Twenty-nine export formats. Check the target one **before** anyone annotates |
+| Do you already have annotations? | `potato import` reads 20 formats and writes a runnable project |
+| What has to come out at the end? | 31 export formats. Check the target one **before** anyone annotates |
 | Who runs it after handover, and for how long? | Decides hosting, logins and the allowlist |
 
 ```bash
@@ -249,7 +256,7 @@ Two files next to the config, neither of which the config can hold:
   answer; ship something that runs alongside the question.
 
 ```bash
-python .claude/skills/potato-skill/scripts/estimate_effort.py config.yaml --rate 15
+python <skill-dir>/scripts/estimate_effort.py config.yaml --rate 15
 ```
 
 reports how many annotators the design needs, how long each is working, total
@@ -264,7 +271,7 @@ then refuses or permits work on that number. Potato logs a warning when that
 happens, but the projection it warns about is still the one the cap uses.
 
 ```bash
-python .claude/skills/potato-skill/scripts/model_prices.py config.yaml
+python <skill-dir>/scripts/model_prices.py config.yaml
 ```
 
 fetches current prices when you run it, puts them next to what Potato would
@@ -281,8 +288,8 @@ the estimate.
 Before writing a scheme from a field list, look for one somebody already ran:
 
 ```bash
-python .claude/skills/potato-skill/scripts/find_design.py --query "stance" --with-instructions
-python .claude/skills/potato-skill/scripts/find_design.py --show text/argumentation-stance/argument-quality
+python <skill-dir>/scripts/find_design.py --query "stance" --with-instructions
+python <skill-dir>/scripts/find_design.py --show text/argumentation-stance/argument-quality
 ```
 
 The Potato Showcase is 440 annotation task designs, most built from a published
@@ -459,7 +466,7 @@ drops at boot, which is what `boot_and_check.py` is for.
 ## Then drive it
 
 ```bash
-python .claude/skills/potato-skill/scripts/walk_task.py \
+python <skill-dir>/scripts/walk_task.py \
     --url http://localhost:8000 --config config.yaml --task-dir .
 ```
 
@@ -516,7 +523,7 @@ adapt.
 a person can find the questions.
 
 ```bash
-python .claude/skills/potato-skill/scripts/check_ui.py \
+python <skill-dir>/scripts/check_ui.py \
     --url http://localhost:8000 --config config.yaml --shots ui/
 ```
 
@@ -543,7 +550,7 @@ twelve steps are annotation pages and a `poststudy` survey is hundreds of items
 out of reach. Measure that page on its own:
 
 ```bash
-python .claude/skills/potato-skill/scripts/check_ui.py \
+python <skill-dir>/scripts/check_ui.py \
     --config config.yaml --phase poststudy --phase consent
 ```
 
@@ -559,7 +566,7 @@ outlive your session or reach anyone else):
 
 ```bash
 pkill -f "potato start config.yaml -p 8000"        # wipe with it stopped
-python .claude/skills/potato-skill/scripts/handover.py config.yaml \
+python <skill-dir>/scripts/handover.py config.yaml \
     --url http://your-host:8000 --port 8000 --confirm
 ```
 
@@ -573,7 +580,7 @@ next annotator to arrive gets the completion page.
 ## Watching a live study
 
 ```bash
-python .claude/skills/potato-skill/scripts/study_status.py \
+python <skill-dir>/scripts/study_status.py \
     --url http://localhost:8000 --task-dir .
 ```
 
@@ -626,7 +633,7 @@ anything an annotator will come back to — it matters most on `render` and
 ## Getting the data out
 
 There is one storage format — `annotation_output/<user>/user_state.json` — and
-twenty-nine export formats. `output_annotation_format` is deprecated: the loader
+31 export formats. `output_annotation_format` is deprecated: the loader
 reads it as `export_annotation_format` and warns. Write the live key.
 
 ```yaml
@@ -709,7 +716,7 @@ For the last two, offer to file it. `references/reporting-upstream.md` has the
 checks and what a report needs; the helper assembles it:
 
 ```bash
-python .claude/skills/potato-skill/scripts/report_issue.py bug \
+python <skill-dir>/scripts/report_issue.py bug \
     --title "Waveform never generates for media_directory audio" \
     --observed "..." --expected "..." --repro "..." \
     --config config.yaml --log server.log
@@ -745,7 +752,7 @@ refuses a body still holding a placeholder.
 | `model-assistance.md` | `ai_support` against a self-hosted LLM: where the keys go, which `endpoint_type` works |
 | `interrogating-potato.md` | Recovering an undocumented block from the validator and the boot log |
 | `data-and-access.md` | Where items come from, output files, login, serving |
-| `getting-the-data-out.md` | The 29 export formats, what the CSV holds, phase data |
+| `getting-the-data-out.md` | The 31 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
 | `config-keys.md` | 157 top-level keys *(generated)* |
 | `config-keys-nested.md` | 408 sub-keys, plus what is undocumented and what is unvalidated |
@@ -789,7 +796,10 @@ potato mcp issue-token --config config.yaml --name some-agent --role admin
 The bridge exposes the authoring tools *and* the live ones, the live ones
 prefixed `live_`: `live_get_status`, `live_get_config`, `live_get_progress`,
 `live_list_items`, `live_get_item`, `live_list_annotators`, `live_get_agreement`,
-`live_submit_annotation`, `live_assign_items`, `live_export_data`. Each
+`live_submit_annotation`, `live_assign_items`, `live_export_data`,
+`live_add_items`, `live_delete_annotations` — 12 in all. `live_delete_annotations`
+clears one annotator's work on one item, so it also has to be listed in
+`mcp.destructive` and called with `confirm: true`; Potato refuses it otherwise. Each
 publishes a real parameter schema, so `tools/list` is enough to call them —
 `live_get_item` declares `instance_id` required, `live_submit_annotation`
 declares `username`, `instance_id` and `annotations`. `mcp.tools` names them

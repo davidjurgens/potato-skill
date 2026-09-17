@@ -30,8 +30,8 @@ build, and all four are cheap to ask and expensive to discover late:
 | Ask | Why it changes the build |
 |---|---|
 | "What format is the data in, and where does the media live?" | Decides `data_files` versus `data_directory` versus `data_sources`, and whether images need `media_directory`. A folder of transcripts or a ConvoKit corpus has its own converter |
-| "Do you already have annotations for any of this?" | `potato import` reads fourteen formats and produces a runnable project. Rebuilding one by hand is the most avoidable way to lose an afternoon |
-| "What do you need to come out at the end?" | Twenty-nine export formats. A study aimed at training a detector should be checked against `coco` **before** anyone annotates, not after |
+| "Do you already have annotations for any of this?" | `potato import` reads 20 formats and produces a runnable project. Rebuilding one by hand is the most avoidable way to lose an afternoon |
+| "What do you need to come out at the end?" | 31 export formats. A study aimed at training a detector should be checked against `coco` **before** anyone annotates, not after |
 | "Who is running this once I hand it over, and for how long?" | Decides hosting, whether logins must survive a restart, and whether it needs an allowlist |
 
 `importing-existing-work.md` and `getting-the-data-out.md` cover the first three.

@@ -16,9 +16,11 @@ potato import --list-formats
 potato import -i instances_val.json -f coco -o ./project --image-url-prefix /media
 ```
 
-Fourteen formats: `coco`, `cvat`, `labelme`, `labelbox`, `pascal_voc`, `via`,
-`darwin`, `cityscapes`, `kitti`, `mot`, `davis`, `openimages`, `huggingface`,
-and a HuggingFace Hub id through `--hf-dataset`. The format is auto-detected
+20 formats, which `--list-formats` prints in two groups. Image and video:
+`coco`, `cvat`, `labelme`, `labelbox`, `pascal_voc`, `via`, `darwin`,
+`cityscapes`, `kitti`, `mot`, `davis`, `openimages`, `webdataset`, `yolo` and
+`huggingface`, which also takes a HuggingFace Hub id through `--hf-dataset`.
+Text: `brat`, `conll`, `doccano`, `prodigy` and `qdpx`. The format is auto-detected
 when `-f` is omitted. What comes out is a runnable project: `config.yaml`, a
 data file and the annotations, rather than a converted file you still have to
 wrap.

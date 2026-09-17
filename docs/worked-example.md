@@ -263,7 +263,7 @@ form.pure-display legend b, form.pure-display legend strong { font-weight: 650; 
 
 ```bash
 potato validate config.yaml --strict
-python .claude/skills/potato-skill/scripts/boot_and_check.py config.yaml -p 8000
+python <skill-dir>/scripts/boot_and_check.py config.yaml -p 8000
 ```
 
 `boot_and_check.py` backgrounds the server, waits for a 200, and reports every

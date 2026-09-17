@@ -151,15 +151,9 @@ PROSE_IDENTIFIERS = {
     "render",
     # the other stage-1 command, named beside `preview`
     "validate",
-    # The MCP control surface a live task exposes through `potato mcp connect`,
-    # named in SKILL.md so an agent can call them. They are tool names on the
-    # bridge, not config keys -- `mcp.tools` names them without the `live_`
-    # prefix the bridge adds, and nothing puts them in a registry this test can
-    # read.
-    "live_", "live_get_status", "live_get_config", "live_get_progress",
-    "live_list_items", "live_get_item", "live_list_annotators",
-    "live_get_agreement", "live_submit_annotation", "live_assign_items",
-    "live_export_data",
+    # The prefix the `potato mcp connect` bridge puts on every live tool name.
+    # The names themselves come from `live_tools.TOOLS` in the vocabulary.
+    "live_",
     # the file the MCP surface writes its call log to, default of mcp.audit_log
     "mcp_audit.jsonl",
     # the top-level key in user_state.json that spans are stored under, beside
@@ -494,6 +488,11 @@ class TestEveryIdentifierInProseIsReal:
         # taken from the tool list the server advertises rather than guessed.
         vocab |= {n for n in dir(tools_local) if not n.startswith("_")}
         vocab |= _advertised_mcp_tools()
+        # The live tools, as the `potato mcp connect` bridge names them. These
+        # were a hand-kept allowlist of ten, which kept passing while Potato
+        # shipped twelve and the prose named ten.
+        from potato.mcp_server.live_tools import TOOLS as live_tools
+        vocab |= {f"live_{name}" for name in live_tools}
         vocab |= _generator_read_keys()
         # Every field any registered scheme declares. The modality references
         # name `steps_key`, `video_key`, `audio_key` and a dozen more because

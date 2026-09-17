@@ -101,7 +101,7 @@ What the tests check:
   real validator; every JSON sample is pushed through the loader that reads it.
 - The worked example boots a real server, and every feature it switches on
   reports a non-zero count in the log.
-- The twelve counts stated in prose match the registries.
+- The counts stated in prose match the registries.
 - The plugin manifests parse and agree with each other.
 
 ## Licence

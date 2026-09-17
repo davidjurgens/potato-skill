@@ -4,7 +4,7 @@ Drift guard for the "Potato has N of these" claims in the skill.
 These numbers rot silently. Every wave that registers a schema, a display type
 or a config key makes them wrong, and nothing fails. In Potato's own docs that
 produced four different answers to "how many annotation types are there?" at
-once. The skill states twelve counts of its own, and before this guard existed
+once. The skill states counts of its own, and before this guard existed
 `SKILL.md` claimed 41 undocumented blocks against a generated reference that
 listed 26.
 
@@ -29,6 +29,9 @@ def _counts():
     from potato.server_utils.config_module import KNOWN_CONFIG_KEYS
     from potato.server_utils.displays.registry import display_registry
     from potato.export.registry import export_registry
+    from potato.importers.registry import import_registry
+    from potato.importers.text.registry import text_import_registry
+    from potato.mcp_server.live_tools import TOOLS as live_tools
     from potato.server_utils.examples_manifest import load_manifest
     from potato.server_utils.schemas.registry import schema_registry
 
@@ -86,6 +89,10 @@ def _counts():
 
     return {
         "export_formats": len(export_registry.get_supported_formats()),
+        # `potato import --list-formats` prints both registries, in two groups.
+        "import_formats": (len(import_registry.get_supported_formats())
+                           + len(text_import_registry.get_supported_formats())),
+        "live_tools": len(live_tools),
         "examples_with_phases": with_phases,
         "annotation_types": len(schema_registry.get_supported_types()),
         "display_types": len(display_registry.get_supported_types()),
@@ -143,6 +150,28 @@ CLAIMS = [
     # about it is a gap an author cannot see.
     ("references/getting-the-data-out.md",
      r"(\d+) formats are registered", "export_formats"),
+
+    # Pinned only after they had drifted: the pack said twenty-nine export
+    # formats in four places while this file said 31, and fourteen import
+    # formats while `--list-formats` printed 20. A researcher who is told their
+    # format is not on the list rebuilds a project by hand.
+    ("SKILL.md", r"\| (\d+) export formats\. Check the target", "export_formats"),
+    ("SKILL.md", r"^(\d+) export formats\. `output_annotation_format`",
+     "export_formats"),
+    ("SKILL.md", r"The (\d+) export formats, what the CSV holds", "export_formats"),
+    ("references/asking-the-experimenter.md",
+     r"\| (\d+) export formats\. A study aimed", "export_formats"),
+    ("SKILL.md", r"`potato import` reads (\d+) formats", "import_formats"),
+    ("references/asking-the-experimenter.md",
+     r"`potato import` reads (\d+) formats", "import_formats"),
+    ("references/importing-existing-work.md",
+     r"^(\d+) formats, which `--list-formats` prints", "import_formats"),
+
+    # The live MCP tools. The pack listed ten after Potato shipped twelve,
+    # and the two it left out were the write and the
+    # destructive one, which are the two an admin most needs to know about.
+    ("AGENTS.md", r"The bridge adds (\d+) live tools", "live_tools"),
+    ("SKILL.md", r"`live_delete_annotations` — (\d+) in all", "live_tools"),
 
     # An author whose file is not one of these shapes gets "Loaded 0 patterns",
     # which reads as an empty file rather than an unrecognised one. The number

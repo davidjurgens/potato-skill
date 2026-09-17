@@ -53,9 +53,11 @@ Two that are easy to get wrong and expensive to discover late:
 - **`num_annotators_per_item` sets the count.** `min_annotators_per_instance` is
   a floor, `max_annotations_per_item` a cap.
 
-The Claude Code skill installed alongside this file has the full versions:
-`.claude/skills/potato-skill/references/designing-a-task.md`,
-`asking-the-experimenter.md`, and `building-the-ui.md`.
+The potato-skill skill has the full versions in its `references/` directory:
+`designing-a-task.md`, `asking-the-experimenter.md` and `building-the-ui.md`.
+Without the skill, read them at
+<https://davidjurgens.github.io/potato-skill/designing-a-task.md> and the
+pages beside it.
 
 ## Start from a working example
 
@@ -147,17 +149,21 @@ example_scheme_for("bws")   # a scheme from a config that really runs
 `potato --help`.
 
 `potato mcp serve --root .` answers authoring questions out of the same
-registries as everything above: `list_annotation_types`,
+registries as everything above, through tools such as `list_annotation_types`,
 `describe_annotation_type`, `list_examples`, `validate_config`,
-`preview_config`, `render_task_screenshot`. Same answers as the shell, and
+`preview_config` and `render_task_screenshot`. `potato mcp tools` prints all of
+them. Same answers as the shell, and
 `render_task_screenshot` hands you the rendered page as an image.
 
 `potato mcp connect --url … --token …` bridges a *running* task, if its config
 carries an `mcp` block listing tools in `mcp.tools` and an agent holds a token
-from `potato mcp issue-token`. The bridge adds ten live tools named
+from `potato mcp issue-token`. The bridge adds 12 live tools named
 `live_get_status`, `live_get_progress`, `live_list_items`, `live_get_item`,
 `live_list_annotators`, `live_get_config`, `live_get_agreement`,
-`live_assign_items`, `live_export_data` and `live_submit_annotation`. Each
+`live_assign_items`, `live_export_data`, `live_submit_annotation`,
+`live_add_items` and `live_delete_annotations`. The last one destroys an
+annotator's work on an item, so it also has to be listed in `mcp.destructive`
+and called with `confirm: true`; Potato refuses it otherwise. Each
 publishes a real parameter schema, so `tools/list` tells you what to pass.
 
 ```bash
@@ -185,16 +191,17 @@ flag, and neither `importlib.metadata.version("potato-annotation")` nor
 you used and name the commit if you run from a clone), the `--strict` result, the shortest config that shows it, the
 shape of one data record rather than the records, and what you measured against
 what you expected. Strip `secret_key`, `ai_support.ai_config.api_key`, crowd
-credentials and annotator email addresses first. The Claude Code skill installed
-alongside this file has a helper that assembles all of that:
-`.claude/skills/potato-skill/scripts/report_issue.py`.
+credentials and annotator email addresses first. The potato-skill skill has a
+helper that assembles all of that, `scripts/report_issue.py` in the skill's
+directory. `npx skills add davidjurgens/potato-skill --agent codex cursor` puts
+that directory at `.agents/skills/potato-skill/`.
 
 Filing is public and cannot be withdrawn. Show the report to whoever owns the
 study and get an answer before you file it.
 
 ## Where to read more
 
-- Configuration reference: `docs/configuration/config_reference.md`
-- Every annotation type: `docs/annotation-types/schemas_and_templates.md`
+- Configuration reference: `docs/configuration/config_reference.md` in Potato's repository
+- Every annotation type: `docs/annotation-types/schemas_and_templates.md` in Potato's repository
 - Full docs in one file: <https://potatoannotator.readthedocs.io/en/latest/llms-full.txt>
 - Curated index: <https://potatoannotator.readthedocs.io/en/latest/llms.txt>

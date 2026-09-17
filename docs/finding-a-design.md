@@ -51,9 +51,9 @@ from `worked-example.md`.
 ## Searching it
 
 ```bash
-python .claude/skills/potato-skill/scripts/find_design.py --type span --category text
-python .claude/skills/potato-skill/scripts/find_design.py --query "dialogue safety" --with-instructions
-python .claude/skills/potato-skill/scripts/find_design.py --show text/education/mathdial-tutoring-dialogue
+python <skill-dir>/scripts/find_design.py --type span --category text
+python <skill-dir>/scripts/find_design.py --query "dialogue safety" --with-instructions
+python <skill-dir>/scripts/find_design.py --show text/education/mathdial-tutoring-dialogue
 ```
 
 Filters: `--type` (repeatable, all must be present), `--display-type`,
