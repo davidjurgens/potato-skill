@@ -94,9 +94,10 @@ What the tests check:
 
 - The generated references match a fresh build, byte for byte.
 - Every annotation type, display type, config key, operator, strategy name and
-  command named anywhere in the prose exists. The hand-written references name
-  around 140 identifiers, and a plausible wrong one is worse than no
-  documentation, because an agent will use it.
+  command named in `SKILL.md`, `AGENTS.md` and the five references on designing
+  a task and its interface exists. A plausible wrong name is worse than no
+  documentation, because an agent will use it. The other hand-written
+  references are not checked this way.
 - Every YAML sample is spliced into a working config and run through Potato's
   real validator; every JSON sample is pushed through the loader that reads it.
 - The worked example boots a real server, and every feature it switches on
