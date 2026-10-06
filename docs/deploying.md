@@ -606,6 +606,9 @@ Verified against Potato 2.10.1 (`6b281231`):
   1 without `--backup`;
 - backup and restore on boot, end to end, with an S3 sink pointed at a local
   S3-compatible server. That run is quoted in **Backups and restore**.
+- the whole lifecycle on `local`: `up`, `status` (`healthy True`), `logs`, a
+  three-item annotator walk, `pull` (one annotator and `project.sqlite`) and
+  `destroy`, which removed the container.
 
 Read from the code but not run: that a real `up` reaches the same refusal check
 as the dry run, before calling the provider (`cmd_up` checks it ahead of the
@@ -613,7 +616,7 @@ as the dry run, before calling the provider (`cmd_up` checks it ahead of the
 `huggingface_backup:` block maps to a sink with `restore_on_boot` off. The prices
 are the planner's own tables, not a quote from anyone's billing page.
 
-Not verified here: an actual `up` against any real provider, and therefore the
+Not verified here: an actual `up` against any cloud provider, and therefore the
 provisioning, DNS, TLS, the HuggingFace sink and pull behaviour of a live host.
 Provisioning costs money and creates real resources, so do it deliberately and
 with the researcher's knowledge. In a handover, say which of these steps you
