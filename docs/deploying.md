@@ -64,7 +64,7 @@ SSH, because there is no server to log in to.
 
 ### The fifteen targets
 
-`potato deploy providers` on 2.10.1:
+`potato deploy providers` on 2.10.2:
 
 ```
 aws            AWS Lightsail: one VM, flat $12/mo for 2 GB with IPv4 and disk; the recommended AWS target
@@ -592,7 +592,8 @@ destroy is worse than a local server.
 
 ## What I have and have not verified
 
-Verified against Potato 2.10.1 (`6b281231`):
+Verified against Potato 2.10.2 (`d5505b18`). Its deploy code is unchanged from
+2.10.1 (`6b281231`), where the dry runs below were run:
 
 - the subcommands and flags, from `--help`;
 - the provider list and credential detection, from `potato deploy providers`;
