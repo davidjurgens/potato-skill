@@ -462,6 +462,41 @@ annotator gets a small corner toast naming the internal scheme name, not the
 question. Requiring a span is fine; just make sure every item, attention checks
 included, is one where drawing a span makes sense.
 
+## `text_as_image`
+
+```yaml
+text_as_image: true
+```
+
+Offer it when a researcher is worried that annotators will paste items into a
+chatbot. The server renders each item's text to a PNG and blanks the words everywhere the
+page could leak them. On a classification task in 2.10.0 the item's sentence was
+absent from the `/annotate` HTML, and `/api/current_instance` returned the item
+with only its `id`. It makes copying more work, not impossible: an annotator can
+retype the text or run OCR on a screenshot. Say that when you offer it.
+
+It costs accessibility. `potato validate` warns that a screen reader gets
+nothing from the picture, and a study that has to stay accessible should leave
+it off.
+
+It refuses anything that still shows or selects the text. With a span scheme,
+`potato validate` and `potato start` both exit 1. `pocket.enabled: true` and
+`rooms.enabled: true` each fail `potato validate` the same way, with a message
+naming the conflict:
+
+```text
+text_as_image is incompatible with these annotation schemes: span. Each one
+anchors its annotations to character offsets in the instance text, and
+text_as_image removes that text from the page, so an annotator would have
+nothing to select. Turn off text_as_image, or use a scheme that does not select
+text.
+```
+
+Potato's `docs/advanced/text_as_image.md` lists the other refusals: audio and
+video schemes that show the text beside the player, and schemes whose own field
+attribute names the text field. Ask about anti-copying before you choose span
+annotation, because the two cannot be combined.
+
 ## Choosing among them
 
 Add in this order, and stop when the risk is covered. Each one costs annotator

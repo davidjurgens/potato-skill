@@ -61,7 +61,7 @@ pages beside it.
 
 ## Start from a working example
 
-There are 214 example projects. Copying one beats assembling a config from field
+There are 215 example projects. Copying one beats assembling a config from field
 lists, and every one of them is checked in CI.
 
 ```bash

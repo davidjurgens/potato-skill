@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 157 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 160 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -173,6 +173,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `agent_proxy` | object |  |  | Run an agent as the subject of annotation. This block only configures the backend -- to put the chat on the page, add an `instance_display` field of `type: interactive_chat`, which renders the panel the annotator talks to. Connection settings (api_key, base_url, model) may be written directly in the block or under `ai_config` inside it, as the other model-backed blocks take them; a `base_url` pointing at an OpenAI-compatible server needs no key. Set `enabled: false` to turn it off without deleting the block |
+| `backup` | object |  |  | Mirror collected data off the host and restore it into an empty task at boot. `sinks` lists `{type: huggingface, repo_id}` and/or `{type: s3, bucket, prefix, region, endpoint_url}`; credentials come from the sink (env substitution applied), HF_TOKEN, or POTATO_S3_ACCESS_KEY_ID / POTATO_S3_SECRET_ACCESS_KEY. Copies the annotation directory and `.backup` snapshots of project.sqlite and datasets.sqlite. Supersedes `huggingface_backup` |
 | `crowdsourcing` | object |  |  | Crowd platform integration (Prolific, MTurk and others) |
 | `database` | object |  |  | Database connection for item or user storage |
 | `huggingface_backup` | object |  |  | Mirror the annotation directory to a Hugging Face dataset repo on a schedule. Needs `enabled` and `repo_id`; the token comes from `token` (env substitution is applied) or HF_TOKEN, and `schedule_minutes` sets the cadence. A misconfiguration logs an error and lets the server run |
@@ -216,8 +217,10 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `calibration` | object |  |  | Agreement drift tracking and the re-calibration prompt on /admin/iaa. Agreement is scored per time window so a fall in recent work is visible, instead of averaging into one whole-project number |
 | `gold_standards` | object |  |  | Items with known labels, used to score annotators |
 | `gold_standards_file` | string |  |  | Gold items file, the flat alternative to the gold_standards block |
+| `machine_annotators` | object |  |  | Declare raters that are tools or models rather than people, so agreement, adjudication and the IRT engine can separate them from human annotators instead of counting them as people |
 | `quality_control` | object |  |  | Aggregate quality thresholds and actions |
 | `require_fully_annotated` | boolean |  |  | Refuse to advance until every scheme on the page has an answer |
+| `text_as_image` | boolean|object |  | `False` | Render each item's text to a PNG so annotators cannot copy or paste it |
 
 ## Server
 

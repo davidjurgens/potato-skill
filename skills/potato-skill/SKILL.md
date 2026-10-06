@@ -394,7 +394,7 @@ annotation itself and a closing survey — with every side-file format filled in
 It validates under `--strict` and boots clean. Copy it and replace the labels
 and prose.
 
-Potato also ships 214 example projects, all checked in CI:
+Potato also ships 215 example projects, all checked in CI:
 
 ```python
 from potato.server_utils.examples_manifest import search_examples
@@ -420,8 +420,8 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 
 ## Config keys
 
-`references/config-keys.md` lists the 157 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 408 documented **sub-keys** — the
+`references/config-keys.md` lists the 160 documented **top-level** keys.
+`references/config-keys-nested.md` lists the 421 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 23 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -660,22 +660,32 @@ validates clean, boots clean, and only warns at runtime after the first save.
 `potato deploy` and `potato share` are in the same **other commands** list.
 
 ```bash
-potato share config.yaml                              # temporary public HTTPS URL
-potato deploy check config.yaml --provider render     # preflight; changes nothing
-potato deploy up    config.yaml --provider render     # provision
-potato deploy pull  config.yaml --dest ./collected    # get the annotations back
+potato share config.yaml                                # temporary public HTTPS URL
+potato deploy providers --verify                        # 15 targets; which credentials work
+potato deploy check config.yaml --provider aws          # preflight; changes nothing
+potato deploy up    config.yaml --provider aws --dry-run  # the plan and the monthly cost
+potato deploy up    config.yaml --provider aws          # provision
+potato deploy pull  config.yaml --dest ./collected      # get the annotations back
 ```
 
-`references/deploying.md` covers the five providers, what the bundle ships (the
+`references/deploying.md` covers the fifteen targets and how to choose between
+them, credentials, backup and restore, deploy buttons, what the bundle ships (the
 whole task directory, minus `annotation_output/`), and the preflight — which is
 the part worth learning, because it names what the deployment exposes and blocks
 on `debug: true`.
 
+Run `--dry-run` before any `potato deploy up` that costs money, and show the
+researcher its cost line. It exits 0 even when the real deploy would refuse, so
+read its warnings.
+
 Three that decide whether a deployment is safe to hand over:
 
-- **`render` and `huggingface` have ephemeral filesystems.** Annotations are lost
-  on restart unless you pass `--hf-token` for a backup Dataset, or `--demo` to
-  say the run is disposable.
+- **Some hosts wipe their disk.** On `heroku`, `render` (free), `huggingface`
+  and `aws-ecs`, annotations survive a restart only through `--backup hf` or
+  `--backup s3`, which restores into the empty server at boot. `heroku` and
+  `aws-ecs` refuse to deploy without one; `heroku` also accepts `--demo` for a
+  disposable run. `render` and `railway` need `--backup` on every deploy, since
+  it is how the project reaches the container.
 - **`user_config.allow_all_users` defaults to true**, so anyone with the URL can
   register. Set an allowlist before exposing anything.
 - **Pull before you destroy.** `destroy` refuses without a prior successful pull
@@ -754,10 +764,10 @@ refuses a body still holding a placeholder.
 | `data-and-access.md` | Where items come from, output files, login, serving |
 | `getting-the-data-out.md` | The 31 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
-| `config-keys.md` | 157 top-level keys *(generated)* |
-| `config-keys-nested.md` | 408 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys.md` | 160 top-level keys *(generated)* |
+| `config-keys-nested.md` | 421 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
-| `deploying.md` | Sharing, hosting, the preflight, bundles, pulling data back |
+| `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
 | `reporting-upstream.md` | Telling a config mistake from a bug from a gap, and filing the last two |
 

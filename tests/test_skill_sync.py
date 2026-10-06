@@ -147,8 +147,6 @@ PROSE_IDENTIFIERS = {
     "server.log", "user_state.json",
     # the key the training file must be wrapped in (flask_server.py:1072)
     "training_instances",
-    # deploy provider names
-    "render",
     # the other stage-1 command, named beside `preview`
     "validate",
     # The prefix the `potato mcp connect` bridge puts on every live tool name.
@@ -529,6 +527,12 @@ class TestEveryIdentifierInProseIsReal:
         # which is why the registry rather than a list is the right source.
         from potato.survey_instruments import get_registry as _instrument_registry
         vocab |= set(_instrument_registry()["instruments"])
+        # `potato deploy --provider` targets, from the list the CLI offers as
+        # its choices. SKILL.md routes a researcher to a host by name; this was
+        # one allowlisted `render` while Potato grew from five targets to
+        # fifteen. Hyphenated ones (`aws-ecs`) never reach the token pattern.
+        from potato.deploy.cli import available_providers
+        vocab |= set(available_providers())
         # The pack's own filenames, so cross-references resolve against what
         # actually ships rather than against a list someone remembered to edit.
         vocab |= set(REFERENCES)

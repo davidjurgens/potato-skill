@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 408 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 421 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -39,6 +39,15 @@ Order items by model uncertainty
 | `use_icl_ensemble` | boolean | `False` | Blend in-context-learning predictions into the ranking |
 | `vectorizer` | object |  | How items become features. `{name: ...}`, optionally with `hyperparameters`. `name` takes `tfidf`, `count` or `sentence-transformers`, or a fully qualified import path |
 | `vectorizer_params` | object |  | Extra keyword arguments passed to the vectorizer constructor. A YAML list for `ngram_range` is coerced to the tuple sklearn wants |
+
+## `adjudication`
+
+Resolve disagreements through an adjudication queue
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `include_machine_annotators` | boolean | `False` | Let declared tools and models into the queue as participants, so a person resolves what they disagreed about. Off by default, which leaves an existing queue unchanged |
+| `min_human_annotations` | integer | `0` | How many people an item needs before it can be adjudicated, counted separately from the participant total. Zero is deliberate: several tools and no human annotator is a valid queue, because the adjudicator is the person in that design |
 
 ## `ai_budget`
 
@@ -189,6 +198,17 @@ Rules engine over incoming items: filter, sample, then act
 |---|---|---|---|
 | `enabled` | boolean | `False` | Run the rules |
 | `rules` | array |  | Rules of `when` (the shared condition grammar), an optional sample rate, and the actions to take on a match |
+
+## `backup`
+
+Mirror collected data off the host and restore it into an empty task at boot. `sinks` lists `{type: huggingface, repo_id}` and/or `{type: s3, bucket, prefix, region, endpoint_url}`; credentials come from the sink (env substitution applied), HF_TOKEN, or POTATO_S3_ACCESS_KEY_ID / POTATO_S3_SECRET_ACCESS_KEY. Copies the annotation directory and `.backup` snapshots of project.sqlite and datasets.sqlite. Supersedes `huggingface_backup`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | boolean | `True` | Set false to keep the block but turn the backup off |
+| `restore_on_boot` | boolean | `True` | When the output directory is empty at start, download the latest backup into it before any annotator state loads. Never overwrites local data |
+| `schedule_minutes` | number | `5` | Minutes between backup cycles |
+| `sinks` | array |  | Where to send the backup. Each entry has a `type` of `huggingface` or `s3`; with several, restore reads the first that holds data |
 
 ## `boundary_probing`
 
@@ -594,6 +614,16 @@ MACE competence estimation: infers per-annotator reliability and a predicted lab
 | `num_restarts` | integer | `10` | EM restarts; the best-scoring run is kept |
 | `trigger_every_n` | integer | `10` | Refit after this many new annotations |
 
+## `machine_annotators`
+
+Declare raters that are tools or models rather than people, so agreement, adjudication and the IRT engine can separate them from human annotators instead of counting them as people
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `annotators` | array |  | One entry per machine rater: `id` (the user id it annotates under), `kind` (tool or llm), and optionally `tool`, `model`, `endpoint_type`, `version`, `database_version` and `run_date`. The version fields are what let a later re-run be told apart from a reference database that changed underneath it |
+| `enabled` | boolean | `False` | Read the roster and record declared participants as machines |
+| `require_declaration` | boolean | `False` | Refuse annotations from an undeclared machine. Off by default, and turning it on adds a check to the login routes |
+
 ## `mcp`
 
 Model Context Protocol control surface, letting an agent query and control this running task. Off unless every tool is named explicitly
@@ -628,6 +658,7 @@ Live IRT. Fits item difficulty and annotator ability as labels arrive, so labels
 | `cost_per_judgment` | number |  | Cost of one judgment, used to price the saved judgments on the dashboard |
 | `discrimination_flag_threshold` | number | `-0.2` | Items whose ability-versus-correctness correlation falls below this are flagged as likely codebook bugs |
 | `enabled` | boolean | `False` | Fit the model and serve the dashboard. Adaptive routing additionally needs assignment_strategy: psychometric |
+| `include_machine_annotators` | boolean | `False` | Score declared machine raters alongside people. Off by default so an existing study's estimates do not move when a machine annotator is declared. On, the model fits an ability per annotation tool and a difficulty per item from disagreement alone, with no gold labels -- but tools sharing a reference database make correlated errors, which inflates the apparent ability of the majority cluster |
 | `min_annotators_per_item` | integer | `2` | Floor before an item may be stopped early, however confident the posterior |
 | `min_observations` | integer | `20` | Cold-start gate: routing falls back to random until this many labels exist, so early assignments build the overlap the model needs |
 | `refit_interval` | integer | `5` | Refit once this many new labels have arrived since the last fit |
@@ -726,6 +757,16 @@ Single-coder loop. An LLM labels the corpus, you review where it is least sure, 
 | `state_dir` | string |  | Where solo-mode state is persisted |
 | `thresholds` | object |  | The stopping and agreement thresholds -- including end_human_annotation_agreement (0.90) and minimum_validation_sample (50) -- plus the per-scheme-type match tolerances |
 | `uncertainty` | object |  | How model uncertainty is estimated: `strategy` (direct_confidence, direct_uncertainty, token_entropy, sampling_diversity) and a `sampling_diversity` block |
+
+## `text_as_image`
+
+Render each item's text to a PNG so annotators cannot copy or paste it
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | boolean | `True` | Turn the picture on, when text_as_image is written as a mapping |
+| `font_size` | integer | `18` | Point size of the text in the picture |
+| `max_width` | integer | `900` | Width of the picture in CSS pixels |
 
 ## `thinkaloud`
 
