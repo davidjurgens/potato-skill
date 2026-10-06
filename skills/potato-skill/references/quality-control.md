@@ -476,10 +476,15 @@ nothing to select. Turn off text_as_image, or use a scheme that does not select
 text.
 ```
 
-Potato's `docs/advanced/text_as_image.md` lists the other refusals: audio and
-video schemes that show the text beside the player, and schemes whose own field
-attribute names the text field. Ask about anti-copying before you choose span
-annotation, because the two cannot be combined.
+Two more are refused by `potato validate`. An `audio_annotation` scheme whose
+`source_field` is not the `text_key` field shows the item text in a box beside
+the player, which the picture does not replace. A scheme whose own field
+attribute names the text field reads a field the feature blanks: `text_edit`
+with `source_field: text` is refused, with a message naming the scheme and the
+attribute, and the same scheme pointed at an `mt_output` field validates. Potato's
+`docs/advanced/text_as_image.md` has the full list, including video and tiered
+schemes. Ask about anti-copying before you choose span annotation, because the
+two cannot be combined.
 
 ## Choosing among them
 
