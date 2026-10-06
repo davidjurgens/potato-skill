@@ -675,8 +675,7 @@ the part worth learning, because it names what the deployment exposes and blocks
 on `debug: true`.
 
 Run `--dry-run` before any `potato deploy up` that costs money, and show the
-researcher its cost line. It exits 0 even when the real deploy would refuse, so
-read its warnings.
+researcher its cost line and its warnings.
 
 Three that decide whether a deployment is safe to hand over:
 

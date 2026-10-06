@@ -68,10 +68,8 @@ tunnel         temporary public URL; stops when `potato share` does
 vultr          Vultr: a 2 GB VPS for $10/mo
 ```
 
-Quote a researcher the price `--dry-run` prints rather than these summaries. It
-comes from the planner's price table and includes the disk and the IPv4
-address: $18.31 for `aws-ec2` where the summary says $16, and $5.85 for `fly`
-where it says $7.
+Quote a researcher the price `--dry-run` prints. It comes from the planner's
+price table and includes the disk and the IPv4 address.
 
 Three extras pull in the provider SDKs:
 
@@ -308,13 +306,6 @@ Show the researcher this output before spending their money. It is the only
 place the cost, the URL and the durability warnings appear together, and it
 reaches no provider.
 
-**Read the warnings, not the exit code.** A dry run exits 0 even when the real
-`up` will refuse. Without a backup, the heroku and aws-ecs plans print
-`Refusing to deploy … with nowhere to keep the annotations`, and the render and
-railway plans show the project being uploaded to nowhere, as `(nowhere)` or
-`(nowhere configured)`. The dry run still finishes and says `nothing was
-created` in all four cases.
-
 Building the bundle writes it under `.potato/bundle/<provider>/<name>/` in the
 task directory. That is gitignored in Potato's own tree, but it is a real
 directory of copied project files, so a dry run against four providers leaves
@@ -410,10 +401,6 @@ Exposure:
 
 PASS — safe to deploy
 ```
-
-D011 offers `--demo`, but on `render` a real `up` still needs `--backup` to
-carry the project (see **Choosing a target**). The preflight only covers what
-the data is exposed to; how the project reaches the host is a separate check.
 
 Exit codes: **0 for PASS, 2 for BLOCKED.** Errors block; warnings do not.
 
