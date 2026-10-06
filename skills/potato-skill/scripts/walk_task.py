@@ -1092,16 +1092,24 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                     go_to.fill("1")
                     page.click("#go-to-btn")
                     _settle(page)
-                    # Checkboxes too: a multiselect-only task has no radios, and
-                    # counting radios alone reported "nothing was selected" on
-                    # every one of them while Potato had restored the boxes.
-                    # Scheme checkboxes are named `<scheme>:::<label>`, which
-                    # keeps any UI toggle on the page out of the count.
-                    checked = page.query_selector_all(
-                        "input[type=radio]:checked, "
-                        "input[type=checkbox][name*=':::']:checked")
-                    report["restored_on_revisit"] = len(checked)
-                    if not checked:
+                    # Every input family the walk fills, not only radios: counting
+                    # radios alone reported "nothing was selected" on every
+                    # multiselect-only and text-only task while Potato had
+                    # restored the answers. Scheme inputs are named
+                    # `<scheme>:::<label>`, which keeps UI toggles and the go-to
+                    # box out of the count. Ranges are left out: a slider
+                    # always has a value, restored or not.
+                    restored = page.evaluate("""() => [
+                        ...document.querySelectorAll(
+                            "input[type=radio]:checked, "
+                            + "input[type=checkbox][name*=':::']:checked"),
+                        ...[...document.querySelectorAll(
+                            "input[type=text][name*=':::'], textarea[name*=':::'], "
+                            + "input[type=number][name*=':::'], select[name*=':::']")]
+                            .filter(e => (e.value || '').trim() !== ''),
+                    ].length""")
+                    report["restored_on_revisit"] = restored
+                    if not restored:
                         report["problems"].append(
                             "Navigated back to item 1 and nothing was selected. "
                             "Either the answers were never stored or they are not "
