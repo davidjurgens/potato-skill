@@ -1092,7 +1092,14 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
                     go_to.fill("1")
                     page.click("#go-to-btn")
                     _settle(page)
-                    checked = page.query_selector_all("input[type=radio]:checked")
+                    # Checkboxes too: a multiselect-only task has no radios, and
+                    # counting radios alone reported "nothing was selected" on
+                    # every one of them while Potato had restored the boxes.
+                    # Scheme checkboxes are named `<scheme>:::<label>`, which
+                    # keeps any UI toggle on the page out of the count.
+                    checked = page.query_selector_all(
+                        "input[type=radio]:checked, "
+                        "input[type=checkbox][name*=':::']:checked")
                     report["restored_on_revisit"] = len(checked)
                     if not checked:
                         report["problems"].append(
