@@ -98,6 +98,8 @@ What the tests check:
   a task and its interface exists. A plausible wrong name is worse than no
   documentation, because an agent will use it. The other hand-written
   references are not checked this way.
+- Every command-line flag the deploy reference names is defined by a Potato
+  parser: `potato deploy`, `potato share` or `potato start`.
 - Every YAML sample is spliced into a working config and run through Potato's
   real validator; every JSON sample is pushed through the loader that reads it.
 - The worked example boots a real server, and every feature it switches on
