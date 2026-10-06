@@ -48,14 +48,14 @@ SSH, because there is no server to log in to.
 
 ### The fifteen targets
 
-`potato deploy providers` on 2.10.0:
+`potato deploy providers` on Potato master at `7d5f819b`, after 2.10.0:
 
 ```
 aws            AWS Lightsail: one VM, flat $12/mo for 2 GB with IPv4 and disk; the recommended AWS target
-aws-ec2        AWS EC2: a t4g.small VM with an Elastic IP, about $16/mo
+aws-ec2        AWS EC2: a t4g.small VM with an Elastic IP, about $18/mo with its root disk
 aws-ecs        AWS ECS Express Mode: managed HTTPS, no server, ~$45-70/mo; ephemeral disk, so it needs --backup
 digitalocean   supports pull
-fly            Fly.io: one Machine + volume on <app>.fly.dev, about $7/mo
+fly            Fly.io: one Machine + volume on <app>.fly.dev, about $6/mo
 heroku         Heroku container dyno from $7/mo; ephemeral disk, so it needs --backup (sustaining mode since 2026-02)
 hetzner        Hetzner Cloud: a 4 GB VM for about €6/mo, the cheapest durable target
 huggingface    ephemeral filesystem, supports pull
@@ -110,7 +110,8 @@ The lines that catch people out:
   `--demo` does not change that.** These hosts run the published image and have
   no way to receive files, so the project is uploaded to the backup's storage
   and downloaded when the container starts. No backup means nowhere to put the
-  project. Heroku builds its own image, so `--demo` alone is accepted there.
+  project. `fly` refuses the same way once the bundle is over 512 KB. Heroku
+  builds its own image, so `--demo` alone is accepted there.
 - **A Docker Space needs a paid HuggingFace plan** (PRO personally, Team or
   Enterprise for an org). Restarting an existing Space does not. A free account
   also runs at most three Spaces, and one over the limit sits `PAUSED` and never
@@ -302,6 +303,16 @@ WARNING: No --domain, so TLS uses a Let's Encrypt certificate for the instance's
 WARNING: No --volume-gb. Annotations live on the instance's own disk, which is destroyed with the instance. Pull before you destroy.
 ```
 
+When `up` would refuse, the plan is followed by a `REFUSED:` line naming the
+reason and the flags that fix it, and the command exits 2 instead of 0. The dry run and the real `up` run the same check, before
+any provider is called:
+
+```
+   2. bundle.publish         upload the project tarball to (nowhere; see REFUSED below); the container fetches it at start
+...
+REFUSED: Render runs the published image and fetches your project into it at start, so the project has to be uploaded somewhere first. It goes to the backup's storage, so --demo is not an option here: pass --backup hf --hf-token <token> (recommended: the link never expires) or --backup s3 --s3-bucket <bucket>. On the free plan the backup is also the only copy of the annotations, since the instance stops after 15 minutes idle and loses its filesystem.
+```
+
 Show the researcher this output before spending their money. It is the only
 place the cost, the URL and the durability warnings appear together, and it
 reaches no provider.
@@ -389,7 +400,7 @@ $ potato deploy check config.yaml --provider render
 WARNING [D003] Anyone who finds the URL can register and annotate.
         -> Set user_config.allow_all_users: false and list your annotators under user_config.users, or use authentication.method: oauth.
 WARNING [D011] The render filesystem is ephemeral: annotations are lost when the host restarts or redeploys.
-        -> Pass --backup hf (with --hf-token) or --backup s3 --s3-bucket <name> so the data is mirrored off the host and restored after a restart, or --demo to accept throwaway data.
+        -> Pass --backup hf (with --hf-token) or --backup s3 --s3-bucket <name> so the data is mirrored off the host and restored after a restart.
 note    [D012] No secret_key is set, so one will be generated and injected as POTATO_SECRET_KEY. Sessions survive restarts only because of it.
 
 Exposure:
@@ -565,13 +576,15 @@ destroy is worse than a local server.
 
 ## What I have and have not verified
 
-Verified against potato-annotation 2.10.0 (`f13200d1`):
+Verified against Potato master at `7d5f819b`, which is 2.10.0 plus the deploy
+fixes made after it:
 
 - the subcommands and flags, from `--help`;
 - the provider list and credential detection, from `potato deploy providers`;
 - `--dry-run` for all fifteen targets, which reaches no provider. That covers
-  the plans, the costs above and the refusal warnings for a missing backup,
-  plus the jetstream2 preset's hostname;
+  the plans, the costs above, the jetstream2 preset's flavor and hostname, and
+  the `REFUSED:` exit 2 for heroku, aws-ecs, render and railway without a
+  backup, and for fly with a 960 KB bundle;
 - `check` output and exit codes, the `debug` block, and what `build` includes
   and strips;
 - the button command for all four targets with `--dry-run`, including its exit
@@ -579,8 +592,9 @@ Verified against potato-annotation 2.10.0 (`f13200d1`):
 - backup and restore on boot, end to end, with an S3 sink pointed at a local
   S3-compatible server. That run is quoted in **Backups and restore**.
 
-Read from the code but not run: that heroku, render, railway and aws-ecs refuse
-`up` without a backup before calling the provider, and that the legacy
+Read from the code but not run: that a real `up` reaches the same refusal check
+as the dry run, before calling the provider (`cmd_up` checks it ahead of the
+`--dry-run` branch, after the credential check), and that the legacy
 `huggingface_backup:` block maps to a sink with `restore_on_boot` off. The prices
 are the planner's own tables, not a quote from anyone's billing page.
 
