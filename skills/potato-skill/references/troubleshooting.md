@@ -84,7 +84,6 @@ potato-annotation 2.7.0.
 | `instance_per_annotator` has no effect | It is not read; `automatic_assignment` sub-keys are unvalidated | Use `max_annotations_per_user`, or `per_annotator_quota` for per-annotator caps |
 | Agreement pages are empty | No overlapping annotations yet | Not a config problem |
 | Every admin JSON route returns `403 {"error":"Admin access required"}` | They need `X-API-Key` | `cat admin_api_key.txt` in `task_dir`; `/admin` HTML is open, the APIs are not |
-| `/admin/api/agreement` returns `experiment_col` TypeErrors for every scheme | Build bug, seen on a geometry task | Use `/admin/iaa` |
 | One annotator got fewer items than the others | Usually a quota set below the item count | Count annotators per item across **all** `user_state.json` files, not one |
 | Wiping `annotation_output/` changed nothing, and new annotators get "Thank You!" immediately | State is in memory; the wipe happened while the server was running | Stop, wipe, start |
 | A new annotator gets "Thank You!" on a server that was never wiped | `items x num_annotators_per_item` is used up, so there is no work to hand out | Raise `num_annotators_per_item`, or add items. No log line marks this |

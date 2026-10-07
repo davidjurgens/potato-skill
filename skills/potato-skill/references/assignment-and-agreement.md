@@ -472,12 +472,6 @@ Without the header, every admin JSON route answers
 `403 {"error":"Admin access required"}` — which reads like a broken config if you
 do not know the key exists. `/admin` itself serves HTML with no key.
 
-`/admin/api/agreement` covers the same ground and has been seen to fail on a
-geometry task with `calculate_krippendorffs_alpha() got an unexpected keyword
-argument 'experiment_col'` for every scheme, while `/admin/iaa` returned proper
-numbers for the same data. If it errors, that is the build, not your config —
-use `/admin/iaa`.
-
 An empty report on a fresh task means "no overlapping annotations yet".
 
 ## Norming a codebook in a live room
@@ -579,9 +573,11 @@ counts and say where they came from.
 A room-written vote registers its annotator against the item like any other
 annotation, so a room can carry an item to its cap and put it into the agreement
 report above. Measured: two annotators who voted `Sarcastic` and `Sincere` blind,
-argued, and converged left `/admin/iaa` reporting `fleiss_kappa: 1.0` for that
-item, with nothing anywhere in the report to say they had been in a room
-together. Norm on items you are willing to spend, and keep them out of the set
+argued, and converged left `/admin/iaa` reporting `percent_agreement: 1.0` for
+that item, with nothing anywhere in the report to say they had been in a room
+together. Kappa and alpha came back `null`, with a note that every annotator
+gave the same label, because that one item was all the report had. Norm on
+items you are willing to spend, and keep them out of the set
 you report agreement on.
 
 ## Related

@@ -172,7 +172,7 @@ curl -H "X-API-Key: $(cat admin_api_key.txt)" localhost:8000/admin/iaa
 |---|---|---|
 | `/admin` | none — serves HTML | The dashboard |
 | `/admin/iaa` | `X-API-Key` | Agreement per scheme: inferred `kind`, the metrics that follow, `n_overlap_items` |
-| `/admin/api/agreement` | `X-API-Key` | Also agreement. Reported broken on a geometry task (`calculate_krippendorffs_alpha() got an unexpected keyword argument 'experiment_col'`); worked on a plain radio/likert task. Prefer `/admin/iaa` |
+| `/admin/api/agreement` | `X-API-Key` | Also agreement: Cohen's κ, Fleiss' κ and Krippendorff's α per scheme, and an `overall` block averaging them |
 | `/admin/api/quality_control` | `X-API-Key` | Attention-check and gold-standard pass rates per user |
 
 Without the header every JSON route returns `403 {"error":"Admin access
