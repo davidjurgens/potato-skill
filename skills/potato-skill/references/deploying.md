@@ -27,6 +27,9 @@ on anything with real annotators behind it.
 
 Same rule as `potato start`: it does not return. Background it.
 
+`potato deploy up --provider tunnel` exits 2 with a `REFUSED:` line telling you
+to run `potato share` instead. The tunnel target runs only under `share`.
+
 ## Hosted deployment
 
 ```bash
@@ -112,6 +115,9 @@ The lines that catch people out:
   and downloaded when the container starts. No backup means nowhere to put the
   project. `fly` refuses the same way once the bundle is over 512 KB. Heroku
   builds its own image, so `--demo` alone is accepted there.
+- **A free Render instance takes no disk.** `--volume-gb` without `--plan
+  starter` or higher is refused. Without a disk the backup is the only copy of
+  the annotations.
 - **A Docker Space needs a paid HuggingFace plan** (PRO personally, Team or
   Enterprise for an org). Restarting an existing Space does not. A free account
   also runs at most three Spaces, and one over the limit sits `PAUSED` and never
@@ -398,9 +404,9 @@ provider, it takes a second, and it reports what the deployment exposes:
 $ potato deploy check config.yaml --provider render
 
 WARNING [D003] Anyone who finds the URL can register and annotate.
-        -> Set user_config.allow_all_users: false and list your annotators under user_config.users, or use authentication.method: oauth.
+        -> Set user_config.allow_all_users: false and list your annotators under user_config.users, or use authentication.method: oauth with at least one entry under authentication.providers.
 WARNING [D011] The render filesystem is ephemeral: annotations are lost when the host restarts or redeploys.
-        -> Pass --backup hf (with --hf-token) or --backup s3 --s3-bucket <name> so the data is mirrored off the host and restored after a restart.
+        -> Pass `potato deploy up` --backup hf (with --hf-token) or --backup s3 --s3-bucket <name> so the data is mirrored off the host and restored after a restart, or add a backup: block to the config.
 note    [D012] No secret_key is set, so one will be generated and injected as POTATO_SECRET_KEY. Sessions survive restarts only because of it.
 
 Exposure:
@@ -576,24 +582,31 @@ destroy is worse than a local server.
 
 ## What I have and have not verified
 
-Verified against Potato 2.10.2 (`d5505b18`). Its deploy code is unchanged from
-2.10.1 (`6b281231`), where the dry runs below were run:
+Verified against Potato 2.10.2 as re-tagged (`1a9235b1`). The first 2.10.2 tag
+(`d5505b18`) never reached PyPI, and the deploy code changed in fourteen files
+between the two. Run again at `1a9235b1`:
 
-- the subcommands and flags, from `--help`;
 - the provider list and credential detection, from `potato deploy providers`;
 - `--dry-run` for all fifteen targets, which reaches no provider. That covers
   the plans, the costs above, the jetstream2 preset's flavor and hostname, and
   the `REFUSED:` exit 2 for heroku, aws-ecs, render and railway without a
-  backup, and for fly with a 960 KB bundle;
+  backup, for fly with a 1 MB bundle, for render with `--volume-gb` on the free
+  plan, and for tunnel;
 - `check` output and exit codes, the `debug` block, and what `build` includes
   and strips;
 - the button command for all four targets with `--dry-run`, including its exit
-  1 without `--backup`;
+  1 without `--backup`.
+
+Run on 2.10.1 (`6b281231`) and not repeated:
+
+- the subcommands and flags, from `--help`. `tests/test_deploy_flags.py` still
+  checks every flag this page names against the parser;
 - backup and restore on boot, end to end, with an S3 sink pointed at a local
-  S3-compatible server. That run is quoted in **Backups and restore**.
+  S3-compatible server. That run is quoted in **Backups and restore**;
 - the whole lifecycle on `local`: `up`, `status` (`healthy True`), `logs`, a
   three-item annotator walk, `pull` (one annotator and `project.sqlite`) and
-  `destroy`, which removed the container.
+  `destroy`, which removed the container. `potato/deploy/providers/local.py`
+  has changed since.
 
 Read from the code but not run: that a real `up` reaches the same refusal check
 as the dry run, before calling the provider (`cmd_up` checks it ahead of the

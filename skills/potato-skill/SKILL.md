@@ -420,7 +420,7 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 
 ## Config keys
 
-`references/config-keys.md` lists the 160 documented **top-level** keys.
+`references/config-keys.md` lists the 162 documented **top-level** keys.
 `references/config-keys-nested.md` lists the 421 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 23 blocks whose sub-keys `--strict` does not check at
@@ -764,7 +764,7 @@ refuses a body still holding a placeholder.
 | `data-and-access.md` | Where items come from, output files, login, serving |
 | `getting-the-data-out.md` | The 31 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
-| `config-keys.md` | 160 top-level keys *(generated)* |
+| `config-keys.md` | 162 top-level keys *(generated)* |
 | `config-keys-nested.md` | 421 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, pulling data back |
