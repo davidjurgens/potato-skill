@@ -49,9 +49,13 @@ The lifecycle is the same on every target, with two gaps: `potato deploy logs`
 does not work on `fly` (use `fly logs -a <app>`), and `aws-ecs` has logs but no
 SSH, because there is no server to log in to.
 
+The host runs the image `ghcr.io/davidjurgens/potato:latest`, not the Potato
+version you have installed. Pass `--image ghcr.io/davidjurgens/potato:2.10.3`,
+or whichever version you tested the study on, to keep the host on that version.
+
 ### The fifteen targets
 
-`potato deploy providers` on 2.10.2:
+`potato deploy providers` on 2.10.3:
 
 ```
 aws            AWS Lightsail: one VM, flat $12/mo for 2 GB with IPv4 and disk; the recommended AWS target
@@ -582,11 +586,19 @@ destroy is worse than a local server.
 
 ## What I have and have not verified
 
-Verified against Potato 2.10.2 as re-tagged (`1a9235b1`). The first 2.10.2 tag
-(`d5505b18`) never reached PyPI, and the deploy code changed in fourteen files
-between the two. Run again at `1a9235b1`:
+Run on 2.10.3, installed from PyPI, with `--image
+ghcr.io/davidjurgens/potato:2.10.3`:
 
-- the provider list and credential detection, from `potato deploy providers`;
+- the whole lifecycle on `local`: `up`, `status` (`healthy True`), `logs`, a
+  three-item annotator walk, `pull` (one annotator, `project.sqlite`, and the
+  three answers in `user_state.json`) and `destroy`, which removed the
+  container;
+- the provider list and credential detection, from `potato deploy providers`.
+
+Run on the re-cut 2.10.2 tag (`1a9235b1`). The only deploy change between it
+and 2.10.3 is the button command's HuggingFace account lookup, which was run
+again on the 2.10.3 release candidate:
+
 - `--dry-run` for all fifteen targets, which reaches no provider. That covers
   the plans, the costs above, the jetstream2 preset's flavor and hostname, and
   the `REFUSED:` exit 2 for heroku, aws-ecs, render and railway without a
@@ -602,17 +614,15 @@ Run on 2.10.1 (`6b281231`) and not repeated:
 - the subcommands and flags, from `--help`. `tests/test_deploy_flags.py` still
   checks every flag this page names against the parser;
 - backup and restore on boot, end to end, with an S3 sink pointed at a local
-  S3-compatible server. That run is quoted in **Backups and restore**;
-- the whole lifecycle on `local`: `up`, `status` (`healthy True`), `logs`, a
-  three-item annotator walk, `pull` (one annotator and `project.sqlite`) and
-  `destroy`, which removed the container. `potato/deploy/providers/local.py`
-  has changed since.
+  S3-compatible server. That run is quoted in **Backups and restore**.
 
 Read from the code but not run: that a real `up` reaches the same refusal check
 as the dry run, before calling the provider (`cmd_up` checks it ahead of the
-`--dry-run` branch, after the credential check), and that the legacy
-`huggingface_backup:` block maps to a sink with `restore_on_boot` off. The prices
-are the planner's own tables, not a quote from anyone's billing page.
+`--dry-run` branch, after the credential check); that the legacy
+`huggingface_backup:` block maps to a sink with `restore_on_boot` off; and that
+every target but `tunnel` defaults to the `latest` image, which was run only on
+`local`. The prices are the planner's own tables, not a quote from anyone's
+billing page.
 
 Not verified here: an actual `up` against any cloud provider, and therefore the
 provisioning, DNS, TLS, the HuggingFace sink and pull behaviour of a live host.
