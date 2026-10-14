@@ -51,16 +51,25 @@ training:
   data_file: data/training.json
   allow_retry: true
   feedback:
-    enabled: true
+    show_explanations: true
   passing_criteria:
-    min_accuracy: 0.6
+    min_correct: 3
 ```
 
 Recognized sub-keys: `enabled`, `data_file`, `allow_retry`, `feedback`,
 `passing_criteria`, `failure_action`, `annotation_schemes`. That is all seven.
-`min_accuracy`, `max_attempts`, `num_items`, `show_feedback`, `threshold` and
-every other plausible name is rejected by `--strict`, which is how you find the
-real ones.
+At this level `min_accuracy`, `max_attempts`, `num_items`, `show_feedback`,
+`threshold` and every other plausible name is rejected by `--strict`, which is
+how you find the real ones.
+
+Inside the two nested blocks an unknown key is a warning, not an error.
+`passing_criteria` takes `min_correct`, `require_all_correct`, `max_mistakes`,
+`max_mistakes_per_question` and `max_attempts`; `feedback` takes
+`show_explanations` and `allow_retry`. Anything else passes validation and logs
+`Unknown key training.feedback.enabled is ignored (known: allow_retry,
+show_explanations)`, so `min_accuracy: 0.6` under `passing_criteria` validates
+and does nothing. The pass mark is `min_correct`, a count of correct answers
+rather than a share; a value that is not a positive integer is a fatal error.
 
 `failure_action` is `move_to_done` (default) or `repeat_training`, and any
 other value is a fatal error. `annotation_schemes` lets the practice questions

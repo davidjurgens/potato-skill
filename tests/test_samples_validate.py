@@ -31,6 +31,20 @@ PACK = Path(SKILL_DIR)
 #: Generated from the registries; drift is caught by `--check`, not here.
 GENERATED = {"annotation-types.md", "config-keys.md", "config-keys-nested.md"}
 
+# A warning saying the validator dropped a key it did not recognise. Not
+# "ignored" alone: "phases.order entry 'x' is not a phase name; it will be
+# ignored" is an artefact of splicing a fragment, not a dead key.
+IGNORED_KEY_WARNING = re.compile(
+    r"(unknown key|unrecognized config key|not recognized).*\bignored\b",
+    re.IGNORECASE)
+
+# worked-example.md is a byte mirror of Potato's full-study-skeleton config, so
+# a dead key in it can only be fixed upstream. Each entry must still fire: once
+# Potato drops the key, the exemption fails and has to go.
+MIRRORED_DEAD_KEYS = {
+    "worked-example.md": {"Unknown key training.feedback.enabled is ignored"},
+}
+
 #: Blocks that are deliberately wrong: the pack shows them as the mistake being
 #: described. Matched as whole words, not as substrings.
 #:
@@ -291,8 +305,18 @@ def test_every_yaml_sample_validates(name, index, body):
         # surrounding prose defines, a `phases.order` listing phases whose
         # blocks are shown separately) are artefacts of the splice, not of the
         # sample.
+        # The phrasing differs by block: "not recognized and will be ignored"
+        # (failure_handling), "Unknown key training.feedback.enabled is
+        # ignored" (training). Matching only the first let the training sample
+        # carry two dead keys through every run of this test.
         ignored_subkeys = [w for w in report.other_warnings
-                           if "not recognized" in w and "will be ignored" in w]
+                           if IGNORED_KEY_WARNING.search(w)]
+        for exempt in MIRRORED_DEAD_KEYS.get(name, ()):
+            assert any(w.startswith(exempt) for w in ignored_subkeys), (
+                f"{name} block {index} no longer logs {exempt!r}. Potato fixed "
+                f"the mirrored config; remove the MIRRORED_DEAD_KEYS entry.")
+            ignored_subkeys = [w for w in ignored_subkeys
+                               if not w.startswith(exempt)]
         assert not ignored_subkeys, (
             f"{name} block {index} names a sub-key Potato does not read:\n  "
             + "\n  ".join(ignored_subkeys))

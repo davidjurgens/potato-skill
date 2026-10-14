@@ -49,7 +49,7 @@ potato-annotation 2.7.0.
 | `ai_support.endpoint_type is required when ai_support is enabled` | Enabled without a model | Set `endpoint_type` |
 | `adjudication.adjudicator_users must be a non-empty list` | Enabled with no adjudicator | Name one |
 | `gold_standards.mode must be one of: training, mixed, separate` | Invented mode | Use one of the three |
-| `training.feedback must be a dictionary` / `passing_criteria` / `accuracy` | Passed a bare `true` or a number | `{enabled: true}`, `{min_accuracy: 0.6}` |
+| `training.feedback must be a dictionary` / `passing_criteria` / `accuracy` | Passed a bare `true` or a number | `{show_explanations: true}`, `{min_correct: 3}` |
 | `attention_checks: specify either 'frequency' or 'probability', not both` | Both set | Pick one |
 | `Configuration has both top-level 'annotation_schemes' and phase-level 'annotation_schemes'` | Mixing the two | All-or-nothing; use `file:` for phase pages |
 
