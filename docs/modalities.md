@@ -129,10 +129,18 @@ media_directory: media        # default; served at /media/<path>
   `screenshots/step_000.png` is served from here. Miss it and every step image
   404s.
 
-Remote URLs work too, and are the right answer for a corpus you do not want in
-the bundle. `potato deploy` ships the whole task directory. A `data:` URI in the
-field works as well, and is worth knowing about for a handful of small images
-you would rather not ship as files.
+Remote URLs display, and are the right answer for a corpus you do not want in
+the bundle: `potato deploy` ships the whole task directory. An
+`image_annotation` scheme loads its own copy of the image with `crossOrigin`
+set, so for it the image host has to send an `Access-Control-Allow-Origin`
+header. Without one the item still displays, and the drawing area underneath it
+reads "Failed to load image. Check the URL or CORS settings."
+`images.cocodataset.org` sends no such header, so COCO URLs fail this way. For a
+canvas task on such a host, copy the images into `media_directory` and reference
+them as `/media/...`.
+
+A `data:` URI in the field works as well, and is worth knowing about for a
+handful of small images you would rather not ship as files.
 
 A path that leaves `media_directory` fails in one of two ways, and only one of
 them tells you. `../outside/far.png` is refused by the traversal check and
