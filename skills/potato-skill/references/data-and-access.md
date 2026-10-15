@@ -244,6 +244,9 @@ for developing the interface, never for anything an annotator can reach. The sam
 goes for `--debug` on the command line: it is what makes
 `--debug-phase annotation` able to drop you straight into the task, and it is
 also what makes any admin-auth check you run under it meaningless.
+On 2.11 it also refuses to start on the default `0.0.0.0` bind: "Refusing to
+start: debug is enabled and the server is bound to 0.0.0.0 rather than
+loopback." Pass `--host 127.0.0.1` with it.
 
 Binding `0.0.0.0` is how a researcher on the same network opens the task. Say so
 explicitly in a handover, along with the port, rather than leaving them to guess
