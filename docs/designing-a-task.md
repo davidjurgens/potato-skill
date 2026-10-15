@@ -281,17 +281,18 @@ cosmetic one.
 
 ## 4. How many annotators
 
-`num_annotators_per_item` is the one that decides it. The other two shape the
-edges.
+`num_annotators_per_item` decides it: an item stops being served once that
+many people have annotated it.
 
 | Key | Meaning |
 |---|---|
-| `num_annotators_per_item` | The target. Set this one. |
-| `min_annotators_per_instance` | **Not read.** Looks like a floor, does nothing |
-| `max_annotations_per_item` | A hard cap; `-1` for unlimited |
+| `num_annotators_per_item` | Annotators per item. Set this one; unset or `0` means no limit |
+| `min_annotators_per_instance` | A deprecated spelling of the same setting. Since 2.11 it is read as the cap, with a warning |
+| `max_annotations_per_item` | An older spelling of the same setting; `-1` for unlimited |
 | `max_annotations_per_user` | How many dataset items **one annotator** is served. Defaults to all of them |
 
-Setting the first three to the same number is harmless but says you were unsure.
+The first three are one setting. Different numbers in two of them fail
+validation; the same number is harmless but says you were unsure.
 
 `max_annotations_per_user` sets how much one person is asked to do, unless
 `per_annotator_quota` is also set -- it caps annotators individually and takes

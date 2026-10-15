@@ -8,24 +8,35 @@ decides whether the items you care about ever reach three annotators.
 
 | Key | What it does | Default |
 |---|---|---|
-| `num_annotators_per_item` | Target annotators per item. **Set this one.** | 3 |
-| `min_annotators_per_instance` | **Nothing.** Reads as a floor, is never consulted | unset |
-| `max_annotations_per_item` | Hard cap per item; `-1` unlimited | -1 |
+| `num_annotators_per_item` | Annotators per item; an item retires when it has this many. **Set this one.** | unset: no limit (`0` too) |
+| `min_annotators_per_instance` | Deprecated spelling of the key above, read as the cap with a warning | unset |
+| `max_annotations_per_item` | Older spelling of the same cap; `-1` unlimited | -1 |
 | `max_annotations_per_user` | **Cap on dataset items per annotator**, unless `per_annotator_quota` overrides it | the item count |
 | `per_annotator_quota` | Per-annotator caps: `default`, `by_user`, `by_user_role`. Beats the key above | unset |
 | `automatic_assignment.instance_per_annotator` | Nothing. See below. | — |
 | `assignment_strategy` | Order items are handed out in | `fixed_order` |
 | `random_seed` | Makes the ordering reproducible | unset |
 
-Setting `num_annotators_per_item` and `max_annotations_per_item` to the same
-number works and says you were unsure.
+The three are one setting. With none of them set there is no cap: on 2.11.0,
+five annotators of a two-item study were all served the first item. Two of them
+with the same number validate clean, and two with different numbers are
+refused:
 
-`min_annotators_per_instance` is stored at load and the stored value is read
-nowhere -- checked against Potato `be457e7b` -- so it neither raises nor lowers
-what anyone is served. A study setting it alongside `num_annotators_per_item`
-looks like it brackets coverage and does not. `num_annotators_per_item` is the
-enforced cap. (The key of the same name under `icl_labeling.example_selection`
-is a different setting, and that one is read.)
+```
+'max_annotations_per_item' and 'num_annotators_per_item' are both set with
+conflicting values (5 vs 3). Drop 'max_annotations_per_item' —
+'num_annotators_per_item' is the canonical key.
+```
+
+`min_annotators_per_instance` used to be stored at load and read nowhere
+(checked against Potato `be457e7b`), so a study that set it collected as many
+annotators as it got. From 2.11 it is read as the cap. Set to 2 on its own, the
+first two annotators got the first item, the third got the second, and the
+fourth and fifth got nothing. Validation warns:
+`min_annotators_per_instance: 2 is deprecated and has been read as
+num_annotators_per_item: 2`. Rename it. (The key of the same name under
+`icl_labeling.example_selection` is a different setting, and that one is
+read.)
 
 #### `num_annotators_per_item.adaptive`
 

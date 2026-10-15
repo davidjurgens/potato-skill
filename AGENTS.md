@@ -50,8 +50,10 @@ Two that are easy to get wrong and expensive to discover late:
 - **The response format decides the agreement metric.** Potato picks the metric
   from the schema kind, so a 1--5 rating stored as a `radio` is scored as
   unordered and "1 vs 2" counts the same as "1 vs 5".
-- **`num_annotators_per_item` sets the count.** `min_annotators_per_instance` is
-  a floor, `max_annotations_per_item` a cap.
+- **`num_annotators_per_item` sets the count.** Unset, there is no limit.
+  `min_annotators_per_instance` and `max_annotations_per_item` are older
+  spellings of the same setting, and two of them with different numbers fail
+  validation.
 
 The potato-skill skill has the full versions in its `references/` directory:
 `designing-a-task.md`, `asking-the-experimenter.md` and `building-the-ui.md`.
