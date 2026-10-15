@@ -116,10 +116,11 @@ explicit that `base_url` is there for vLLM, SGLang, LM Studio, llama.cpp and
 LiteLLM, and it appends `/v1` if you leave it off. Pick it whenever any item is
 an image, because it is the only one of the three that sends one.
 
-The full list is `openai`, `openai_vision`, `anthropic`, `anthropic_vision`,
-`gemini`, `huggingface`, `ollama`, `ollama_vision`, `openrouter`, `vllm`, plus
-`yolo`, `sam` and `sam3` for detection and segmentation. I have run three of
-them.
+The validator accepts ten: `openai`, `openai_vision`, `anthropic`,
+`anthropic_vision`, `gemini`, `huggingface`, `ollama`, `ollama_vision`, `vllm`,
+and `yolo` for detection. Anything else fails with `ai_support.endpoint_type
+must be one of:` and that list. `openrouter`, `sam` and `sam3` have endpoint
+classes in Potato's code but are refused here. I have run three of the ten.
 
 ## max_tokens
 
