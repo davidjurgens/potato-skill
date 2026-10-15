@@ -96,7 +96,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `max_annotations_per_user` | integer |  | `-1` | Cap on how many dataset items one annotator may receive. Left unset, the cap is the number of items loaded, so every annotator is offered the whole corpus; -1 is explicit unlimited, which is what a dynamic data source needs for items added after boot to be assignable. Injected attention checks and gold items do not count against it |
 | `max_session_seconds` | integer |  |  | Hard limit on one annotation session |
 | `min_annotators_per_instance` | integer |  |  | DEPRECATED spelling of num_annotators_per_item, and read as it. It named a coverage floor that was parsed and never consulted, so a study asking for three annotators an item collected an unlimited number. Setting it alongside num_annotators_per_item or max_annotations_per_item with a different value is refused |
-| `num_annotators_per_item` | integer|object |  | `3` | Target annotators per item. Either a plain count or a mapping carrying `default` plus overlap-sampling and adaptive-boost rules |
+| `num_annotators_per_item` | integer|object |  |  | Target annotators per item. Either a plain count or a mapping carrying `default` plus overlap-sampling and adaptive-boost rules. Unset (with no max_annotations_per_item) or 0 means unlimited; a negative count is refused |
 | `per_annotator_quota` | object |  |  | Per-annotator workload caps: `default`, plus `by_user` and `by_user_role` overrides. Any other sub-key is rejected at load rather than ignored |
 | `random_seed` | integer |  |  | Seed for assignment shuffling, so an ordering can be reproduced |
 | `scheme_sets` | object |  |  | Named, reusable lists of annotation schemes. A batch_assignment group names one in its `schemes` key to give that cohort its own questions |
@@ -162,7 +162,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
-| `debug` | boolean |  | `False` | Run in debug mode. This disables admin authentication and skips login entirely, so it must never be set on a deployed server |
+| `debug` | boolean |  | `False` | Run in debug mode. Admin pages open without a key for requests from this machine, and with debug_phase every visitor is signed in as a shared debug_user, so it must never be set on a deployed server |
 | `debug_log` | string |  |  | Which halves of the debug logging to turn on: all, ui, server or none. The --debug-log flag writes this key |
 | `debug_phase` | string |  |  | Jump straight to a workflow phase, for UI debugging |
 | `server_debug` | boolean |  | `False` | Backend debug logging. Note that only the phase pages (consent, instructions, surveys) read this key; the annotation page asks the logging module, which is driven by debug_log/verbose/debug |

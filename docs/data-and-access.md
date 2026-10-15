@@ -255,14 +255,17 @@ restart.
 | `persist_sessions` | Asks for sessions to be kept across a restart; refuses to start without `secret_key` | false |
 | `admin_api_key` | Admin API key, sent as `X-API-Key`. Generated into `{task_dir}/admin_api_key.txt` when unset | — |
 
-**`debug: true` disables admin authentication and skips login entirely.** It is
-for developing the interface, never for anything an annotator can reach. The same
-goes for `--debug` on the command line: it is what makes
-`--debug-phase annotation` able to drop you straight into the task, and it is
-also what makes any admin-auth check you run under it meaningless.
-On 2.11 it also refuses to start on the default `0.0.0.0` bind: "Refusing to
-start: debug is enabled and the server is bound to 0.0.0.0 rather than
-loopback." Pass `--host 127.0.0.1` with it.
+**`debug: true` is for a server on your own machine, never for one an
+annotator can reach.** The same goes for `--debug` on the command line. On its
+own it still shows the login page. With `--debug-phase annotation` it signs
+every visitor in as one shared `debug_user` and drops them into the task, which
+is what makes it useful for checking the interface. It also opens the admin
+pages without a key to requests from the server's own machine, so an
+admin-auth check you run locally under debug proves nothing. On 2.11.1, with
+`--debug` on the default `0.0.0.0` bind, `/admin/api/overview` answered 200 on
+`localhost` and 403 on the machine's network address. 2.11.0 refused that bind
+outright ("Refusing to start: debug is enabled and the server is bound to
+0.0.0.0 rather than loopback"), so on 2.11.0 pass `--host 127.0.0.1`.
 
 Binding `0.0.0.0` is how a researcher on the same network opens the task. Say so
 explicitly in a handover, along with the port, rather than leaving them to guess

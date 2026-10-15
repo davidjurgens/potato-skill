@@ -116,11 +116,12 @@ explicit that `base_url` is there for vLLM, SGLang, LM Studio, llama.cpp and
 LiteLLM, and it appends `/v1` if you leave it off. Pick it whenever any item is
 an image, because it is the only one of the three that sends one.
 
-The validator accepts ten: `openai`, `openai_vision`, `anthropic`,
-`anthropic_vision`, `gemini`, `huggingface`, `ollama`, `ollama_vision`, `vllm`,
-and `yolo` for detection. Anything else fails with `ai_support.endpoint_type
-must be one of:` and that list. `openrouter`, `sam` and `sam3` have endpoint
-classes in Potato's code but are refused here. I have run three of the ten.
+On 2.11.1 the validator accepts `openai`, `openai_vision`, `anthropic`,
+`anthropic_vision`, `gemini`, `huggingface`, `ollama`, `ollama_vision`,
+`openrouter` (also spelt `open_router`; 2.11.0 refused both), `vllm`, and
+`yolo` for detection. Anything else fails with `ai_support.endpoint_type must
+be one of:` and that list. `sam` and `sam3` have endpoint classes in Potato's
+code but are refused here. I have run three of them.
 
 ## max_tokens
 
@@ -313,10 +314,13 @@ active_learning:
   model_persistence: {enabled: true} # a dict, not a boolean
 ```
 
-On 2.11.0 `{name: logistic}` and `{name: tfidf}` validate and train the same
-models as the paths above. The short classifier names are `logistic`,
-`random_forest` and `svm`, with a few spellings of each; the vectorizer ones
-are `tfidf`, `count` (or `bow`) and `sentence-transformers` (or `embeddings`).
+`{name: logistic}` and `{name: tfidf}` validate and train the same models as
+the paths above. The short classifier names are `logistic`, `random_forest` and
+`svm`, with a few spellings of each; the vectorizer ones are `tfidf`, `count`
+(or `bow`) and `sentence-transformers` (or `embeddings`), and from 2.11.1
+`image` (or `clip`) for items that are image files. On 46 coloured images under
+`media_directory`, referenced as `/media/...`, `{name: image}` trained to 0.978
+accuracy and warned about the two remote URLs it could not read.
 A name Potato cannot build fails validation and stops the boot, with the full
 list in the message:
 `active_learning.classifier.name: 'logreg' is not a classifier Potato can

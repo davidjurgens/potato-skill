@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 500 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 503 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -86,11 +86,11 @@ Model-backed label suggestions shown alongside each item
 | `ai_config.model` | string |  | Model name as the backend spells it |
 | `ai_config.temperature` | number | `0.1` | Sampling temperature, 0 to 2 |
 | `ai_config.think` | boolean | `False` | Let a reasoning model emit its thinking block. Off keeps the reply to the answer (vllm) |
-| `ai_config.timeout` | integer |  | Seconds to wait for the model. Left out, each endpoint applies its own: 30 for openai, anthropic, gemini, huggingface and vllm, 60 for ollama and the openai/anthropic vision endpoints, 120 for ollama_vision. There is no single default to quote here |
+| `ai_config.timeout` | integer |  | Seconds to wait for the model. Left out, each endpoint applies its own: 30 for openai, anthropic, gemini, huggingface, vllm and openrouter, 60 for ollama and the openai/anthropic vision endpoints, 120 for ollama_vision. There is no single default to quote here |
 | `ai_config_file` | string |  | Path to a separate YAML file holding the endpoint settings, so keys stay out of the repo. Its keys are merged FLAT into ai_config, so the file holds model/base_url/api_key directly — a nested ai_config: block inside it becomes ai_config.ai_config and is ignored. endpoint_type is the one key lifted to the ai_support level. A missing file disables AI support with a warning, which `validate --strict` treats as an error |
 | `cache_config` | object |  | Disk cache and prefetch for model replies, so an annotator does not wait for a generation the study has already paid for |
 | `enabled` | boolean | `False` | Turn AI assistance on. Without an endpoint that starts, the boot log says so and no assistant appears |
-| `endpoint_type` | string | `openai` | Which backend to talk to: openai, openai_vision, anthropic, anthropic_vision, gemini, huggingface, ollama, ollama_vision, openrouter, vllm, yolo, sam, sam3 |
+| `endpoint_type` | string |  | Which backend to talk to, required when ai_support is enabled: openai, openai_vision, anthropic, anthropic_vision, gemini, huggingface, ollama, ollama_vision, openrouter (or open_router), vllm, yolo. The decision models laya and systemone are refused here (they cannot write text; use them in solo_mode.labeling_models or as a labeling_engine decision source), and so are sam and sam3 |
 | `image_key` | string |  | Item field holding the image, when the item also carries text. Without it a vision endpoint only ever sees `item_properties.text_key` |
 
 ## `analytics`
@@ -557,8 +557,10 @@ Machines label the corpus and human labels calibrate and certify them. Each sour
 | `crowd.study_id` | string |  | The Prolific study the engine adds places to |
 | `distill` | object |  | Distillation settings: `trainer`, `min_labels`, `every`, `include_silver` |
 | `distill.every` | number | `2.0` | Retrain when the label count has grown by this factor |
+| `distill.image_field` | string |  | The item field holding the image, when it is not the text_key |
 | `distill.include_silver` | boolean | `True` | Also train on machine labels a contract certified |
 | `distill.min_labels` | integer | `200` | Train only once this many labels exist |
+| `distill.modality` | string | `auto` | What the distilled model reads: text, image (each item's image file, through CLIP embeddings), or auto (image when most items name an image file) |
 | `distill.trainer` | string | `sklearn-text` | A trainer from potato/training |
 | `enabled` | boolean | `False` | Turn the labeling engine on |
 | `features` | object |  | Optional parts of the engine: all off by default except drift |
@@ -699,18 +701,19 @@ Train models on the study's annotations from the admin Training page, and option
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `aggregation` | string | `consensus` | How several annotators' labels become one training label |
-| `auto_retrain` | object |  | Retrain as annotations arrive: `enabled`, `trainer`, `schemas` |
+| `auto_retrain` | object |  | Retrain as annotations arrive: `enabled`, `trainer`, `schemas`, `min_interval_s` (default 600, seconds since the last run), `update_frequency` (default 25, new annotations since the last run) and `params` (passed to the trainer) |
 | `device` | string | `auto` | auto, cpu, cuda or mps |
 | `enabled` | boolean | `False` | Turn model training on |
-| `grace_seconds` | integer |  | Seconds a cancelled run is given to exit before it is killed |
+| `grace_seconds` | integer | `20` | Seconds a cancelled run is given to exit before it is killed |
 | `max_ram_mb` | number |  | Memory limit for one run |
 | `max_wall_seconds` | number |  | Time limit for one run |
 | `num_threads` | integer |  | CPU threads for one run |
-| `retain_runs` | integer | `5` | Finished runs kept on disk |
+| `retain_runs` | integer | `5` | Finished runs kept in the run ledger. Older runs are dropped from it unless their predictions are still stored; run directories stay on disk |
 | `split_seed` | integer | `0` | Seed for the train/validation/test split |
-| `splits` | object |  | Split fractions, e.g. train 0.8, validation 0.1, test 0.1 |
+| `splits` | object | `{'train': 0.7, 'val': 0.15, 'test': 0.15}` | Split fractions as a mapping of train, val and test. Unset, 0.7 / 0.15 / 0.15. Membership is a seeded hash of the instance id, so it is stable across runs |
 | `writeback` | object |  | Publish a run's predictions as prelabels |
 | `writeback.field` | string | `predictions` | Item field the prelabels are written to |
+| `writeback.include_unlabeled` | boolean | `False` | Also predict on, and prelabel, the items nobody has labelled yet (otherwise only the held-out val and test items get predictions) |
 | `writeback.min_confidence` | number | `0.0` | Predictions below this confidence are not published |
 | `writeback.schemas` | array |  | Schemes whose predictions are published |
 

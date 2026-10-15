@@ -65,8 +65,8 @@ The lifecycle is the same on every target, with two gaps: `potato deploy logs`
 does not work on `fly` (use `fly logs -a <app>`), and `aws-ecs` has logs but no
 SSH, because there is no server to log in to.
 
-The host runs the image for the Potato version you have installed: on 2.11.0,
-`up --dry-run` plans `docker.pull ghcr.io/davidjurgens/potato:2.11.0`. Up to
+The host runs the image for the Potato version you have installed: on 2.11.1,
+`up --dry-run` plans `docker.pull ghcr.io/davidjurgens/potato:2.11.1`. Up to
 2.10.3 the default was `:latest`, so two `up`s of one study could run different
 releases; on those versions pass `--image ghcr.io/davidjurgens/potato:2.10.3`,
 or whichever version you tested the study on. `--image` picks any other tag.
@@ -453,14 +453,16 @@ Exit codes: **0 for PASS, 2 for BLOCKED.** Errors block; warnings do not.
 The one that blocks most often:
 
 ```
-ERROR [D002] debug is true, which disables admin authentication entirely:
-      validate_admin_api_key returns True unconditionally in debug mode, so
-      anyone reaching /admin has full control.
-      -> Remove `debug: true` from the config before deploying.
+ERROR   [D002] debug is true. With debug_phase it signs every visitor in as
+        one shared debug_user and skips them to that phase, and it opens the
+        admin pages without a key to requests from the server's own machine.
+        It is for a server on a developer's machine.
+        -> Remove `debug: true` from the config before deploying.
 ```
 
 If you turned on `debug` to check the interface, take it out. It is not a
-logging flag; it removes login and admin auth.
+logging flag: it can sign every visitor in as the same user, and it lets the
+host's own machine into the admin pages without a key.
 
 Run `check` against the provider you actually intend to use. `local` reports no
 exposure and no durability problem, so a clean `check` with the default provider
@@ -565,7 +567,7 @@ The preflight will say all of this, but decide it before you type `up`:
 | Question | Where it is answered |
 |---|---|
 | Who can sign in? | `user_config.allow_all_users: false` plus `user_config.users`, or `authentication.method: oauth`. The default lets anyone with the URL create an account |
-| Is `debug` off? | It must be. It disables admin auth outright |
+| Is `debug` off? | It must be. It can sign everyone in as one user and opens admin to the host without a key |
 | Do sessions survive a restart? | `secret_key`, or let deploy generate one |
 | Where do annotations live if the host restarts? | A volume (`--volume-gb`), or `--backup` with restore on boot |
 | Who holds the admin key? | Generated per deployment; `potato deploy status` and the provider's env |
@@ -610,6 +612,11 @@ how to pull them, and how to take it down. A deployment nobody can pull from or
 destroy is worse than a local server.
 
 ## What I have and have not verified
+
+Run on 2.11.1 (`cf0873a0`), from a checkout, with Docker stopped: `up
+--dry-run` on `local`, `render` and `railway` plans the 2.11.1 image, which is
+published on ghcr.io; `check` with `debug: true` blocks on D002 with exit 2,
+quoted above; `check` on `openstack` without its SDK still blocks on D021.
 
 Run on 2.11.0 (`eb284819`), from a checkout, with Docker stopped:
 
