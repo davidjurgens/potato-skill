@@ -298,8 +298,7 @@ follows is what I set and what the server then said it had.
 
 **`active_learning`** reorders the queue by what a classifier finds hard, and
 needs `assignment_strategy: active_learning` to have any effect on assignment.
-Its `classifier.name` and `vectorizer.name` are **fully qualified sklearn dotted
-paths**, not friendly names:
+`classifier.name` and `vectorizer.name` take a short name or an import path:
 
 ```yaml
 assignment_strategy: active_learning
@@ -314,12 +313,14 @@ active_learning:
   model_persistence: {enabled: true} # a dict, not a boolean
 ```
 
-`{name: logistic}` passes `--strict`, because the validator checks only that the
-name is a string, and then falls back to LogisticRegression with an ERROR line in
-the log. The accepted values are the three classifiers above plus
-`sklearn.ensemble.RandomForestClassifier` and `sklearn.svm.SVC`, and
-`sklearn.feature_extraction.text.CountVectorizer` or `sentence-transformers` for
-the vectorizer.
+On 2.11.0 `{name: logistic}` and `{name: tfidf}` validate and train the same
+models as the paths above. The short classifier names are `logistic`,
+`random_forest` and `svm`, with a few spellings of each; the vectorizer ones
+are `tfidf`, `count` (or `bow`) and `sentence-transformers` (or `embeddings`).
+A name Potato cannot build fails validation and stops the boot, with the full
+list in the message:
+`active_learning.classifier.name: 'logreg' is not a classifier Potato can
+build. Use a short name (logistic, logistic_regression, ...)`.
 
 Two log lines tell you it is working, and they say different things. The first
 is `Trained classifier for schema <name> with N instances, accuracy: ...`,
