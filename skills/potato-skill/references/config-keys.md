@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 162 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 164 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -15,6 +15,8 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `ai_support` | object |  |  | Model-backed label suggestions shown alongside each item |
 | `chat_support` | object |  |  | In-task chat with a model |
 | `icl_labeling` | object |  |  | In-context-learning labeler that builds few-shot prompts from high-confidence annotations already collected. Configured in four nested blocks, not as flat keys |
+| `labeling_engine` | object |  |  | Machines label the corpus and human labels calibrate and certify them. Each source's predictions are kept per version, every human request records how its item was sampled, and contracts state the quality guarantee the accepted labels must meet |
+| `model_training` | object |  |  | Train models on the study's annotations from the admin Training page, and optionally publish their predictions back as prelabels |
 
 ## Advanced Features
 
@@ -86,7 +88,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `alert_time_each_instance` | integer |  | `10000000` | Seconds an annotator may spend on one item before being warned. The default is effectively no limit |
-| `assignment_strategy` | string |  | `fixed_order` | How items are handed out: random, fixed_order, active_learning, max_diversity, least_annotated, category_based, diversity_clustering, batch, priority, model_review or psychometric. `llm_confidence` is accepted and assigns at random -- it is not implemented |
+| `assignment_strategy` | string |  | `fixed_order` | How items are handed out: random, fixed_order, active_learning, max_diversity, least_annotated, category_based, diversity_clustering, batch, priority, model_review, psychometric or engine (the labeling engine's human requests). `llm_confidence` is accepted and assigns at random -- it is not implemented |
 | `automatic_assignment` | object |  |  | Assign items to annotators automatically as they arrive |
 | `batch_assignment` | object |  |  | Split items into named groups and assign whole batches |
 | `instance_reclaim` | object |  |  | Take assignments back from annotators who abandoned them so the items can go out again. `enabled` (false) and `timeout_hours` (24), plus optional `stale`, `manual`, `quality_control` and `prolific` sections each carrying `preserve_completed_annotations` |

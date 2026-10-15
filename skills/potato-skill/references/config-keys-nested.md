@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 421 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 500 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -538,6 +538,60 @@ Content-blind typing dynamics on free-text fields -- when someone pauses, revise
 | `pause_thresholds_ms` | array | `[500, 1000, 2000, 5000, 10000]` | Pause buckets the summary counts against. Must be positive integers |
 | `store_events` | boolean | `True` | Write raw event streams to the typing store. Does nothing at summary fidelity, which the loader warns about |
 
+## `labeling_engine`
+
+Machines label the corpus and human labels calibrate and certify them. Each source's predictions are kept per version, every human request records how its item was sampled, and contracts state the quality guarantee the accepted labels must meet
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `budgets` | object |  | Spending limits: `model_usd`, `human_usd` and `human_labels` |
+| `budgets.human_labels` | number |  | Most human labels the engine may request |
+| `budgets.human_usd` | number |  | Most the engine may spend on crowd work, in US dollars. Required before features.crowd_live_spend can be turned on |
+| `budgets.model_usd` | number |  | Most the engine may spend on model calls, in US dollars |
+| `cascade` | array |  | Source ids tried in order. An item a tier is not confident enough about goes to the next, and after the last one to a human. Defaults to the first source |
+| `contracts` | array |  | Quality targets. Each has `kind` (selective_risk, ppi, no_worse_than_human, budget_first, distributional, threshold_legacy), `schema` and `confidence` (0.9), plus the kind's own keys: `error` and `per_class` for selective_risk, `estimand`, `by` and `max_width` for ppi, `epsilon` for no_worse_than_human, `human_labels` or `human_usd` for budget_first, `max_distance` and `groups_by` for distributional, `threshold` for threshold_legacy |
+| `crowd` | object |  | Crowd recruitment for the crowd pool. Only Prolific is supported |
+| `crowd.per_worker_quota` | integer | `20` | Requests one participant is expected to complete |
+| `crowd.provider` | string | `prolific` | Crowd provider |
+| `crowd.reward_usd` | number |  | Reward per participant, used to cost places against budgets.human_usd |
+| `crowd.study_id` | string |  | The Prolific study the engine adds places to |
+| `distill` | object |  | Distillation settings: `trainer`, `min_labels`, `every`, `include_silver` |
+| `distill.every` | number | `2.0` | Retrain when the label count has grown by this factor |
+| `distill.include_silver` | boolean | `True` | Also train on machine labels a contract certified |
+| `distill.min_labels` | integer | `200` | Train only once this many labels exist |
+| `distill.trainer` | string | `sklearn-text` | A trainer from potato/training |
+| `enabled` | boolean | `False` | Turn the labeling engine on |
+| `features` | object |  | Optional parts of the engine: all off by default except drift |
+| `features.crowd_live_spend` | boolean | `False` | Let the engine add crowd places and spend money, within budgets.human_usd |
+| `features.crowd_recruit` | boolean | `False` | Work out how many crowd places open requests need. Without crowd_live_spend this only reports what it would do |
+| `features.distill` | boolean | `False` | Train a cheaper model on human and certified labels and add it as the first tier |
+| `features.drift` | boolean | `True` | Suspend auto-acceptance when audit labels show accuracy has fallen (set false to only report a breach) |
+| `features.optimize` | boolean | `False` | Each planner pass scores every subset of the cascade on dev labels and reports the cheapest that keeps the contracts' coverage; nothing is applied |
+| `features.payload_capture` | boolean | `False` | Keep the full prompt and reply of each model call next to the call log. Off by default because it stores item text |
+| `features.pii_redaction` | boolean | `False` | Mask personal data in text sent to remote models and record what was masked |
+| `humans` | object |  | Who labels for the engine and how their labels are sampled |
+| `humans.audit_rate` | number | `0.02` | Fraction of auto-accepted labels sent back to a human, blind, to watch for drift |
+| `humans.calibration_rate` | number|string | `auto` | Fraction of items drawn at random for blind calibration, or `auto` to let the planner size the sample from the contracts |
+| `humans.dev_fraction` | number | `0.5` | Share of calibration labels used to fit calibrators and choose thresholds. The rest are held out to test the contract |
+| `humans.distribution_k` | integer | `5` | Human labels per item for a distributional contract |
+| `humans.min_calibration_per_class` | integer | `10` | Calibration labels each predicted class needs before a per-class contract is tested |
+| `humans.overlap` | number | `0.0` | Fraction of the calibration sample sent to overlap_k people instead of one, for the human-human baseline and the no_worse_than_human contract |
+| `humans.overlap_k` | integer | `3` | People per item on the overlap share of the calibration sample. The no_worse_than_human contract needs at least 3 |
+| `humans.pools` | array | `['team']` | Any of team, crowd and solo |
+| `humans.truth` | string | `majority` | How several people's labels on one item become the label the contracts test against: majority, or dawid_skene to weight each rater by their estimated reliability. An adjudicated label always wins |
+| `humans.verify_visibility` | string | `shown` | Whether the machine label is shown on verify requests (shown or blind). Calibration, certification and audit requests are always blind |
+| `redaction` | object |  | PII redaction settings: `categories` to mask |
+| `redaction.categories` | array |  | What to mask: email, url, ip, card, ssn, phone, handle (default: all) |
+| `runtime` | object |  | How model calls are run |
+| `runtime.batch_size` | integer | `32` | Items per committed chunk |
+| `runtime.cache` | boolean | `True` | Reuse a stored reply when the same source version is asked the same question |
+| `runtime.concurrency` | integer | `4` | Concurrent calls per endpoint unless a source sets its own |
+| `runtime.hold_minutes` | number | `60` | Minutes a person may hold a request without answering before it goes back to the pool |
+| `runtime.planner_interval` | number | `30` | Seconds between planner passes in a running server |
+| `runtime.retries` | integer | `2` | Extra attempts for a call that timed out, lost its connection or got a 429 or 5xx. Each attempt is logged |
+| `schemas` | array |  | Scheme names the engine labels. Unset means every scheme it supports |
+| `sources` | array |  | Machine labelers. Each has an `id` and a `kind` (llm, vlm, decision, detector, asr, trained, lf, jury, judge, static, fixture, simulator), plus endpoint_type, model, base_url, api_key, temperature, max_tokens, prompt and `confidence` (method auto, verbalized, k_sample, logprob or native) as the kind needs |
+
 ## `layout`
 
 How the annotation questions are arranged on the page: a grid, collapsible groups, an explicit order, and responsive breakpoints. Without it every scheme stacks full-width in config order
@@ -638,6 +692,28 @@ Model Context Protocol control surface, letting an agent query and control this 
 | `scope` | object |  | Limits on what agents may touch, e.g. `users` to restrict which annotators they can act on |
 | `tools` | array |  | Allowlist of tool names an agent may call. Empty grants nothing, and an unrecognized name fails at startup rather than warning |
 
+## `model_training`
+
+Train models on the study's annotations from the admin Training page, and optionally publish their predictions back as prelabels
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `aggregation` | string | `consensus` | How several annotators' labels become one training label |
+| `auto_retrain` | object |  | Retrain as annotations arrive: `enabled`, `trainer`, `schemas` |
+| `device` | string | `auto` | auto, cpu, cuda or mps |
+| `enabled` | boolean | `False` | Turn model training on |
+| `grace_seconds` | integer |  | Seconds a cancelled run is given to exit before it is killed |
+| `max_ram_mb` | number |  | Memory limit for one run |
+| `max_wall_seconds` | number |  | Time limit for one run |
+| `num_threads` | integer |  | CPU threads for one run |
+| `retain_runs` | integer | `5` | Finished runs kept on disk |
+| `split_seed` | integer | `0` | Seed for the train/validation/test split |
+| `splits` | object |  | Split fractions, e.g. train 0.8, validation 0.1, test 0.1 |
+| `writeback` | object |  | Publish a run's predictions as prelabels |
+| `writeback.field` | string | `predictions` | Item field the prelabels are written to |
+| `writeback.min_confidence` | number | `0.0` | Predictions below this confidence are not published |
+| `writeback.schemas` | array |  | Schemes whose predictions are published |
+
 ## `pocket`
 
 Pocket Mode: the phone-sized annotation surface at /pocket, served as a PWA with an offline queue
@@ -737,14 +813,25 @@ Single-coder loop. An LLM labels the corpus, you review where it is least sure, 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `batches` | object |  | Batch sizes for LLM labeling: llm_labeling_batch (50) and max_parallel_labels (200) |
+| `cache` | object |  | Reuse the stored reply for an identical labeling call: enabled (true). Kept in state_dir |
+| `cache.enabled` | boolean | `True` | Reuse the stored reply for a labeling call with the same model, temperature, prompt, item and response schema. Turn off to measure run-to-run variation |
 | `confidence_routing` | object |  | Where an item goes by confidence band: auto-accept, review, or human |
 | `confusion_analysis` | object |  | Confusion-pair analysis over model-versus-human disagreements |
 | `edge_case_rules` | object |  | Rules distilled from your corrections and applied before the model |
 | `embedding` | object |  | Embedder for diversity and textbox similarity; `model_name` defaults to all-MiniLM-L6-v2 |
 | `enabled` | boolean | `False` | Turn solo mode on |
-| `instance_selection` | object |  | Weights that decide what you are shown next: low_confidence_weight (0.4), diversity_weight (0.3), random_weight (0.2), disagreement_weight (0.1), and the opt-in edge_case_rule, cartography and llm_predicted weights |
+| `gold` | object |  | Items with known answers for scoring prompt versions: file (JSON, JSONL, CSV or TSV inside the project), id_key (id), label_key (label), and text_key for items outside the corpus |
+| `gold.file` | string |  | Gold-label file inside the project: JSON, JSONL, CSV or TSV |
+| `gold.id_key` | string | `id` | Field holding the item id; it matches the corpus's id_key |
+| `gold.label_key` | string | `label` | Field holding the known answer |
+| `gold.text_key` | string |  | Field holding the item text, for gold items that are not in the corpus |
+| `instance_selection` | object |  | Weights that decide what you are shown next: low_confidence_weight (0.4), diversity_weight (0.3), random_weight (0.2), disagreement_weight (0.1), and the opt-in edge_case_rule, cartography and llm_predicted weights. A `curriculum` block (enabled: false, warmup_items: 20, ramp_items: 30, difficulty_signal: confidence, window: 5) shows the easiest items first and then ramps up the difficulty |
+| `jury` | object |  | Several models vote on each item and the plurality label wins: enabled (false), models (two or more), early_stop (true). Not with confidence_routing |
+| `jury.early_stop` | boolean | `True` | Skip the remaining jurors once their votes could not change the winner. Not applied to multiselect |
+| `jury.enabled` | boolean | `False` | Label each item by a vote of jury.models instead of the first labeling model that answers |
+| `jury.models` | array |  | Two or more endpoints, in the same shape as labeling_models |
 | `labeling_functions` | object |  | Programmatic labeling functions run alongside the model |
-| `labeling_models` | array |  | Endpoints that label the corpus. Each is endpoint_type plus model, and optionally api_key, base_url, max_tokens, temperature, think, timeout |
+| `labeling_models` | array |  | Endpoints that label the corpus. Each is endpoint_type plus model, and optionally api_key, base_url, max_tokens, temperature, think, timeout. A decision model (endpoint_type systemone or laya) labels radio, select, likert and slider schemes in one pass and needs a generative model under revision_models |
 | `prompt_optimization` | object |  | Automatic prompt search: enabled (true), find_smallest_model, target_accuracy (0.85), optimization_interval_seconds, and the accuracy/length/consistency weights |
 | `refinement_loop` | object |  | The automatic refine-evaluate-keep cycle over the labeling prompt |
 | `refinement_loop.auto_apply_suggestions` | boolean |  | Adopt a winning candidate prompt without asking |
@@ -755,6 +842,10 @@ Single-coder loop. An LLM labels the corpus, you review where it is least sure, 
 | `refinement_loop.trigger_interval` | integer |  | New human labels between cycles |
 | `revision_models` | array |  | Endpoints used to revise the prompt. Defaults to labeling_models |
 | `state_dir` | string |  | Where solo-mode state is persisted |
+| `suggestions` | object |  | When the annotator sees the LLM's suggestion: display (before_label, after_label or blind_sample), blind_rate (0.2) and minimum_blind_sample (20). Agreement is split into blind and shown, and the handoff to the LLM reads blind agreement once there is enough |
+| `suggestions.blind_rate` | number | `0.2` | Fraction of items labelled without the suggestion under blind_sample. Which items is fixed per study, so a reload keeps them blind |
+| `suggestions.display` | string | `before_label` | before_label shows the LLM's suggestion before the annotator answers; after_label never does, and a disagreement then opens the resolution page; blind_sample hides it on a blind_rate fraction of items |
+| `suggestions.minimum_blind_sample` | integer | `20` | Blind comparisons needed before the handoff to the LLM reads blind agreement. Under after_label and blind_sample the handoff waits for them |
 | `thresholds` | object |  | The stopping and agreement thresholds -- including end_human_annotation_agreement (0.90) and minimum_validation_sample (50) -- plus the per-scheme-type match tolerances |
 | `uncertainty` | object |  | How model uncertainty is estimated: `strategy` (direct_confidence, direct_uncertainty, token_entropy, sampling_diversity) and a `sampling_diversity` block |
 
@@ -837,6 +928,8 @@ Interface language code
 | `iaa_drift_th_window` | string |  | Short column prefix for a window, e.g. the W in W1, W2 |
 | `iaa_drift_title` | string |  | Heading of the agreement-over-time section on /admin/iaa |
 | `iaa_drift_untimed` | string |  | Note about items with no timestamp, which cannot be placed on the timeline |
+| `image_to_annotate` | string | `Image to Annotate:` | Heading above an item whose text field embeds an image |
+| `jump_unannotated_label` | string | `Unlabeled` | Caption between the header's jump-to-unlabeled buttons (shown at 1200px and wider) |
 
 ## `user_config`
 

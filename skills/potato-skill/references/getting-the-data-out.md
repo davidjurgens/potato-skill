@@ -68,7 +68,7 @@ reading the log. Check the name against the list below.
 
 ## Which format
 
-31 formats are registered. `GET /admin/api/export/formats` lists them with
+32 formats are registered. `GET /admin/api/export/formats` lists them with
 descriptions against the running server; `potato preview` does not.
 
 | They want | Format |
@@ -88,6 +88,7 @@ descriptions against the running server; `potato preview` does not.
 | Per-frame embodied episode labels | `episode_jsonl` |
 | How the text was typed, or how the boxes were drawn | `keystrokes`, `annotation_telemetry` |
 | The single resolved label per item, after adjudication | `adjudication` |
+| The labeling engine's labels, certificate and model-call log | `labeling_engine` (see `labeling-engine.md`) |
 | It published | `huggingface` (see `publish` in `modes-and-subsystems.md`) |
 
 **An item nobody annotated is not in the export.** I ran a three-image study,

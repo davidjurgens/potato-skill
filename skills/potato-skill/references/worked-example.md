@@ -1,7 +1,7 @@
 # A task that runs
 
 Copying something that works beats assembling a config from field lists. Potato
-ships 215 examples for exactly this reason — but they are text-classification and
+ships 218 examples for exactly this reason — but they are text-classification and
 schema demos, and none of them is a whole study: consent, instructions, a
 practice round, attention checks, the annotation itself, and a survey at the end.
 
@@ -108,7 +108,7 @@ training:
   enabled: true
   data_file: data/training.json
   allow_retry: true
-  feedback: {enabled: true}
+  feedback: {show_explanations: true}
 
 attention_checks:
   enabled: true

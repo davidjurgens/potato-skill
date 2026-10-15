@@ -392,6 +392,10 @@ MIRRORED_REFERENCES = {
         "Model Assistance From a Self-Hosted Endpoint",
         "Pointing `ai_support` at your own vLLM or other OpenAI-compatible server.",
     ),
+    "labeling-engine.md": (
+        "Letting Models Label and People Certify",
+        "The 2.11 labeling engine: blind samples, contracts, and what to ask first.",
+    ),
     "agent-traces.md": (
         "Agent Traces and Agent Evaluation",
         "The trace displays, the twenty evaluation schemes, and how they bind.",

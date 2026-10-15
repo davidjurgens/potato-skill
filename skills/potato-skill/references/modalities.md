@@ -113,15 +113,22 @@ media_directory: media        # default; served at /media/<path>
   `screenshots/step_000.png` is served from here. Miss it and every step image
   404s.
 
-Remote URLs display, and are the right answer for a corpus you do not want in
-the bundle: `potato deploy` ships the whole task directory. An
-`image_annotation` scheme loads its own copy of the image with `crossOrigin`
-set, so for it the image host has to send an `Access-Control-Allow-Origin`
-header. Without one the item still displays, and the drawing area underneath it
-reads "Failed to load image. Check the URL or CORS settings."
-`images.cocodataset.org` sends no such header, so COCO URLs fail this way. For a
-canvas task on such a host, copy the images into `media_directory` and reference
-them as `/media/...`.
+Remote URLs work, with the limits below, and suit a corpus you do not want in
+the bundle: `potato deploy` ships the whole task directory. On an
+`image_annotation` scheme, three tools need CORS headers from the image host
+and the rest do not. From a host that sends none (a local server with no headers,
+or `images.cocodataset.org`), boxes, polygons, ellipses, points, freeform lines
+and brush strokes all draw, save, and are redrawn when the annotator comes
+back. Region fill, the SAM magic wand and the text prompt have to read the
+image's pixels, and the browser refuses that for such a host. Each one says so
+and does nothing. Fill shows "Fill cannot read this image: its host does not
+allow it (no CORS headers)" and saves no mask; the other two show "The browser
+will not let the model read this image: its host sends no CORS headers." A task
+that needs any of those three should copy the images into `media_directory`
+and reference them as `/media/...`, or use a host that sends
+`Access-Control-Allow-Origin`. Before 2.11 the drawing area did not load at all
+from such a host, and read "Failed to load image. Check the URL or CORS
+settings."
 
 A `data:` URI in the field works as well, and is worth knowing about for a
 handful of small images you would rather not ship as files.

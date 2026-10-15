@@ -171,7 +171,7 @@ CLAIMS = [
     # and the two it left out were the write and the
     # destructive one, which are the two an admin most needs to know about.
     ("AGENTS.md", r"The bridge adds (\d+) live tools", "live_tools"),
-    ("SKILL.md", r"`live_delete_annotations` — (\d+) in all", "live_tools"),
+    ("SKILL.md", r"`live_engine_certificate` — (\d+) in all", "live_tools"),
 
     # An author whose file is not one of these shapes gets "Loaded 0 patterns",
     # which reads as an empty file rather than an unrecognised one. The number

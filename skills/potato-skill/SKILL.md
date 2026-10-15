@@ -169,7 +169,7 @@ expensive to discover after the config is written:
 |---|---|
 | What format is the data in, and where is the media? | Transcripts and conversation corpora have their own converters |
 | Do you already have annotations? | `potato import` reads 20 formats and writes a runnable project |
-| What has to come out at the end? | 31 export formats. Check the target one **before** anyone annotates |
+| What has to come out at the end? | 32 export formats. Check the target one **before** anyone annotates |
 | Who runs it after handover, and for how long? | Decides hosting, logins and the allowlist |
 
 ```bash
@@ -394,7 +394,7 @@ annotation itself and a closing survey — with every side-file format filled in
 It validates under `--strict` and boots clean. Copy it and replace the labels
 and prose.
 
-Potato also ships 215 example projects, all checked in CI:
+Potato also ships 218 example projects, all checked in CI:
 
 ```python
 from potato.server_utils.examples_manifest import search_examples
@@ -420,8 +420,8 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 
 ## Config keys
 
-`references/config-keys.md` lists the 162 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 421 documented **sub-keys** — the
+`references/config-keys.md` lists the 164 documented **top-level** keys.
+`references/config-keys-nested.md` lists the 500 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 23 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -633,7 +633,7 @@ anything an annotator will come back to — it matters most on `render` and
 ## Getting the data out
 
 There is one storage format — `annotation_output/<user>/user_state.json` — and
-31 export formats. `output_annotation_format` is deprecated: the loader
+32 export formats. `output_annotation_format` is deprecated: the loader
 reads it as `export_annotation_format` and warns. Write the live key.
 
 ```yaml
@@ -760,12 +760,13 @@ refuses a body still holding a placeholder.
 | `assignment-and-agreement.md` | Quotas, ordering, and which metric each schema kind gets |
 | `modes-and-subsystems.md` | The rest of Potato, routed from what the researcher said |
 | `model-assistance.md` | `ai_support` against a self-hosted LLM: where the keys go, which `endpoint_type` works |
+| `labeling-engine.md` | Models label, people label a blind sample, contracts decide what is accepted (2.11) |
 | `interrogating-potato.md` | Recovering an undocumented block from the validator and the boot log |
 | `data-and-access.md` | Where items come from, output files, login, serving |
-| `getting-the-data-out.md` | The 31 export formats, what the CSV holds, phase data |
+| `getting-the-data-out.md` | The 32 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
-| `config-keys.md` | 162 top-level keys *(generated)* |
-| `config-keys-nested.md` | 421 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys.md` | 164 top-level keys *(generated)* |
+| `config-keys-nested.md` | 500 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
@@ -807,7 +808,9 @@ The bridge exposes the authoring tools *and* the live ones, the live ones
 prefixed `live_`: `live_get_status`, `live_get_config`, `live_get_progress`,
 `live_list_items`, `live_get_item`, `live_list_annotators`, `live_get_agreement`,
 `live_submit_annotation`, `live_assign_items`, `live_export_data`,
-`live_add_items`, `live_delete_annotations` — 12 in all. `live_delete_annotations`
+`live_add_items`, `live_delete_annotations`, and for the labeling engine
+`live_engine_status`, `live_engine_requests`, `live_engine_run`,
+`live_engine_certify`, `live_engine_certificate` — 17 in all. `live_delete_annotations`
 clears one annotator's work on one item, so it also has to be listed in
 `mcp.destructive` and called with `confirm: true`; Potato refuses it otherwise. Each
 publishes a real parameter schema, so `tools/list` is enough to call them —

@@ -61,7 +61,7 @@ pages beside it.
 
 ## Start from a working example
 
-There are 215 example projects. Copying one beats assembling a config from field
+There are 218 example projects. Copying one beats assembling a config from field
 lists, and every one of them is checked in CI.
 
 ```bash
@@ -157,13 +157,16 @@ them. Same answers as the shell, and
 
 `potato mcp connect --url … --token …` bridges a *running* task, if its config
 carries an `mcp` block listing tools in `mcp.tools` and an agent holds a token
-from `potato mcp issue-token`. The bridge adds 12 live tools named
+from `potato mcp issue-token`. The bridge adds 17 live tools named
 `live_get_status`, `live_get_progress`, `live_list_items`, `live_get_item`,
 `live_list_annotators`, `live_get_config`, `live_get_agreement`,
 `live_assign_items`, `live_export_data`, `live_submit_annotation`,
-`live_add_items` and `live_delete_annotations`. The last one destroys an
-annotator's work on an item, so it also has to be listed in `mcp.destructive`
-and called with `confirm: true`; Potato refuses it otherwise. Each
+`live_add_items` and `live_delete_annotations`, plus five that drive the
+labeling engine: `live_engine_status`, `live_engine_requests`,
+`live_engine_run`, `live_engine_certify` and `live_engine_certificate`.
+`live_delete_annotations` destroys an annotator's work on an item, so it also
+has to be listed in `mcp.destructive` and called with `confirm: true`; Potato
+refuses it otherwise. Each
 publishes a real parameter schema, so `tools/list` tells you what to pass.
 
 ```bash

@@ -413,7 +413,8 @@ config does not already declare. `radio`, `multiselect` and `select` only.
 suggestion; `icl_labeling` labels the corpus as the study runs.
 `modes-and-subsystems.md` routes to all three as features. The design question they raise is separate:
 **an annotator shown a suggestion agrees with it more often than one who is
-not.**
+not.** The labeling engine serves its calibration requests blind for that reason
+(`labeling-engine.md`).
 
 Prefilling is still worth doing — it is what makes correction passes cheap, and
 cheap is often the point. It does change what the numbers mean:

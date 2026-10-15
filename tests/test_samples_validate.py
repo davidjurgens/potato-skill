@@ -41,9 +41,7 @@ IGNORED_KEY_WARNING = re.compile(
 # worked-example.md is a byte mirror of Potato's full-study-skeleton config, so
 # a dead key in it can only be fixed upstream. Each entry must still fire: once
 # Potato drops the key, the exemption fails and has to go.
-MIRRORED_DEAD_KEYS = {
-    "worked-example.md": {"Unknown key training.feedback.enabled is ignored"},
-}
+MIRRORED_DEAD_KEYS: dict[str, set[str]] = {}
 
 #: Blocks that are deliberately wrong: the pack shows them as the mistake being
 #: described. Matched as whole words, not as substrings.

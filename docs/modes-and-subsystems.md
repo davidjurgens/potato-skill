@@ -106,7 +106,7 @@ agent traces are their own family, in `agent-traces.md`.
 | They said | Reach for |
 |---|---|
 | "suggest a label", "pre-fill and let them correct" | `ai_support` — see `model-assistance.md`, which is where the keys actually live |
-| "label everything with a model first" | `pre_annotation` for labels you already have; `icl_labeling` for a model that labels as the study runs |
+| "label everything with a model first", "we can only afford to label a sample", "how good are the model's labels" | `labeling_engine` with `assignment_strategy: engine`, which tests the machine labels against a blind human sample — see `labeling-engine.md`. `pre_annotation` and `icl_labeling` still work and print a note pointing at the engine |
 | "use the labels we already have as examples" | `icl_labeling` |
 | "show me where the model is unsure" | `active_learning`, `llm_confidence` assignment |
 | "does the judge agree with our humans" | `judge_alignment`, `judge_calibration` |

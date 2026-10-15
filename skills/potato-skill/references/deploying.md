@@ -49,9 +49,11 @@ The lifecycle is the same on every target, with two gaps: `potato deploy logs`
 does not work on `fly` (use `fly logs -a <app>`), and `aws-ecs` has logs but no
 SSH, because there is no server to log in to.
 
-The host runs the image `ghcr.io/davidjurgens/potato:latest`, not the Potato
-version you have installed. Pass `--image ghcr.io/davidjurgens/potato:2.10.3`,
-or whichever version you tested the study on, to keep the host on that version.
+The host runs the image for the Potato version you have installed: on 2.11.0,
+`up --dry-run` plans `docker.pull ghcr.io/davidjurgens/potato:2.11.0`. Up to
+2.10.3 the default was `:latest`, so two `up`s of one study could run different
+releases; on those versions pass `--image ghcr.io/davidjurgens/potato:2.10.3`,
+or whichever version you tested the study on. `--image` picks any other tag.
 
 ### The fifteen targets
 
@@ -84,6 +86,13 @@ Three extras pull in the provider SDKs:
 pip install 'potato-annotation[deploy]'            # every target not named below
 pip install 'potato-annotation[deploy-aws]'        # aws, aws-ec2, aws-ecs (boto3)
 pip install 'potato-annotation[deploy-openstack]'  # openstack (openstacksdk)
+```
+
+`check` blocks a target whose extra is missing, and names the one to install:
+
+```
+ERROR   [D021] the openstack target needs openstack, which is not installed
+        -> pip install 'potato-annotation[deploy-openstack]'
 ```
 
 ## Choosing a target
@@ -586,6 +595,15 @@ destroy is worse than a local server.
 
 ## What I have and have not verified
 
+Run on 2.11.0 (`eb284819`), from a checkout, with Docker stopped:
+
+- `up --dry-run` on the fourteen targets other than `tunnel`. The three whose plans
+  name the image, `local`, `render` and `railway`, plan the 2.11.0 image and
+  none plans `latest`. The image tag `2.11.0` is published on ghcr.io;
+- `check` on the eleven VM and container targets. `openstack`, whose SDK was not
+  installed, blocked on D021 with exit 2 and `ok: false` in `--json`; the
+  others passed.
+
 Run on 2.10.3, installed from PyPI, with `--image
 ghcr.io/davidjurgens/potato:2.10.3`:
 
@@ -620,8 +638,8 @@ Read from the code but not run: that a real `up` reaches the same refusal check
 as the dry run, before calling the provider (`cmd_up` checks it ahead of the
 `--dry-run` branch, after the credential check); that the legacy
 `huggingface_backup:` block maps to a sink with `restore_on_boot` off; and that
-every target but `tunnel` defaults to the `latest` image, which was run only on
-`local`. The prices are the planner's own tables, not a quote from anyone's
+every other target takes the same default image as the three dry runs that
+print it (they all read `DEFAULT_IMAGE` in `potato/deploy/image.py`). The prices are the planner's own tables, not a quote from anyone's
 billing page.
 
 Not verified here: an actual `up` against any cloud provider, and therefore the
