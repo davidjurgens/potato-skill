@@ -686,7 +686,7 @@ Model Context Protocol control surface, letting an agent query and control this 
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `allow_debug` | boolean | `False` | Permit the MCP surface on a debug server. Off by default: debug disables admin authentication server-wide, so the two together are a remote shell |
+| `allow_debug` | boolean | `False` | Permit the MCP surface on a debug server. Off by default: debug opens admin pages without a key to requests from this machine, and a tunnel or proxy on it that adds no forwarding header passes every caller through as local |
 | `audit_log` | string | `mcp_audit.jsonl` | File recording every MCP call and refusal, one JSON object per line |
 | `auth` | object |  | Where per-agent tokens live. `tokens_file` defaults to mcp_tokens.json under task_dir |
 | `destructive` | array |  | Second, separate opt-in for tools that discard work. A destructive tool must appear here and in mcp.tools, and callers must pass confirm: true |

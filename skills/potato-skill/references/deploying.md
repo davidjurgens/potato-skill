@@ -597,7 +597,7 @@ destroy is worse than a local server.
 
 ## What I have and have not verified
 
-Run on 2.11.1 (`cf0873a0`), from a checkout, with Docker stopped: `up
+Run on 2.11.1 (`cf0873a0`; the retagged `68880e8c` changes only wording), from a checkout, with Docker stopped: `up
 --dry-run` on `local`, `render` and `railway` plans the 2.11.1 image, which is
 published on ghcr.io; `check` with `debug: true` blocks on D002 with exit 2,
 quoted above; `check` on `openstack` without its SDK still blocks on D021.

@@ -17,4 +17,4 @@
 #
 # To move it: update the SHA, run `python scripts/generate_references.py`,
 # `pytest`, and commit the regenerated files together with this change.
-cf0873a09ee047c617a55b3214903796728d9175
+68880e8ccbdb2aeb1fc02d99f03a387785cc89c5
