@@ -347,8 +347,10 @@ whose ordering reaches nobody, and until this pair existed the two cases were
 indistinguishable in the log, in the admin report and in `--strict`.
 
 **`icl_labeling`** builds few-shot prompts out of annotations you already have.
-Its sub-keys are **three levels deep**, and the block is one of those `--strict`
-does not check, so a flat guess validates clean and does nothing:
+Its sub-keys are **three levels deep**. On 2.11.1 `--strict` refuses a name it
+does not know at any level, and a real sub-key at the wrong level too:
+`min_agreement_threshold` written directly under `icl_labeling` fails with
+`Unrecognized config key 'icl_labeling.min_agreement_threshold'`. The layout:
 
 ```yaml
 icl_labeling:
@@ -368,8 +370,8 @@ icl_labeling:
 
 It needs **two annotators who agree** on an item before that item can become an
 example. On a one-annotator study it runs on schedule and reports `Refreshed
-high-confidence examples: 0 examples across 0 schemas` forever, which is also
-what a misspelled key looks like. Prove the keys landed by reading
+high-confidence examples: 0 examples across 0 schemas` forever. Prove the keys
+landed by reading
 `example_refresh=` in the startup line back: it echoes
 `refresh_interval_seconds`, so if it still says 300 you are in the defaults.
 
