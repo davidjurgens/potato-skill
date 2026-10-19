@@ -293,9 +293,10 @@ warning rather than failing.
 ## The blocks past `ai_support`
 
 `ai_support` puts a button beside a scheme. Three other blocks put a model in the
-loop at other points, and all three are configured by keys the documentation does
-not carry — `get_key_doc` returns the block summary and nothing under it. What
-follows is what I set and what the server then said it had.
+loop at other points. On 2.11.1 Potato documents their sub-keys (25 under
+`active_learning`, 23 under `icl_labeling`, 2 under `arena`), and
+`config-keys-nested.md` lists them. What follows is what I set and what the
+server then said it had.
 
 **`active_learning`** reorders the queue by what a classifier finds hard, and
 needs `assignment_strategy: active_learning` to have any effect on assignment.
