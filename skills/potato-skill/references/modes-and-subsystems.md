@@ -347,3 +347,14 @@ Each entry records the annotation and display types a config uses, the features
 it switches on, and the command that runs it. Copying a config that is checked in
 CI beats assembling one from field lists — and if the examples are unavailable to
 you, the discovery method in `SKILL.md` is the fallback.
+
+When nothing built in fits, a plugin can add an annotation or display type. A
+plugin is an installed Python package with a `potato.plugins` entry point, and
+a config turns it on by name, as in `plugins: [counter]`. `potato plugins` lists what is installed, and `potato plugins counter` lists the
+types one provides. Potato's `examples/plugins/counter/` installs with
+`pip install -e examples/plugins/counter/plugin`, from the `plugin/` folder and
+not the example root. Its `counter` widget then rendered, saved `3` under the
+label `count`, and exported as the column `people.count`, like a built-in type.
+Naming a plugin that is not installed fails validation and lists the installed
+ones. A plugin is ordinary Python running inside the server, so install one
+only from a source you would trust with the data.

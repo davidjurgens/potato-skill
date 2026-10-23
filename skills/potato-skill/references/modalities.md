@@ -32,6 +32,7 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | Several agents talking | `multi_agent_discussion` | `failure_attribution`, ratings | Span target; see `agent-traces.md` |
 | Point clouds, LiDAR, 3D scans | the cloud path, **unlabelled** | `spatial_annotation` | It reads the path off the page, not the item; `lod` defaults on, which changes what `max_points` does |
 | Robot episodes, teleop logs | *(none needed)* | `episode_annotation` | Four layers; pick the ones you need |
+| CT or MRI volumes, NIfTI or DICOM | *(none needed)* | `volume_annotation` | The path is relative to `media_directory`; take masks from the `volume_nifti` export, not the stored JSON |
 
 ## Where the widget looks for its data
 
@@ -456,6 +457,52 @@ time-series lanes. Its four `layers` (`phases`, `outcome`, `reward`,
 want rather than asking annotators for all four on every episode.
 `series_shown` picks which sensor lanes to draw; omit it and you get all of them,
 which on a real robot log is unreadable.
+
+## Medical volumes (CT and MRI)
+
+```yaml
+media_directory: media
+annotation_schemes:
+  - annotation_type: volume_annotation
+    name: ct_segmentation
+    description: Outline the lesion and the bone ring
+    labels:
+      - {name: Lesion, color: "#e6553a", key_value: "1"}
+      - {name: Bone, color: "#3a8ee6", key_value: "2"}
+    source_field: volume
+    window_presets:
+      - {name: Soft tissue, center: 40, width: 400}
+      - {name: Bone, center: 400, width: 1800}
+```
+
+`name`, `description` and `labels` are required. Each item names its volume in
+the `source_field` field, as a path relative to `media_directory`:
+`{"id": "case1", "volume": "case1.nii.gz", "text": "Case 1"}`. A `.nii` or
+`.nii.gz` file loads, and so does a 4D NIfTI holding one volume (read as 3D) and
+a directory of DICOM slices, with or without the `.dcm` suffix. An absolute
+path or a URL is not fetched (404), and a single `.dcm` file, a `.mha` file or
+a corrupt archive gets a 415 when the page asks for the volume. Open the first
+item of each kind before the study starts.
+
+A NIfTI file has no modality header, so it gets one "Auto" window unless the scheme
+sets `window_presets`. A DICOM series adds "From file" and built-in presets
+(soft tissue, lung and others).
+
+**Take masks from the `volume_nifti` export.** The answer is stored as one
+`_data` label holding a JSON string: run-length-encoded masks per label and
+slice, plus any boxes. The `csv` export copies that string into a
+`ct_segmentation._data` column. Its voxel indices are in the viewer's
+orientation, not the file's. `volume_nifti` does the conversion. It writes
+`<user>/<item>__<scheme>.nii.gz` for every saved item, a uint8 mask with the
+source volume's shape and affine, and `labels__<scheme>.json` mapping mask
+values to label names (`{"0": "background", "1": "Lesion", "2": "Bone"}`). A
+brush stroke painted on slice 24 came back on slice 24 at the voxels it covered.
+`dicom_seg` writes a DICOM Segmentation object per item, for DICOM-sourced items
+only; a NIfTI item is skipped with a warning naming `volume_nifti`.
+
+**Leave `serve_raw_medical_files` off.** With it off, `/media/` refuses to hand
+out NIfTI and DICOM files (403) and the viewer still works. With it on, the raw
+files are served to anyone who has the URL, signed in or not.
 
 ## Verifying a non-text task
 

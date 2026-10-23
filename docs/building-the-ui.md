@@ -757,6 +757,33 @@ annotator scrolls is a better one, and you can measure it. Screenshot
 `full_page=True` and read the page height against a 900px viewport. Anything
 past two screens is worth restructuring.
 
+## Labelling many items on one page: `grid_view`
+
+```yaml
+annotation_schemes:
+  - annotation_type: radio
+    name: sentiment
+    description: What is the sentiment of this headline?
+    labels: [positive, neutral, negative]
+grid_view:
+  enabled: true
+  scheme: sentiment     # a top-level radio, multiselect or triage scheme
+  page_size: 12
+```
+
+This serves a second page at `/annotate/grid` that shows `page_size` items as
+tiles. The annotator selects tiles (A selects them all) and presses a label's
+number. **Save and load more** stores every labelled tile and brings up the
+next unanswered items. Twelve headlines labelled that way landed in
+`user_state.json` exactly as answers from the normal page do, one
+`sentiment` label per item. The grid labels its one scheme. Validation refuses
+any other kind (`grid_view.scheme 'why' is a text. The grid labels many items
+with one click, so it takes a radio, multiselect or triage scheme.`) and any
+name that is not a top-level scheme.
+
+Reach for it when each item takes a second to judge, which is where a page
+load per item costs more than the judgment.
+
 ## Page-level appearance
 
 | Key | Effect |
@@ -779,7 +806,7 @@ removes that box and with it the only way back.
 | `horizontal_key_bindings` | Lay shortcut hints out horizontally |
 | `highlight_linebreaks` | Make line breaks visible in item text |
 | `keyword_highlights_file` | Highlight given keywords in the item |
-| `ui`, `ui_config` | Interface toggles |
+| `ui`, `ui_config` | Interface toggles, including `ui.theme` below |
 | `ui_language` | Interface language code |
 
 Two of those carry a contract the key name does not:
@@ -815,6 +842,13 @@ way to check that the field you care about was one of them.
 **`list_as_text` takes three sub-keys**: `text_list_prefix_type` (`alphabet`,
 `number`, `bullet` or `none`), `horizontal`, and `alternating_shading`. A bare
 `true` turns it on with the defaults.
+
+**`ui.theme` takes `auto`, `light` or `dark`.** `auto`, the default, follows
+the browser's colour-scheme setting and puts a light/dark toggle in the
+annotation page's navbar. `light` or `dark` gives every annotator that theme and
+removes the toggle. Anything else fails validation with `ui.theme must be one
+of auto, light, dark`. Under `auto` some annotators see each theme, so a
+`base_css` or `task_layout` needs checking in both.
 
 Reach for `task_layout` last. Hand-written layout HTML stops tracking changes
 to the schema generators, and most of what people want it for is

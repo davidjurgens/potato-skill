@@ -511,6 +511,31 @@ attribute, and the same scheme pointed at an `mt_output` field validates. Potato
 schemes. Ask about anti-copying before you choose span annotation, because the
 two cannot be combined.
 
+## Authenticity paradata
+
+```yaml
+authenticity:
+  enabled: true
+  disclose_to_annotators: true
+export_include_authenticity: true
+```
+
+This records, per item, whether the annotator left the page, copied the item,
+pasted text from elsewhere, or drove the page with automation. It never
+records what was copied or pasted. With `disclose_to_annotators` the page says
+so (*This task records when you leave this page and whether you copy the item or
+paste text from elsewhere — not what you copy or paste*).
+`export_include_authenticity` makes the CSV export write `authenticity.csv`,
+one row per annotator and item with the counts, then the item's flags and their
+severity. Potato's own documentation says to treat a flag as a reason to read
+the item, not a reason to reject the work.
+
+**A browser you drive sets the `automation` flag.** One item answered through
+Playwright came out `suspect,automation`, because the headless browser sets
+`navigator.webdriver`. Test with a throwaway username and delete its
+`annotation_output/` directory before the study opens, or the test answers sit
+in the flagged rows.
+
 ## Choosing among them
 
 Add in this order, and stop when the risk is covered. Each one costs annotator

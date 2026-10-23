@@ -89,10 +89,6 @@ PROSE_IDENTIFIERS = {
     # documented only in their own module docstrings
     "headers",
 
-    # `cell_width` is a pairwise_display option and `auto` is its default;
-    # pairwise_display.py:28 and 54. `auto` is a bare word rather than a key,
-    # so nothing in the registries claims it
-    "auto",
     # the id `bws_config` gives a generated tuple, measured off a running
     # server. bws_tuple_generator.py's own docstring says `bws_tuple_001`, one
     # digit short of what it emits, so the code is the only source for this
@@ -533,15 +529,19 @@ class TestEveryIdentifierInProseIsReal:
         vocab |= {f"live_{name}" for name in live_tools}
         vocab |= _generator_read_keys()
         vocab |= _experiment_read_keys()
-        # Documented sub-keys of the blocks `experiments.md` configures, as
-        # their last path segment: it names `max_per_cell` and
-        # `group_by_condition` the way the other files name top-level keys.
+        # Documented sub-keys of the blocks `experiments.md` and the grid
+        # section configure, as their last path segment: the prose names
+        # `max_per_cell` and `page_size` the way it names top-level keys.
         # Only these blocks, because every block's leaves together include
         # `type`, `id` and `none`, which would then resolve anywhere.
         from potato.server_utils.config_key_docs import iter_key_docs
         vocab |= {path.rsplit(".", 1)[-1] for path, _ in iter_key_docs()
                   if path.split(".", 1)[0] in (
-                      "conditions", "trial_timing", "batch_assignment")}
+                      "conditions", "trial_timing", "batch_assignment",
+                      "grid_view")}
+        # `ui.theme`'s values, from the tuple its validator checks against.
+        from potato.server_utils.theme import THEMES
+        vocab |= set(THEMES)
         # Every field any registered scheme declares. The modality references
         # name `steps_key`, `video_key`, `audio_key` and a dozen more because
         # each family has its own convention for "where is my data" -- which is
