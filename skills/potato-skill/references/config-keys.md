@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 164 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 174 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -25,6 +25,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `analytics` | object |  |  | Cost and latency analytics over ingested traces: optional per-model pricing, and the thresholds that raise a regression alert |
 | `annotation_telemetry` | object |  |  | The drawing-process analogue of keystroke_logging: content-blind telemetry on geometry schemas -- when someone draws, zooms, revises and accepts AI suggestions, never what or where -- and the rubber-stamping screening built on it |
 | `annotator_dashboard` | boolean|object |  | `False` | Read-only progress page at /progress. Shows project totals and the requesting annotator's own stats, never another annotator's identity. A bare `true` is accepted as shorthand for `{enabled: true}` |
+| `authenticity` | object |  |  | Page-level, content-blind authenticity paradata on every task type: leaving the page, copying the item, pasting text that did not come from the page, a narrowed window, and automation signals. Counts and durations only -- copied and pasted text never leaves the browser |
 | `boundary_probing` | object |  |  | Boundary Lab. After a label is chosen, shows counterfactual edits of the item and asks whether they flip it -- which maps the decision boundary and exports as a contrast set |
 | `bws_config` | object |  |  | Best-worst scaling. Builds the tuples annotators compare and scores the results into a ranking. Its presence is what enables BWS |
 | `category_assignment` | object |  |  | Route items to annotators by the item's category, optionally gated on a qualification the annotator earned in training |
@@ -34,12 +35,15 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `embeddings` | object |  |  | The project-wide embedder shared by the corpus map, diversity ordering and duplicate detection. `backend` (auto by default), plus `model`, `source_field`, `cache_dir`, `media_root`; anything else is passed through to the backend. A custom backend needs `entrypoint` ('module.path:callable') or `endpoint` (an HTTP URL) |
 | `event_template` | object |  |  | Cross-document event registry: admin-defined slots that annotators fill with evidence drawn from many documents |
 | `ibws_config` | object |  |  | Iterative best-worst scaling: re-generates tuples each round, concentrating comparisons where the ranking is still uncertain |
+| `interaction_tracking` | object |  |  | The general behavioural tracker (clicks, focus, scroll, shortcut keys) that feeds the admin Behavioral tab. On by default |
 | `keystroke_logging` | object |  |  | Content-blind typing dynamics on free-text fields -- when someone pauses, revises or pastes, never which keys -- and the composed/transcribed/pasted detection built on them |
 | `mace` | object |  |  | MACE competence estimation: infers per-annotator reliability and a predicted label per item from the disagreement pattern alone |
+| `plugins` | array |  |  | Installed plugins to load, by name. A plugin adds annotation or display types; `potato plugins` lists the installed ones. Plugins run as Python inside the server, so only listed ones load |
 | `pocket` | object |  |  | Pocket Mode: the phone-sized annotation surface at /pocket, served as a PWA with an offline queue |
 | `psychometrics` | object |  |  | Live IRT. Fits item difficulty and annotator ability as labels arrive, so labels carry error bars and confident items can stop early |
 | `rooms` | object |  |  | Multiplayer rooms at /rooms: live norming sessions, adjudication huddles and shadowing over a shared event log |
 | `thinkaloud` | object |  |  | Think-aloud mode: local speech-to-text over spoken rationales, plus rule-based detection of spoken label phrases |
+| `trial_timing` | object |  |  | Run each annotation item as a timed trial: fixation, stimulus duration, response deadline and keys mapped to labels, with the reaction time measured from the frame the stimulus appeared. For frame-critical or auditory paradigms use a `type: jspsych` phase |
 | `truth_serum` | object |  |  | Surprisingly-popular scoring. Each annotator also predicts how many others will pick the same label, and an answer that beats its own predicted popularity wins over the majority |
 
 ## Agent
@@ -81,7 +85,9 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `auto_redirect_on_completion` | boolean |  | `False` | Send annotators to the crowd platform's completion URL when they finish, instead of leaving them on the done page |
 | `export_annotation_format` | array|string |  | `[]` | Formats the periodic auto-export writes, as a list (a bare string is accepted). Empty means no auto-export |
 | `export_include_annotation_changes` | boolean |  | `False` | Write annotation_changes.csv, the timestamped record of every answer revision. Off by default: it is far larger than the annotations and carries interaction detail not every study wants to distribute |
+| `export_include_authenticity` | boolean |  | `False` | Write authenticity.csv, the per-item page-leave, copy, paste and automation paradata with its verdict. Off by default for the same reason |
 | `export_include_phase_data` | boolean |  | `False` | Include consent, instruction and survey responses in exports. Off by default: survey answers are usually where the PII is |
+| `export_include_typing_dynamics` | boolean |  | `False` | Write typing_dynamics.csv, the per-field keystroke features and writing-process verdicts. Off by default: they describe identifiable annotators |
 
 ## Assignment & Sessions
 
@@ -91,6 +97,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `assignment_strategy` | string |  | `fixed_order` | How items are handed out: random, fixed_order, active_learning, max_diversity, least_annotated, category_based, diversity_clustering, batch, priority, model_review, psychometric or engine (the labeling engine's human requests). `llm_confidence` is accepted and assigns at random -- it is not implemented |
 | `automatic_assignment` | object |  |  | Assign items to annotators automatically as they arrive |
 | `batch_assignment` | object |  |  | Split items into named groups and assign whole batches |
+| `conditions` | object |  |  | Between-subjects conditions. Each participant is assigned one cell (one level of every factor) on arrival and keeps it. Page `show_when` rules and question `display_logic` can test `condition.<factor>` |
 | `instance_reclaim` | object |  |  | Take assignments back from annotators who abandoned them so the items can go out again. `enabled` (false) and `timeout_hours` (24), plus optional `stale`, `manual`, `quality_control` and `prolific` sections each carrying `preserve_completed_annotations` |
 | `max_annotations_per_item` | integer |  | `-1` | Cap on how many annotators may label one item. -1 means unlimited |
 | `max_annotations_per_user` | integer |  | `-1` | Cap on how many dataset items one annotator may receive. Left unset, the cap is the number of items loaded, so every annotator is offered the whole corpus; -1 is explicit unlimited, which is what a dynamic data source needs for items added after boot to be assignable. Injected attention checks and gold items do not count against it |
@@ -167,6 +174,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `debug_phase` | string |  |  | Jump straight to a workflow phase, for UI debugging |
 | `server_debug` | boolean |  | `False` | Backend debug logging. Note that only the phase pages (consent, instructions, surveys) read this key; the annotation page asks the logging module, which is driven by debug_log/verbose/debug |
 | `ui_debug` | boolean |  | `False` | Print browser-side debug logging to the console |
+| `validation` | object |  |  | Settings read by `potato validate`, not by the running server |
 | `verbose` | boolean |  | `False` | Raise the log level. --verbose writes this key |
 | `very_verbose` | boolean |  | `False` | Raise the log level further; equivalent to debug for logging purposes, without debug's effect on authentication. --veryVerbose writes this key |
 
@@ -189,6 +197,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `audio_annotation` | object |  |  | Server-side waveform service backing audio_annotation schemes. Only read when the task actually has one |
+| `serve_raw_medical_files` | boolean |  | `False` | Let /media/ hand out DICOM and NIfTI files as-is. Off by default: their headers carry patient information that volume_annotation's display_tags filter withholds |
 
 ## Publishing & Export
 
@@ -250,6 +259,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 |-----|------|----------|---------|-------------|
 | `base_css` | string |  |  | Extra stylesheet to load |
 | `format_handling` | object |  |  | How rich text and markup in item fields are rendered |
+| `grid_view` | object |  |  | A page at /annotate/grid that labels many items at once for one radio, multiselect or triage scheme: select tiles, press a label |
 | `hide_navbar` | boolean |  |  | Hide the top navigation bar |
 | `horizontal_key_bindings` | boolean |  |  | Lay keyboard shortcut hints out horizontally |
 | `instance_display` | object |  |  | How each item is rendered: one entry per field, with a type drawn from the display registry (text, image, audio, video, ...) |
@@ -257,7 +267,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `layout` | object |  |  | How the annotation questions are arranged on the page: a grid, collapsible groups, an explicit order, and responsive breakpoints. Without it every scheme stacks full-width in config order |
 | `list_as_text` | object |  |  | How a list-valued field is laid out. Sub-keys: text_list_prefix_type (alphabet, number, bullet or none), horizontal, alternating_shading. `true` turns it on with the defaults |
 | `task_layout` | string |  |  | Custom HTML for the annotation form area |
-| `ui` | object |  |  | Interface toggles |
+| `ui` | object |  |  | Interface toggles. `ui.theme` (auto \| light \| dark, default auto) sets the annotator pages' theme: auto follows the browser and shows a toggle; light or dark gives every annotator that theme |
 | `ui_config` | object |  |  | Additional interface settings |
 | `ui_language` | string |  | `en` | Interface language code |
 

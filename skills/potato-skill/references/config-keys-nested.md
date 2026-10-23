@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 503 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 551 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -91,6 +91,9 @@ Model-backed label suggestions shown alongside each item
 | `cache_config` | object |  | Disk cache and prefetch for model replies, so an annotator does not wait for a generation the study has already paid for |
 | `enabled` | boolean | `False` | Turn AI assistance on. Without an endpoint that starts, the boot log says so and no assistant appears |
 | `endpoint_type` | string |  | Which backend to talk to, required when ai_support is enabled: openai, openai_vision, anthropic, anthropic_vision, gemini, huggingface, ollama, ollama_vision, openrouter (or open_router), vllm, yolo. The decision models laya and systemone are refused here (they cannot write text; use them in solo_mode.labeling_models or as a labeling_engine decision source), and so are sam and sam3 |
+| `holdout` | object |  | A randomized no-assistance comparison group: a share of (annotator, item) pairs see no AI assistance at all, so /admin can report whether the assistance changed the answers |
+| `holdout.fraction` | number | `0` | Share of (annotator, item) pairs that get no AI assistance, from 0 to 1 |
+| `holdout.salt` | string | `""` | Changes which pairs are held out. Keep it fixed for the life of a study |
 | `image_key` | string |  | Item field holding the image, when the item also carries text. Without it a vision endpoint only ever sees `item_properties.text_key` |
 
 ## `analytics`
@@ -185,10 +188,25 @@ Identity provider settings for SSO and database-backed accounts
 | `allowed_org` | string |  | Organization permitted to sign in through SSO |
 | `auto_register` | boolean |  | Create an account the first time an SSO identity signs in |
 | `database_url` | string |  | SQLAlchemy URL for the database backend; falls back to the POTATO_DB_CONNECTION environment variable |
-| `method` | string | `in_memory` | Which backend holds accounts: in_memory (the default), database, oauth or clerk |
+| `method` | string | `in_memory` | Which backend holds accounts: in_memory (the default), database, oauth, saml or clerk |
 | `providers` | object |  | OAuth provider settings, keyed by provider name |
+| `saml` | object |  | SAML 2.0 sign-in through an institution's identity provider (method: saml). Keys: display_name; one of idp_metadata_url (https), idp_metadata_file or idp {entity_id, sso_url, x509cert, slo_url}; sp_base_url, sp_entity_id, sp_cert_file + sp_key_file, name_id_format; user_identity_attribute (default: the NameID, refused when transient); required_attribute {name, values}; claim_attributes; want_assertions_encrypted; single_logout (default true: signing out also ends the IdP session when the IdP has a logout service) |
 | `user_config_path` | string |  | JSONL file of registered accounts, one {username, password} object per line, with the password stored as salt$hash. Under the default in_memory backend this is the ONLY thing that makes accounts survive a restart: unset, registrations live in memory and every annotator loses their login when the server stops, while their annotations remain in output_annotation_dir. Set it on anything an annotator will come back to |
 | `user_identity_field` | string |  | Which claim from the identity provider becomes the Potato username |
+
+## `authenticity`
+
+Page-level, content-blind authenticity paradata on every task type: leaving the page, copying the item, pasting text that did not come from the page, a narrowed window, and automation signals. Counts and durations only -- copied and pasted text never leaves the browser
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `detection` | object |  | Server-side flags: `enabled` and `thresholds` (keys such as `away_from_task.min_events`, `copy_then_away.min_away_ms`). Thresholds are never sent to the browser |
+| `disclose_to_annotators` | boolean | `True` | Show the recording notice |
+| `disclosure_text` | string |  | Replace the default notice with your own wording |
+| `enabled` | boolean | `False` | Record authenticity paradata |
+| `flush_interval_ms` | integer | `10000` | How often the browser posts the current item's running totals |
+| `min_away_ms` | integer | `1000` | Absences from the page shorter than this are not counted |
+| `track_pointer` | boolean | `True` | Record pointer movement totals and clicks that land with no movement in between. false removes the pointermove listener |
 
 ## `automation`
 
@@ -209,6 +227,14 @@ Mirror collected data off the host and restore it into an empty task at boot. `s
 | `restore_on_boot` | boolean | `True` | When the output directory is empty at start, download the latest backup into it before any annotator state loads. Never overwrites local data |
 | `schedule_minutes` | number | `5` | Minutes between backup cycles |
 | `sinks` | array |  | Where to send the backup. Each entry has a `type` of `huggingface` or `s3`; with several, restore reads the first that holds data |
+
+## `batch_assignment`
+
+Split items into named groups and assign whole batches
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `group_by_condition` | string |  | A `conditions` factor whose levels name the auto-assigned groups. Each participant gets the group of their assigned level, so each condition can carry its own items |
 
 ## `boundary_probing`
 
@@ -295,6 +321,18 @@ The shared label set a scheme opts into with a scheme-level `codebook: true`, ed
 | `distiller` | object |  | What the distilled, prompt-facing view of the codebook contains: include, include_types, include_doc_sections, scope, procedure, max_chars |
 | `enabled` | boolean |  | Force the codebook on or off. Left unset it turns itself on when a scheme sets `codebook: true`, or under qda_mode/solo_mode |
 | `mode` | string |  | Who may change codes: fixed, extensible (annotators may add) or open (annotators may add and edit) |
+
+## `conditions`
+
+Between-subjects conditions. Each participant is assigned one cell (one level of every factor) on arrival and keeps it. Page `show_when` rules and question `display_logic` can test `condition.<factor>`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `assignment` | string | `balanced` | How a cell is chosen: `balanced` (fewest participants, by weight), `random` (seeded per participant) or `round_robin` (arrival order) |
+| `balance_on` | string | `assigned` | What `balanced` counts: everyone `assigned`, or only participants who `completed` without being screened out, so dropouts are replaced |
+| `cells` | array |  | Explicit cells (a subset of the full factorial), each a mapping of factor to level with an optional `weight` |
+| `factors` | object |  | Factor name to list of levels, e.g. `{feedback: [none, immediate]}`. Several factors form a full factorial design unless `cells` lists a subset |
+| `max_per_cell` | integer |  | Skip a cell once it has this many participants. When every cell is full, the least-filled one is still assigned and a warning is logged |
 
 ## `corpus_map`
 
@@ -424,6 +462,16 @@ Items with known labels, used to score annotators
 | `items_file` | string |  | File holding the gold items |
 | `mode` | string |  | How gold items are surfaced |
 
+## `grid_view`
+
+A page at /annotate/grid that labels many items at once for one radio, multiselect or triage scheme: select tiles, press a label
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | boolean | `False` | Serve the grid page |
+| `page_size` | integer | `24` | Items per grid page, from the annotator's own assignment |
+| `scheme` | string |  | The radio, multiselect or triage scheme the grid labels. Other schemes are answered on the normal page |
+
 ## `ibws_config`
 
 Iterative best-worst scaling: re-generates tuples each round, concentrating comparisons where the ranking is still uncertain
@@ -465,6 +513,16 @@ In-context-learning labeler that builds few-shot prompts from high-confidence an
 | `verification.mix_with_regular_assignments` | boolean | `True` | Hand verification items out through the normal assignment queue, rather than only on request |
 | `verification.sample_rate` | number | `0.2` | Share of model-labeled instances sent for checking |
 | `verification.selection_strategy` | string | `low_confidence` | Which of them to check: low_confidence or random |
+
+## `interaction_tracking`
+
+The general behavioural tracker (clicks, focus, scroll, shortcut keys) that feeds the admin Behavioral tab. On by default
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `disclose_to_annotators` | boolean | `False` | Show a notice that page interaction is recorded |
+| `disclosure_text` | string |  | Replace the default notice with your own wording |
+| `enabled` | boolean | `True` | Record the click, focus, scroll and key stream. When false, item loads, saves, navigation and an activity mark with no target or detail are still recorded, so time per item (Throughput tab, adjudication, dashboard) keeps working. AI-assistant usage and the annotation change trail are recorded either way |
 
 ## `item_properties`
 
@@ -889,6 +947,18 @@ Accept agent traces posted to /api/traces/*
 | `enabled` | boolean | `False` | Register the trace webhook endpoints |
 | `notify_annotators` | boolean |  | Push newly ingested traces to connected annotators |
 | `sources` | array |  | Upstream trace sources to poll |
+| `writeback` | object |  | Send each ingested trace's merged answers back to Langfuse (as scores) or LangSmith (as feedback), with the annotator count and agreement |
+| `writeback.langfuse` | object |  | Langfuse host and the environment variables holding its keys. The host and keys default to a configured langfuse source's |
+| `writeback.langfuse.host` | string | `https://cloud.langfuse.com` | Langfuse base URL |
+| `writeback.langfuse.public_key_env` | string | `LANGFUSE_PUBLIC_KEY` | Environment variable holding the Langfuse public key |
+| `writeback.langfuse.score_configs` | boolean | `False` | Attach a Langfuse score config to each categorical or numeric score, creating it from the scheme's labels if missing. Multiselect and text schemes never get one |
+| `writeback.langfuse.secret_key_env` | string | `LANGFUSE_SECRET_KEY` | Environment variable holding the Langfuse secret key |
+| `writeback.langsmith` | object |  | LangSmith API URL and the environment variable holding its key |
+| `writeback.langsmith.api_key_env` | string | `LANGSMITH_API_KEY` | Environment variable holding the LangSmith API key |
+| `writeback.langsmith.api_url` | string | `https://api.smith.langchain.com` | LangSmith API base URL |
+| `writeback.min_annotators` | integer |  | Annotators a trace needs before it is sent. Defaults to the study's per-item cap, or 2 when there is none |
+| `writeback.score_prefix` | string | `potato` | Scores are named <score_prefix>.<scheme name> |
+| `writeback.trigger` | string | `fully_annotated` | When to send: fully_annotated (once min_annotators have answered) or adjudicated (only after an adjudication decision). An adjudication is sent in either mode |
 
 ## `triage`
 
@@ -903,6 +973,23 @@ Rank items by a priority signal so failures, thumbs-down feedback and low scores
 | `rules` | array |  | Rules of `when` (the shared condition grammar) plus priority and an optional badge; the highest-priority match wins. Leaving both this and signal_field unset installs built-in rules for errored agents, thumbs-down feedback and scores below 0.5 |
 | `show_badge` | boolean | `True` | Show the matching rule's badge on the item |
 | `signal_field` | string |  | Item field read as a numeric priority when no rule matches |
+
+## `trial_timing`
+
+Run each annotation item as a timed trial: fixation, stimulus duration, response deadline and keys mapped to labels, with the reaction time measured from the frame the stimulus appeared. For frame-critical or auditory paradigms use a `type: jspsych` phase
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `disable_back_navigation` | boolean | `True` | Hide Previous during a timed task, so no stimulus is shown twice |
+| `enabled` | boolean | `False` | Turn timed trials on |
+| `fixation_ms` | integer | `0` | Fixation cross before each stimulus, in ms. 0 for none |
+| `fixation_symbol` | string | `+` | What the fixation shows |
+| `item_overrides` | object |  | Per-item timing read from item fields, e.g. `{stimulus_duration_ms: soa_ms}` |
+| `iti_ms` | integer | `0` | Minimum blank interval between one response and the next fixation, in ms. Page loading counts toward it |
+| `response` | object |  | `schema` (a radio or likert scheme), `keys` (key to label, e.g. `{f: word, j: nonword}`) and `allow_mouse` |
+| `show_response_options` | boolean |  | Show the scheme's options during the trial. Defaults to true only when `response.allow_mouse` is on |
+| `stimulus_duration_ms` | integer |  | Hide the stimulus after this many ms. Omit to keep it up until the response |
+| `trial_duration_ms` | integer |  | Response deadline in ms from onset. A trial that runs out is recorded as a timeout and the item advances with no answer. Omit for no deadline |
 
 ## `truth_serum`
 
@@ -921,6 +1008,7 @@ Interface language code
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `dark_mode` | string | `Dark mode` | Label of the light/dark toggle on annotator pages |
 | `iaa_drift_approx` | string |  | Marks a codebook revision whose date was inferred rather than recorded |
 | `iaa_drift_baseline` | string |  | Row label for the whole-project agreement figure |
 | `iaa_drift_below_baseline` | string |  | Phrase following the percentage in the re-calibration prompt |
@@ -933,6 +1021,7 @@ Interface language code
 | `iaa_drift_untimed` | string |  | Note about items with no timestamp, which cannot be placed on the timeline |
 | `image_to_annotate` | string | `Image to Annotate:` | Heading above an item whose text field embeds an image |
 | `jump_unannotated_label` | string | `Unlabeled` | Caption between the header's jump-to-unlabeled buttons (shown at 1200px and wider) |
+| `sign_in_opens_new_tab` | string | `Sign-in opens in a new tab.` | Note under the single sign-on buttons when the login page is shown inside another site's frame, where sign-in opens in a new tab |
 
 ## `user_config`
 
@@ -942,6 +1031,14 @@ Who may log in
 |---|---|---|---|
 | `allow_all_users` | boolean | `True` | Let anyone register and annotate, rather than only listed users |
 | `users` | array |  | Allowlist of usernames, used when allow_all_users is false |
+
+## `validation`
+
+Settings read by `potato validate`, not by the running server
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `acknowledge` | array | `[]` | Warnings this study expects, so `validate --strict` stops failing on them. Each entry is a piece of a warning's text, at least 12 characters long; a warning containing it is listed as acknowledged and not counted. An entry that matches no warning is itself reported, so an acknowledgement that has gone stale does not hide the next problem. The server still logs these warnings at boot |
 
 ## `webhooks`
 
@@ -971,6 +1068,7 @@ Post task events to external URLs as they happen
 - `mturk.*`
 - `partial_loading.*`
 - `per_annotator_quota.*`
+- `plugins.*`
 - `prestudy.*`
 - `publish.*`
 - `quality_control.*`

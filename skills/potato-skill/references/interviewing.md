@@ -102,7 +102,7 @@ two · three (recommended if they want to report agreement) · more. Sets
 most people to want none of it.
 
 **A task needs only the annotation itself.** Most do not declare a `phases` block
-at all — 7 of the example projects Potato ships use one, and none of them has a
+at all — 8 of the example projects Potato ships use one, and none of them has a
 `consent` or `prestudy` phase. This is a multi-select that is allowed to come
 back empty, not a menu to talk someone through.
 
@@ -175,7 +175,7 @@ have missed something.
 | The corpus is large, or keeps growing | Material | `partial_loading`, `data_sources`, `watch_data_directory` |
 | Score whole conversations, or per participant | Unit | `sessions` with `session_level`, `cases` |
 | Publish or hand off the dataset | Output | `publish`, `dataset_metadata` |
-| Pay annotators on Prolific or MTurk | Output | `crowdsourcing` |
+| Pay annotators on Prolific, SONA or Connect | Output | `crowdsourcing` |
 
 Nothing here is free. Every one of these is a block that turns on with
 `enabled: true`, validates clean, and can then load nothing at all. Whatever they

@@ -2,12 +2,12 @@
 
 # Annotation types
 
-Potato has 61 annotation types. Set one as `annotation_type` on each entry in `annotation_schemes`.
+Potato has 63 annotation types. Set one as `annotation_type` on each entry in `annotation_schemes`.
 
 Every type also accepts these, regardless of which one you pick:
 
 - Required: `annotation_type`, `description`, `name`
-- Optional: `display_logic`, `humanize_labels`, `label_requirement`, `layout`, `required`, `session_level`, `turn_binding`, `turn_label`, `turn_level`
+- Optional: `ai_support`, `display_logic`, `humanize_labels`, `keybinding_strategy`, `label_requirement`, `layout`, `required`, `session_level`, `turn_binding`, `turn_label`, `turn_level`
 
 The examples below are lifted from configs in `examples/` that use each type, so they are known to run.
 
@@ -18,6 +18,7 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`audio_annotation`](#audio-annotation) — Audio segmentation and annotation with waveform visualization
 - [`bws`](#bws) — Best-Worst Scaling: select the best and worst item from a set
 - [`card_sort`](#card-sort) — Drag-and-drop card sorting into predefined or user-created groups
+- [`cloze`](#cloze) — Fill-in-the-blank passage, scored against an answer key kept on the server
 - [`code_review`](#code-review) — GitHub PR-style code review with inline comments and file ratings
 - [`confidence`](#confidence) — Confidence rating meta-annotation for any primary annotation
 - [`conjoint`](#conjoint) — Discrete choice conjoint analysis with side-by-side profile comparison
@@ -74,6 +75,7 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`video`](#video) — Video player display
 - [`video_annotation`](#video-annotation) — Video annotation with temporal segments, frame classification, keyframes, and object tracking
 - [`voice_interaction`](#voice-interaction) — Voice/full-duplex turn-taking: dual-track timeline + barge-in/overlap classification
+- [`volume_annotation`](#volume-annotation) — 3D medical volumes (DICOM series, NIfTI): three linked slice views, window/level, brush masks with interpolation, boxes and polygons; NIfTI and DICOM SEG export
 
 ## agent_interaction_graph
 
@@ -203,6 +205,28 @@ Drag-and-drop card sorting into predefined or user-created groups
 ```
 
 From `examples/classification/card-sort/config.yaml`.
+
+## cloze
+
+Fill-in-the-blank passage, scored against an answer key kept on the server
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `answer_field`, `input_width`, `label_requirement`, `scoring`, `source_field`, `text`
+
+```yaml
+- annotation_type: cloze
+  name: completion
+  description: Fill in each blank with one word.
+  source_field: passage
+  answer_field: answers
+  scoring: case_insensitive
+  input_width: 10
+  label_requirement:
+    required: true
+```
+
+From `examples/classification/cloze-test/config.yaml`.
 
 ## code_review
 
@@ -738,7 +762,7 @@ Image annotation with bounding boxes, polygons, freeform drawing, and landmarks
 
 **Required:** `labels`, `tools`
 
-**Optional:** `ai_support`, `brush_size`, `carry_over`, `eraser_size`, `fill_max_pixels`, `fill_mode`, `fill_tolerance`, `freeform_brush_size`, `freeform_simplify`, `instance_masks`, `keybinding_profile`, `mask_mode`, `mask_opacity`, `max_annotations`, `min_annotations`, `pan_enabled`, `segmentation`, `skeletons`, `source_field`, `text_prompt`, `tiles`, `viewer`, `zoom_enabled`
+**Optional:** `ai_support`, `attributes`, `brush_size`, `carry_over`, `eraser_size`, `fill_max_pixels`, `fill_mode`, `fill_tolerance`, `freeform_brush_size`, `freeform_simplify`, `instance_masks`, `keybinding_profile`, `mask_mode`, `mask_opacity`, `max_annotations`, `min_annotations`, `pan_enabled`, `segmentation`, `skeletons`, `source_field`, `text_prompt`, `tiles`, `viewer`, `zoom_enabled`
 
 ```yaml
 - annotation_type: image_annotation
@@ -851,7 +875,7 @@ Rate multiple items on a scale
 
 **Required:** `labels`, `options`
 
-**Optional:** `arrangement`, `display_config`, `label_requirement`, `options_from_data`, `randomize_order`
+**Optional:** `arrangement`, `display_config`, `label_requirement`, `option_randomization`, `options_from_data`, `randomize_order`
 
 ```yaml
 - annotation_type: multirate
@@ -871,7 +895,6 @@ Rate multiple items on a scale
   - Strongly Agree
   label_requirement:
     required: true
-  sequential_key_binding: true
   option_randomization: true
 ```
 
@@ -1361,7 +1384,7 @@ From `examples/span/span-linking/config.yaml`.
 
 **Required:** `labels`, `tools`
 
-**Optional:** `calibration_field`, `color_mode`, `default_box_height`, `fit_box_height`, `lod`, `max_annotations`, `max_loaded_nodes`, `max_points`, `min_annotations`, `min_screen_size`, `mpr`, `point_budget`, `point_size`, `slab_thickness`, `source_field`
+**Optional:** `attributes`, `calibration_field`, `color_mode`, `default_box_height`, `fit_box_height`, `lod`, `max_annotations`, `max_loaded_nodes`, `max_points`, `min_annotations`, `min_screen_size`, `mpr`, `point_budget`, `point_size`, `slab_thickness`, `source_field`
 
 ```yaml
 - annotation_type: spatial_annotation
@@ -1381,6 +1404,17 @@ From `examples/span/span-linking/config.yaml`.
   - name: pedestrian
     color: '#FFD93D'
     key_value: '3'
+  attributes:
+  - name: occluded
+    type: select
+    options:
+    - none
+    - partly
+    - largely
+    default: none
+    required: true
+  - name: truncated
+    type: bool
   color_mode: height
   point_size: 2.0
   lod: true
@@ -1775,7 +1809,7 @@ Video annotation with temporal segments, frame classification, keyframes, and ob
 
 **Required:** `labels`
 
-**Optional:** `ai_support`, `frame_stepping`, `max_segments`, `min_segments`, `mode`, `overview_height`, `playback_rate_control`, `segment_schemes`, `show_timecode`, `source_field`, `timeline_height`, `tracking_options`, `video_fps`, `zoom_enabled`
+**Optional:** `ai_support`, `attributes`, `frame_stepping`, `max_segments`, `min_segments`, `mode`, `overview_height`, `playback_rate_control`, `propagation`, `segment_schemes`, `show_timecode`, `source_field`, `timeline_height`, `tracking_options`, `video_fps`, `zoom_enabled`
 
 ```yaml
 - annotation_type: video_annotation
@@ -1834,3 +1868,44 @@ Voice/full-duplex turn-taking: dual-track timeline + barge-in/overlap classifica
 ```
 
 From `examples/agent-traces/voice-interaction/config.yaml`.
+
+## volume_annotation
+
+3D medical volumes (DICOM series, NIfTI): three linked slice views, window/level, brush masks with interpolation, boxes and polygons; NIfTI and DICOM SEG export
+
+**Required:** `labels`
+
+**Optional:** `allow_identifying_tags`, `brush_size`, `default_window`, `display_tags`, `prefill_rtstruct_field`, `source_field`, `tools`, `views`, `window_presets`
+
+```yaml
+- annotation_type: volume_annotation
+  name: ct_segmentation
+  description: Outline the lesion and the bone ring
+  labels:
+  - name: Lesion
+    color: '#e6553a'
+    key_value: '1'
+  - name: Bone
+    color: '#3a8ee6'
+    key_value: '2'
+  source_field: volume
+  prefill_rtstruct_field: rtstruct
+  default_window: Soft tissue
+  window_presets:
+  - name: Soft tissue
+    center: 40
+    width: 400
+  - name: Bone
+    center: 400
+    width: 1800
+  display_tags:
+  - Modality
+  - BodyPartExamined
+  - SliceThickness
+  - SeriesDescription
+  - PatientName
+  allow_identifying_tags:
+  - SeriesDescription
+```
+
+From `examples/image/ct-volume/config.yaml`.

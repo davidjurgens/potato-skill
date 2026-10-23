@@ -87,6 +87,8 @@ def _counts():
     with_phases = sum(1 for e in manifest["examples"]
                       if "phases" in (e.get("config_keys") or []))
 
+    from potato.jspsych.vendored import PLUGINS as _jspsych_plugins
+
     return {
         "export_formats": len(export_registry.get_supported_formats()),
         # `potato import --list-formats` prints both registries, in two groups.
@@ -102,6 +104,7 @@ def _counts():
         "examples": load_manifest()["count"],
         "keyword_shapes": len(_kw_shapes),
         "price_rows": len(price_table),
+        "jspsych_plugins": len(_jspsych_plugins),
     }
 
 
@@ -185,6 +188,9 @@ CLAIMS = [
      r"\*\*(\d+) of Potato's \d+ bundled examples declare", "examples_with_phases"),
     ("references/phases-and-pages.md",
      r"\*\*\d+ of Potato's (\d+) bundled examples declare", "examples"),
+    # The plugins a jsPsych page can name without `extra_scripts`.
+    ("references/experiments.md",
+     r"Potato ships jsPsych and (\d+) of its plugins", "jspsych_plugins"),
 ]
 
 

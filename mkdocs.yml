@@ -24,6 +24,7 @@ nav:
       - Images, Video, Audio and 3D: modalities.md
       - Agent Traces and Agent Evaluation: agent-traces.md
       - Phases and Pages: phases-and-pages.md
+      - Behavioural Experiments: experiments.md
   - Quality:
       - Attention Checks and Gold Standards: quality-control.md
       - Assignment and Agreement: assignment-and-agreement.md

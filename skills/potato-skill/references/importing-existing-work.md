@@ -16,7 +16,7 @@ potato import --list-formats
 potato import -i instances_val.json -f coco -o ./project --image-url-prefix /media
 ```
 
-20 formats, which `--list-formats` prints in two groups. Image and video:
+21 formats, which `--list-formats` prints in two groups. Image and video:
 `coco`, `cvat`, `labelme`, `labelbox`, `pascal_voc`, `via`, `darwin`,
 `cityscapes`, `kitti`, `mot`, `davis`, `openimages`, `webdataset`, `yolo` and
 `huggingface`, which also takes a HuggingFace Hub id through `--hf-dataset`.

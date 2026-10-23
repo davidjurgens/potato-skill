@@ -46,12 +46,12 @@ pip install potato-annotation
 | | |
 |---|---|
 | `skills/potato-skill/SKILL.md` | What Claude Code loads when the skill fires |
-| `skills/potato-skill/references/` | 29 reference files, loaded on demand |
+| `skills/potato-skill/references/` | 30 reference files, loaded on demand |
 | `skills/potato-skill/scripts/` | Nine helpers an agent runs rather than reconstructs |
 | `AGENTS.md` | The same guidance for Codex and Cursor, which read this filename directly |
 
 Three references are generated from Potato's registries by
-`scripts/generate_references.py`: `annotation-types.md` (all 61 types, each with
+`scripts/generate_references.py`: `annotation-types.md` (all 63 types, each with
 a worked example lifted from a real project), `config-keys.md` and
 `config-keys-nested.md`. The rest are hand-written and checked rather than
 generated.

@@ -3,12 +3,13 @@
 Everything a researcher describes as "they should see X first" and "at the end I
 want to ask them Y" lives here. None of it is in the generated key reference:
 `phases` and `surveyflow` are documented as `object` with no sub-keys, and
-`potato validate --strict` does not check inside either of them. Every fact
+`potato validate --strict` checks only the page rules and orderings described in
+`experiments.md`, not the phase types or page files. Every fact
 below was established by running the server and reading the startup log.
 
 ## Which of these you actually need
 
-Start from none of them. **7 of Potato's 218 bundled examples declare a `phases`
+Start from none of them. **8 of Potato's 229 bundled examples declare a `phases`
 block at all**; the other 207 open on the first item. A phase is a page an
 annotator has to get through before doing any work, and every one you add costs
 attrition and setup time, so add them because someone asked or because the
@@ -45,6 +46,10 @@ That is the complete list. Anything else fails at boot with
 passes it**. A config naming fourteen invented phase types validates clean and
 then loses fourteen phases at startup.
 
+A page can also be `type: jspsych`, which runs a jsPsych timeline and takes the
+prestudy slot before annotation or the poststudy slot after it
+(`experiments.md`).
+
 There is no `survey` phase, no `demographics`, no `debrief`, no `end`, no
 `done`. A post-study questionnaire is a `poststudy` phase whose page happens to
 contain survey questions. Screening before the task is `prestudy`.
@@ -61,13 +66,13 @@ serves consent, then the screening page, then the instructions page, then the
 training questions, in exactly that sequence. A phase with required questions
 gates the next one — the annotator cannot advance past it unanswered — which is
 what "only people who answer the screening questions get through" means in
-practice. **Phase pages record; they do not route.** There is no mechanism for screening
-someone *out* on the basis of what they answered, and no documented way to feed a
-survey answer into assignment. The nearest thing is `category_assignment`, which
-routes by item category and can gate on a qualification earned in **training**,
-not on a survey response. If a researcher says "only screen-reader users get
-through", tell them the phase collects the answer and someone has to act on it —
-do not imply the phase enforces it.
+practice. **A page routes only when you give it a rule.** `exit_when` on the
+screening page ends the study for anyone whose answers match it, and
+`show_when` on a later page skips that page for anyone it does not apply to.
+Both are in `experiments.md`, along with between-subjects `conditions`. Without
+one of them a phase page records an answer and nothing acts on it. A survey
+answer still cannot steer which *items* someone gets; the nearest thing is
+`category_assignment`, which gates on a qualification earned in **training**.
 
 Note also that the **top-level `prestudy:` key is dead code** — the key
 documentation says so outright ("the only code that reads it is an unreferenced

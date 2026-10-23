@@ -138,7 +138,7 @@ def _host_config(work_dir: str) -> dict:
 
 
 #: Extensions a config names when it points at a side file.
-_SIDE_FILE_SUFFIXES = (".json", ".jsonl", ".csv", ".tsv", ".txt", ".html")
+_SIDE_FILE_SUFFIXES = (".json", ".jsonl", ".csv", ".tsv", ".txt", ".html", ".js")
 
 
 def _stub_side_files(work_dir: str, node, _seen=None) -> None:
@@ -176,10 +176,85 @@ def _stub_side_files(work_dir: str, node, _seen=None) -> None:
     elif node.lower().endswith((".csv", ".tsv")):
         sep = "," if node.lower().endswith(".csv") else "\t"
         body = sep.join(["id", "text"]) + "\n" + sep.join(["s1", "An item."]) + "\n"
+    elif node.lower().endswith(".js"):
+        # A jsPsych phase's timeline file.
+        body = "window.potatoTimeline = [];\n"
     else:
         body = "sample\n"
     with open(target, "w", encoding="utf-8") as handle:
         handle.write(body)
+
+
+def _stub_phase_files(work_dir: str, host: dict) -> None:
+    """Write each phase page file as one question, ahead of the generic stubs.
+
+    A page file is read as a list of questions, and from 2.12 on one shaped
+    like an item list is refused, so the item-shaped stub `_stub_side_files`
+    writes would fail every sample with a `phases` block.
+    """
+    phases = host.get("phases")
+    if isinstance(phases, dict):
+        entries = list(phases.values())
+    elif isinstance(phases, list):  # the `- {name: ..., type: ...}` form
+        entries = phases
+    else:
+        return
+    # From 2.12, `potato validate` also reads the page files and checks that
+    # every question a page rule, a pin or `expose_answers` names is asked
+    # where the rule can see it. The samples name questions in page files the
+    # pack does not ship, so the stubs ask them: a rule's question on the
+    # first earlier page, a pin's or an `exit_when`'s on the page itself.
+    if isinstance(phases, dict):
+        order = [n for n in phases.get("order") or [] if n in phases]
+        named = phases
+    else:
+        named = {e.get("name"): e for e in entries if isinstance(e, dict)}
+        order = list(named)
+    asks = {name: ["stub"] for name in order}
+
+    def _rule_names(rules):
+        return [c.get("schema") for c in rules or []
+                if isinstance(c, dict) and isinstance(c.get("schema"), str)
+                and not c["schema"].startswith("condition.")]
+
+    for i, name in enumerate(order):
+        entry = named.get(name)
+        if not isinstance(entry, dict):
+            continue
+        earlier = [n for n in order[:i] if isinstance(named.get(n), dict)
+                   and named[n].get("file")]
+        upstream = _rule_names(entry.get("show_when"))
+        upstream += [q for q in entry.get("expose_answers") or []
+                     if isinstance(q, str)]
+        if upstream and earlier:
+            asks[earlier[0]] += upstream
+        exit_when = entry.get("exit_when")
+        if isinstance(exit_when, dict):
+            asks[name] += _rule_names(exit_when.get("show_when"))
+        pins = entry.get("randomize_questions")
+        if isinstance(pins, dict):
+            for key in ("pin_first", "pin_last"):
+                asks[name] += [q for q in pins.get(key) or []
+                               if isinstance(q, str)]
+
+    for name in order:
+        entry = named.get(name)
+        path = entry.get("file") if isinstance(entry, dict) else None
+        if (not isinstance(path, str) or os.path.isabs(path)
+                or ".." in path.split("/")):
+            continue
+        target = os.path.join(work_dir, path)
+        if os.path.exists(target):
+            continue
+        questions = [{"annotation_type": "radio", "name": q,
+                      "description": "A page.", "labels": ["a", "b"]}
+                     for q in dict.fromkeys(asks.get(name, ["stub"]))]
+        os.makedirs(os.path.dirname(target) or work_dir, exist_ok=True)
+        with open(target, "w", encoding="utf-8") as handle:
+            if path.lower().endswith(".jsonl"):
+                handle.write("".join(json.dumps(q) + "\n" for q in questions))
+            else:
+                json.dump(questions, handle)
 
 
 def _has_elision(value) -> bool:
@@ -278,6 +353,7 @@ def test_every_yaml_sample_validates(name, index, body):
         # `failure_handling: {action: warn}` sat in the worked example, and in
         # this file's own attention-check sample, without either being flagged.
         # Stub every path the sample names so the run reaches the rest.
+        _stub_phase_files(work_dir, host)
         _stub_side_files(work_dir, host)
 
         from potato.validate_cli import validate_config_file

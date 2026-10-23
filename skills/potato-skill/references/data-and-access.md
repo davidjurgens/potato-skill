@@ -195,7 +195,9 @@ auto_redirect_delay: 3000        # milliseconds on the completion page first
 
 `crowdsourcing.provider` takes `prolific`, `mturk`, `connect`, `sona`,
 `microworkers`, `clickworker`, `expert`, `generic` or `url_direct`, and the boot
-log confirms it — `Initialized crowdsourcing provider: prolific`. Set
+log confirms it — `Initialized crowdsourcing provider: prolific`. Mechanical
+Turk closed on 30 September 2026; `mturk` is still accepted so an archived
+study's server starts, but new recruitment needs another platform. Set
 `login.url_argument` to whatever the platform appends: Prolific sends
 `PROLIFIC_PID`, so `?PROLIFIC_PID=worker777` seats that worker with no login
 screen and their id in the navbar.

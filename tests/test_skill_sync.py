@@ -48,6 +48,7 @@ HAND_WRITTEN = [
     os.path.join("references", "interviewing.md"),
     os.path.join("references", "building-the-ui.md"),
     os.path.join("references", "evaluating-the-ui.md"),
+    os.path.join("references", "experiments.md"),
 ]
 GENERATED = [
     os.path.join("references", "annotation-types.md"),
@@ -58,8 +59,6 @@ GENERATED = [
 #: keys, literals, phase names, filenames, and the three type names the pack
 #: deliberately calls out as *not* being types.
 PROSE_IDENTIFIERS = {
-    # The distribution and the command. Not a config key or a type.
-    "potato",
     # sub-keys of one `link_types` entry on a `span_link` scheme. Two levels
     # inside a scheme entry, which is past where any registry describes a
     # config; they are read in span_link.py:78-79
@@ -109,7 +108,6 @@ PROSE_IDENTIFIERS = {
     # accessibility warning is about that attribute being the only affordance
     "draggable",
     # structural keys inside a scheme or an instance_display field
-    "type",
     "fields", "direction", "gap",
     # item_properties
     "id_key",
@@ -117,8 +115,6 @@ PROSE_IDENTIFIERS = {
     "key_binding",
     # instance_display field keys, validated by validate_instance_display_config
     "span_target", "display_options",
-    # display_logic structure
-    "show_when",
     # phase names
     "consent", "instructions", "annotation", "poststudy",
     # literals and example values
@@ -135,12 +131,30 @@ PROSE_IDENTIFIERS = {
     # training instances (flask_server.py:1103), attention checks and gold
     # items (quality_control.py:266, 274)
     "id", "correct_answers", "expected_answer", "gold_label",
-    # phases.order, read in flask_server.py; `phases` has no recorded sub-keys
-    "order",
     # the per-item data field dynamic_options reads when the scheme does not
     # name one, defaulted in flask_server.filter_dynamic_options. A data-file
     # field, so it is in neither the config keys nor the scheme registry.
     "visible_labels",
+    # experiments.md's example question name, pinned last in its sample and
+    # named in the sentence that reports where it landed
+    "comments",
+    # the label names cloze stores one blank under, built as f"blank_{n}" in
+    # schemas/cloze.py, so no literal names them
+    "blank_1", "blank_2",
+    # `trial_timing.response.schema`, written as a path because `schema` alone
+    # is the display_logic key. The leaves resolve; the path does not
+    "response.schema",
+    # files the CSV export writes (experiment_sidecars.py, the csv exporter)
+    "annotations.csv", "participants.csv", "trials.csv",
+    # files the jspsych export writes, named in jspsych_exporter.py's own
+    # docstring and passed to write() as literals the token pattern skips
+    "jspsych_runs.csv", "jspsych_trials.csv", "jspsych_interaction.csv",
+    # `phases.<page>.csp.extra_sources`, written as a path because the bare
+    # leaf is not what an author types; jspsych/phase.py:106 reads it
+    "csp.extra_sources",
+    # the columns jspsych-bridge.js stamps on every trial, and the object it
+    # hands the timeline. Browser code, which no Python registry sees
+    "potato_user", "potato_run_id", "potato_attempt", "potato.conditions",
     # real commands and a provider name, not config keys
     "preview", "destroy",
     # files a running task writes, or the pack tells you to create
@@ -161,13 +175,13 @@ PROSE_IDENTIFIERS = {
     # The key doc describes them in prose rather than registering each one, so
     # iter_key_docs has no entry for `list_as_text.text_list_prefix_type`
     "text_list_prefix_type",
-    "alphabet", "bullet", "none",
+    "alphabet", "bullet",
     # column names keyword_highlights_file accepts in its CSV/TSV header, and
     # the accepted spellings of the first one. File-format strings, not config
     "keyword", "word", "pattern", "term",
     # the argument names the live MCP tools publish in their own schemas,
     # quoted in SKILL.md so an agent can call them without a round trip
-    "instance_id", "username",
+    "username",
     # the field list_examples returns for each example, named in SKILL.md
     # because get_example wants that value under a differently-named parameter
     "dir",
@@ -216,6 +230,32 @@ def _generator_read_keys() -> set:
         return set()
     quoted = set(re.findall(r"""["']([a-z][a-z0-9_]{2,})["']""", source))
     return quoted
+
+
+def _experiment_read_keys() -> set:
+    """Keys and values the experiment-flow code reads or writes.
+
+    Phase-page keys (`exit_when`, `pin_last`, a jsPsych page's
+    `expose_answers`), the `flow_record` fields, the
+    assignment and counterbalance methods, and the trial-record columns are
+    string literals in these modules rather than entries in a registry, so they
+    are taken from the source the same way `_generator_read_keys` does.
+    """
+    import inspect
+    import re
+
+    try:
+        from potato import trial_timing
+        from potato.export import experiment_sidecars, jspsych_exporter
+        from potato.jspsych import phase as jspsych_phase
+        from potato.server_utils import (experiment_conditions, phase_flow,
+                                         question_order)
+        source = "".join(inspect.getsource(m) for m in (
+            trial_timing, experiment_sidecars, experiment_conditions,
+            phase_flow, question_order, jspsych_phase, jspsych_exporter))
+    except Exception:
+        return set()
+    return set(re.findall(r"""["']([a-z][a-z0-9_]{2,})["']""", source))
 
 
 def _advertised_mcp_tools() -> set:
@@ -492,6 +532,16 @@ class TestEveryIdentifierInProseIsReal:
         from potato.mcp_server.live_tools import TOOLS as live_tools
         vocab |= {f"live_{name}" for name in live_tools}
         vocab |= _generator_read_keys()
+        vocab |= _experiment_read_keys()
+        # Documented sub-keys of the blocks `experiments.md` configures, as
+        # their last path segment: it names `max_per_cell` and
+        # `group_by_condition` the way the other files name top-level keys.
+        # Only these blocks, because every block's leaves together include
+        # `type`, `id` and `none`, which would then resolve anywhere.
+        from potato.server_utils.config_key_docs import iter_key_docs
+        vocab |= {path.rsplit(".", 1)[-1] for path, _ in iter_key_docs()
+                  if path.split(".", 1)[0] in (
+                      "conditions", "trial_timing", "batch_assignment")}
         # Every field any registered scheme declares. The modality references
         # name `steps_key`, `video_key`, `audio_key` and a dozen more because
         # each family has its own convention for "where is my data" -- which is

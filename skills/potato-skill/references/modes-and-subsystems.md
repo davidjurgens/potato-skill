@@ -62,6 +62,7 @@ answers that a scale cannot hold:
 | "score the whole conversation, not each turn" | `sessions` + `session_level: true` on the scheme | Warns at validate if no scheme opts in |
 | "on their phone" | `pocket` | PWA at `/pocket` with an offline queue. Seven answer types work there and one other scheme takes the task off the phone — `designing-a-task.md` |
 | "annotators should pick their own items" | `search.annotator_claim` | Admin search is always on; claiming is the opt-in |
+| "half get feedback, half don't", "screen out minors", "counterbalance the blocks", "reaction times", "my jsPsych task" | `conditions`, `exit_when`, `phases.counterbalance`, `trial_timing`, `type: jspsych` | A behavioural experiment rather than an annotation study — `experiments.md` |
 
 ### What they brought
 
@@ -123,7 +124,7 @@ agent traces are their own family, in `agent-traces.md`.
 | "show me the corpus shape" | `corpus_map`, `embedding_visualization`, `diversity_ordering` |
 | "find the ones like this", "a group that keeps updating", "what is even in here" | `curation` — the catalog at `/admin/catalog`, below |
 | "publish the dataset" | `publish`, `dataset_metadata` |
-| "pay people on Prolific / MTurk" | `crowdsourcing` (+ `completion_code`, `auto_redirect_on_completion`) |
+| "pay people on Prolific / SONA / Connect" | `crowdsourcing` (+ `completion_code`, `auto_redirect_on_completion`) |
 | "different groups see different items" | `batch_assignment` + `scheme_sets`, or `category_assignment` |
 | "people abandon assignments" | `instance_reclaim` |
 | "let annotators see their own progress" | `annotator_dashboard` |

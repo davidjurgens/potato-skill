@@ -432,6 +432,10 @@ MIRRORED_REFERENCES = {
         "Phases and Pages",
         "Consent, instructions, training, surveys, and the order they run in.",
     ),
+    "experiments.md": (
+        "Behavioural Experiments",
+        "Conditions, screen-outs, counterbalancing, timed trials and jsPsych tasks.",
+    ),
     "quality-control.md": (
         "Attention Checks and Gold Standards",
         "The quality-control ladder, and what each rung costs.",
