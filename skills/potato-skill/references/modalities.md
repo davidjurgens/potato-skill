@@ -484,6 +484,11 @@ path or a URL is not fetched (404), and a single `.dcm` file, a `.mha` file or
 a corrupt archive gets a 415 when the page asks for the volume. Open the first
 item of each kind before the study starts.
 
+With `prefill_rtstruct_field`, an item's RTSTRUCT contours become the starting
+mask, and pressing Next without editing saves them as that annotator's answer.
+Compare the exported masks against the RTSTRUCT before reading agreement into
+them.
+
 A NIfTI file has no modality header, so it gets one "Auto" window unless the scheme
 sets `window_presets`. A DICOM series adds "From file" and built-in presets
 (soft tissue, lung and others).

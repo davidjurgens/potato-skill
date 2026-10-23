@@ -197,7 +197,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `audio_annotation` | object |  |  | Server-side waveform service backing audio_annotation schemes. Only read when the task actually has one |
-| `serve_raw_medical_files` | boolean |  | `False` | Let /media/ hand out DICOM and NIfTI files as-is. Off by default: their headers carry patient information that volume_annotation's display_tags filter withholds |
+| `serve_raw_medical_files` | boolean |  | `False` | Let /media/ hand out DICOM and NIfTI files as-is. Off by default: their headers carry patient information that volume_annotation's display_tags filter withholds. When on, they are served without sign-in like other /media/ files |
 
 ## Publishing & Export
 

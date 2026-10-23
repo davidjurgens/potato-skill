@@ -779,7 +779,9 @@ next unanswered items. Twelve headlines labelled that way landed in
 `sentiment` label per item. The grid labels its one scheme. Validation refuses
 any other kind (`grid_view.scheme 'why' is a text. The grid labels many items
 with one click, so it takes a radio, multiselect or triage scheme.`) and any
-name that is not a top-level scheme.
+name that is not a top-level scheme. An item labelled in the grid counts as done, so
+another required scheme beside the grid's would never be asked, and validation
+refuses that too: make the other schemes optional, or do without the grid.
 
 Reach for it when each item takes a second to judge, which is where a page
 load per item costs more than the judgment.

@@ -527,8 +527,8 @@ so (*This task records when you leave this page and whether you copy the item or
 paste text from elsewhere — not what you copy or paste*).
 `export_include_authenticity` makes the CSV export write `authenticity.csv`,
 one row per annotator and item with the counts, then the item's flags and their
-severity. Potato's own documentation says to treat a flag as a reason to read
-the item, not a reason to reject the work.
+severity. Potato's own documentation says to read the item behind a flag
+before acting on it, and never to reject work on a flag alone.
 
 **A browser you drive sets the `automation` flag.** One item answered through
 Playwright came out `suspect,automation`, because the headless browser sets
