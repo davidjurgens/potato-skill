@@ -519,10 +519,12 @@ and writes `listening_ratings.csv` and a summary per condition. Do not decode
 slots yourself.
 
 **`anchors` make low-pass copies of the reference and need a PCM WAV
-reference.** With a `.flac` reference and `anchors: [3500, 7000]` the config
-validated and the server booted, the two anchor slots answered HTTP 500 and the
-reference and conditions played. For another format, drop `anchors` and list
-the anchor files in `stimuli` yourself.
+reference.** With a `.flac` reference and `anchors: [3500, 7000]`, `potato
+validate` still says the config is fine, because it does not read items. On
+2.12.1 `potato start` refuses to boot and names the items whose reference is not
+a `.wav` file; on 2.12.0 it booted and the two anchor slots answered HTTP 500.
+For another format, drop `anchors` and list the anchor files in `stimuli`
+yourself.
 
 ## Spectrogram boxes
 
@@ -937,7 +939,9 @@ media task's classification questions but cannot draw a box for you.
 
 ## What has and has not been checked
 
-Checked against Potato 2.12.0 (a snapshot of the unreleased tree), in a
+Checked against Potato 2.12.0 (`5b1ec643`; the tree these runs used matched the
+release in every file under `potato/`), with the `anchors` refusal re-run on
+2.12.1 (`49c1be61`). On 2.12.0, in a
 scratch task per scheme: `potato validate` on every YAML block above or a close
 copy, a booted server, an authenticated `GET /annotate`, a `POST /updateinstance`
 in the page's own key shape, and a read of `user_state.json`. The `listening_test`

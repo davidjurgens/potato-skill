@@ -184,10 +184,13 @@ the type: `radio` and `select` nominal, `likert` ordinal, `number`, `slider` and
 bootstrap=` and `--option seed=` change the resamples (1000 and a fixed seed).
 Two traps. First, `units` counts only items that at least two coders answered with
 something: `issues` shows 2 of 3 items because the third had no box ticked by
-anyone. Second, a handful of items gives a useless interval and a noisy log. Three
-items gave `[-0.333, 0.6]` and one `krippendorff_alpha failed: float division by
-zero` line per degenerate resample, about 300 lines at the default 1000 resamples. Report the
-interval only on a study big enough for a resample to contain both labels.
+anyone. Second, a handful of items gives a useless interval. Three items gave
+`[-0.333, 0.6]`, and on 2.12.1 the export's warnings count the resamples that
+had no variation: "alpha was undefined (no variation) in 313 of 1000 bootstrap
+resamples; the interval uses the other 687", once per question, with the same
+note in `reliability.md`. (2.12.0 logged one `float division by zero` warning
+per such resample instead, about 300 lines.) Report the interval only on a
+study big enough for a resample to contain both labels.
 
 **`data_package`** wraps the CSV export in a Frictionless Data Package v2:
 `annotations.csv` plus `datapackage.json`, whose resource carries a Table Schema.
@@ -304,9 +307,9 @@ or the export warns that High Freq is empty.
 - `mot` writes `<item>/gt/gt.txt` and `<item>/seqinfo.ini` for image sequences
   and for `video_annotation` tracks. Two keyframes at frames 0 and 30 gave 31
   rows, interpolated, 1-indexed. Rows need the video's pixel size, and a remote
-  video URL has none: the export printed "Export successful" with no files and
-  one warning until `--option width=1280 --option height=720 --option fps=30`
-  was given. Read the warnings on a video study.
+  video URL has none. On 2.12.1 the export then fails with "Nothing was
+  written." and the reason; pass `--option width=1280 --option height=720
+  --option fps=30`. (2.12.0 reported success with no files and one warning.)
 
 ### Networks and cultural domains
 
@@ -455,14 +458,16 @@ The admin API's response tells you which way it went: `num_phase_responses` and
 `num_phase_responses_excluded` are both in `stats`, and one of them is always
 zero.
 
-A survey-only study has no item labels, and csv and tsv now write
-`phase_responses` for it, but only when the config uses `conditions`, page rules,
-a runtime page or `trial_timing` and a saved state holds a flow or trial record.
-Driven with `conditions` and two poststudy answers, the CSV export wrote
-`phase_responses.csv` and `participants.csv`, warned `No item annotations, so
-annotations.csv was not written`, and `jsonl` still refused with `No annotations
-to export`. The same study without the `conditions` block failed `csv` the same
-way.
+A survey-only study has no item labels. On 2.12.1, with
+`export_include_phase_data: true`, `csv`, `tsv` and `jsonl` each write
+`phase_responses` for it: a prestudy answer came out as
+`U1,prestudy,intro,0,age,text_box,33`, csv and tsv warned `No item annotations,
+so annotations.csv was not written`, and jsonl wrote no empty
+`annotations.jsonl`. Without the key the export writes nothing and its error
+names `export_include_phase_data` and the number of answers left out. On 2.12.0
+only csv and tsv wrote them, and only when the study used `conditions`, page
+rules, a runtime page or `trial_timing`; upgrade rather than add a `conditions`
+block to get the answers out.
 
 `export_include_annotation_changes` adds the revision trail: every answer an
 annotator moved off, with timestamps. Useful for studying how people decide,
@@ -484,7 +489,11 @@ worth checking before quoting a number at anyone.
 
 ## What has and has not been checked
 
-Against Potato 2.12.0 (unreleased snapshot). Run, with the files read back:
+Against Potato 2.12.0 (`5b1ec643`; the tree these runs used matched the release
+in every file under `potato/`). On 2.12.1 (`49c1be61`) the three changed
+behaviours above were re-run: `reliability` and `mot` through their exporter
+classes, the survey-only export with and without `export_include_phase_data`.
+Run on 2.12.0, with the files read back:
 `web_annotation`, `data_package`, `psych_ds`, `reliability`, `tei` (inline and
 `standOff`), `iiif_annotations` (from an imported one-canvas manifest),
 `page_xml` (from the `htr-line-correction` example), `flextext`, `toolbox`,
