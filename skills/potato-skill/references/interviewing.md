@@ -102,9 +102,9 @@ two · three (recommended if they want to report agreement) · more. Sets
 most people to want none of it.
 
 **A task needs only the annotation itself.** Most do not declare a `phases` block
-at all — 8 of the example projects Potato ships use one, and none of them has a
-`consent` or `prestudy` phase. This is a multi-select that is allowed to come
-back empty, not a menu to talk someone through.
+at all: 14 of the example projects Potato ships use one, and 235 do not. This is
+a multi-select that is allowed to come back empty, not a menu to talk someone
+through.
 
 | Offer | Phase | Ask for it only when |
 |---|---|---|

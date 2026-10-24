@@ -9,11 +9,28 @@ potato-annotation 2.7.0.
 |---|---|---|
 | `potato --help` seems not to list `validate` or `preview` | They are under **other commands**, after the long `start` flag list | `potato validate --help`, `potato preview --help` |
 | A command never returns | `potato start` holds the foreground until killed | `nohup potato start … &` and poll for a 200 |
-| `validate --strict` prints "Re-run with --strict to fail on unknown keys" while you are running with `--strict` | Wrong message; the exit code is correct | Trust `$?`, not the sentence |
-| `--strict` reports nothing about unknown keys | Warnings are suppressed while there are hard errors | Fix the errors and run again |
+| `validate --strict` prints "Re-run with --strict to fail on unknown keys" while you are running with `--strict` | Wrong message on 2.7.0; on 2.12.0 it prints `FAILED — N unrecognized key(s); --strict treats these as errors.` | Trust `$?` on an older build |
+| `--strict` reports nothing about unknown keys | On 2.7.0 warnings were suppressed while there were hard errors. On 2.12.0 the unknown keys print beside the errors | Fix the errors and run again on an older build |
+| A config that validated on 2.11 now has `Unrecognized config key 'annotation_schemes[s].min_value'. A radio scheme does not read it` | 2.12.0 checks each scheme's keys against its type; the key was always ignored | Remove it. For a warning the study expects, put a substring of at least 12 characters under `validation.acknowledge`; it moves to an `ACKNOWLEDGED` list and `--strict` passes. An entry matching nothing is itself a warning |
 | Killing the server leaves the port held | It spawns children | `pkill -f "potato start <config> -p <port>"`, or `killpg` on the process group |
 | `timeout` not found (macOS) | Not installed | Poll in a loop, or use a Python wrapper |
 | `preview` prints `ERROR: Missing required field 'task_dir'` on a config `validate --strict` just passed | `preview` reads the raw file; the loader defaults `task_dir` to the config's own directory, so the server runs fine | Write `task_dir: .` and stop thinking about it. Every other relative path resolves against it anyway |
+
+## After upgrading to 2.12.0
+
+Each row was run on 2.12.0.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Annotators see a dark page | `ui.theme` defaults to `auto`, so the page follows the browser's setting (`data-theme="dark"` under a dark browser, `data-theme-mode="auto"`) | `ui: {theme: light}` for everyone on the light theme |
+| A follow-up question gated on a multiselect with `equals` stops showing | `equals` no longer matches a list of selected options on the server | Use `contains` |
+| A `matches` rule shows its question before anyone answers | It does not any more: `matches` on an unanswered question is false, pattern `^$` included | Use `empty` to branch on unanswered |
+| A `length_gt` / `length_lt` rule on a multiselect changed behaviour | It counts the options selected, not characters: `length_lt 3` is true for two options | `count_gt`, `count_lt` and `count_equals` say the same thing |
+| `second video_annotation scheme in tracking or combined mode` | Two trackers on one page share keyboard shortcuts | One tracking scheme with several labels, or the second in its own phase |
+| `grid_view labels only 's'… the required scheme(s) … would never be asked` | An item labelled in the grid counts as done | Make the other schemes optional, or drop `grid_view` |
+| `live_ingestion must be a dictionary` | `live_ingestion: true` is no longer accepted on any source type | Write the mapping: `live_ingestion: {enabled: true}` |
+| A slider with `min_value: 1`, `step: 2` offers 1, 3, 5, 7, 9 | Steps count from `min_value`; the browser snaps `2` to `3` | Pick `min_value` and `step` so the values you want are on the grid |
+| Previous on the last item shows the previous item, not the completion page | It starts a review; Next from the last item then completes the study | None |
 
 ## Boot
 

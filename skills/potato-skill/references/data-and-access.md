@@ -81,16 +81,38 @@ not the way to get documents into a `document` field; see `building-the-ui.md`.
 ### Remote and live sources
 
 ```yaml
-# type: url, s3, huggingface, google_sheets, database, google_drive,
-#       dropbox or file
+# type: url, s3, gcs, azure_blob, huggingface, google_sheets, database,
+#       google_drive, dropbox or file
 data_sources:
   - type: url
     url: https://example.org/items.json
+  - id: incoming            # an object store read by prefix, polled while the study runs
+    type: gcs               # or s3, or azure_blob (which takes container: instead of bucket:)
+    bucket: my-annotation-data
+    prefix: "incoming/"
+    live_ingestion:
+      enabled: true
+      poll_interval_seconds: 30
 data_cache:
   enabled: true
   ttl_seconds: 3600
   max_size_mb: 200
 ```
+
+`s3`, `gcs` and `azure_blob` take either `key` (one object) or `prefix` (every
+`.json`, `.jsonl`, `.ndjson`, `.csv` and `.tsv` object under it, in key order;
+images and READMEs are skipped), never both. Install the SDK with
+`pip install "potato-annotation[s3]"`, `[gcs]` or `[azure]`. Credentials come
+from the SDK's usual places (application default credentials for GCS, a
+`connection_string` or `account_url` for Azure). With `live_ingestion` on an
+object store, the cursor is each object's modified time, so write new objects and
+do not edit old ones: a re-uploaded object is read again and its changed rows are
+dropped as duplicates of ids already in the pool. `listing: after_last_key` saves
+listing a large bucket on every poll for S3 and GCS and is refused for
+`azure_blob`. On 2.12.0 `potato validate` accepted these blocks and refused a
+`live_ingestion` with no `prefix`, `key` together with `prefix`, and
+`after_last_key` on `azure_blob`. No read from a real bucket was run, so the
+credentials, the listing and the polling are unverified.
 
 Sources can be polled for new rows, which is how a task keeps ingesting while
 annotators work. Pair with `automation` (rules over incoming items) and `triage`
@@ -109,6 +131,13 @@ so a bare filename resolves against the site root and 404s. Measured across one
 page on 2.8.2-26: `image`, `gallery`, `video`, `audio`, `pdf`,
 `audio_dialogue` and `web_agent_trace` all need the prefix in the data, and all
 of them except `pdf` fail without a word on the page.
+
+`/media/` sends `X-Content-Type-Options: nosniff` on every response, errors
+included. HTML, SVG and XML files also get `Content-Security-Policy: sandbox`, so
+a document that arrived in imported data cannot run scripts as the server's own
+page; an HTML file you meant to run in the page will not run from here. A `.gz`
+(or `.bz2`, `.xz`, `.br`, `.Z`) file is sent as `application/octet-stream` with no
+`Content-Encoding`, as stored, so the browser no longer inflates it. Read from a 2.12.0 server with one file of each kind.
 
 Without an `instance_display` field of the right type, that path renders as
 **text** — the classic "the item shows a file path instead of an image". See

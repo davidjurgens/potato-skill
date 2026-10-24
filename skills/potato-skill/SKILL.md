@@ -168,8 +168,8 @@ expensive to discover after the config is written:
 | Ask | Because |
 |---|---|
 | What format is the data in, and where is the media? | Transcripts and conversation corpora have their own converters |
-| Do you already have annotations? | `potato import` reads 21 formats and writes a runnable project |
-| What has to come out at the end? | 36 export formats. Check the target one **before** anyone annotates |
+| Do you already have annotations? | `potato import` reads 45 formats and writes a runnable project |
+| What has to come out at the end? | 60 export formats. Check the target one **before** anyone annotates |
 | Who runs it after handover, and for how long? | Decides hosting, logins and the allowlist |
 
 ```bash
@@ -324,7 +324,7 @@ Two things to get right without reading further:
 
 ## Building the interface
 
-`references/building-the-ui.md` covers `instance_display`, the 24 display types,
+`references/building-the-ui.md` covers `instance_display`, the 27 display types,
 `span_target`, keyboard shortcuts, `display_logic`, and the **form layout** —
 `layout.grid` puts short questions side by side, `layout.groups` gives them
 collapsible headings, and a per-scheme `layout` says how many columns each one
@@ -406,7 +406,7 @@ annotation itself and a closing survey — with every side-file format filled in
 It validates under `--strict` and boots clean. Copy it and replace the labels
 and prose.
 
-Potato also ships 229 example projects, all checked in CI:
+Potato also ships 249 example projects, all checked in CI:
 
 ```python
 from potato.server_utils.examples_manifest import search_examples
@@ -420,7 +420,7 @@ are single-purpose demos, so none of them shows a whole workflow.
 
 ## Picking an annotation type
 
-There are 63. `references/annotation-types.md` has all of them with fields and a
+There are 76. `references/annotation-types.md` has all of them with fields and a
 worked example lifted from a config that really runs.
 
 ```python
@@ -432,8 +432,8 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 
 ## Config keys
 
-`references/config-keys.md` lists the 174 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 551 documented **sub-keys** — the
+`references/config-keys.md` lists the 175 documented **top-level** keys.
+`references/config-keys-nested.md` lists the 559 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 24 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -645,7 +645,7 @@ anything an annotator will come back to — it matters most on `render` and
 ## Getting the data out
 
 There is one storage format — `annotation_output/<user>/user_state.json` — and
-36 export formats. `output_annotation_format` is deprecated: the loader
+60 export formats. `output_annotation_format` is deprecated: the loader
 reads it as `export_annotation_format` and warns. Write the live key.
 
 ```yaml
@@ -756,19 +756,19 @@ refuses a body still holding a placeholder.
 |---|---|
 | `worked-example.md` | A complete study skeleton that validates and boots |
 | `asking-the-experimenter.md` | What to confirm, what to assume, how to ask |
-| `importing-existing-work.md` | Existing annotations, transcripts, conversation corpora |
+| `importing-existing-work.md` | Existing annotations, transcripts, conversation corpora, questionnaires (Qualtrics, REDCap, XLSForm and four more), Ibex, IIIF, camera-trap and bioacoustics files |
 | `designing-a-task.md` | The seven decisions |
 | `finding-a-design.md` | The Potato Showcase, and what to change before reusing a design |
 | `writing-guidelines.md` | Label definitions, tie-break rules, the codebook an annotator reads |
 | `recording-decisions.md` | `DESIGN.md`, `QUESTIONS.md`, and estimating effort |
-| `annotation-types.md` | All 63 types with worked examples *(generated)* |
+| `annotation-types.md` | All 76 types with worked examples *(generated)* |
 | `building-the-ui.md` | `instance_display`, display types, spans, shortcuts, `display_logic` |
-| `modalities.md` | Images, video, audio, dialogue, 3D — display, scheme and quirks |
+| `modalities.md` | Images, video, audio, dialogue, 3D, listening tests, spectrograms, maps, protein structures, genome loci, glossing, ego networks — display, scheme and quirks |
 | `agent-traces.md` | Trace displays, the agent-evaluation schemes, world-model rollouts |
 | `evaluating-the-ui.md` | What to look at in a render, and when to stop |
 | `interviewing.md` | The multiple-choice question bank, for when the skill is invoked with no brief |
 | `phases-and-pages.md` | Consent, instructions, training, surveys, page files |
-| `experiments.md` | Conditions, screen-outs, page and question order, timed trials, jsPsych, cloze |
+| `experiments.md` | Conditions, screen-outs, page and question order, timed trials, self-paced reading, jsPsych, headphone checks, external tasks, cloze, LexTALE, list experiments, incentivized elicitation and bonus payment |
 | `quality-control.md` | Training, attention checks, gold standards, adjudication, side-file formats |
 | `assignment-and-agreement.md` | Quotas, ordering, and which metric each schema kind gets |
 | `modes-and-subsystems.md` | The rest of Potato, routed from what the researcher said |
@@ -776,12 +776,12 @@ refuses a body still holding a placeholder.
 | `labeling-engine.md` | Models label, people label a blind sample, contracts decide what is accepted (2.11) |
 | `interrogating-potato.md` | Recovering an undocumented block from the validator and the boot log |
 | `data-and-access.md` | Where items come from, output files, login, serving |
-| `getting-the-data-out.md` | The 36 export formats, what the CSV holds, phase data |
+| `getting-the-data-out.md` | The 60 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
-| `config-keys.md` | 174 top-level keys *(generated)* |
-| `config-keys-nested.md` | 551 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys.md` | 175 top-level keys *(generated)* |
+| `config-keys-nested.md` | 559 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
-| `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, pulling data back |
+| `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, SAML and Hugging Face sign-in, offline hosts, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |
 | `reporting-upstream.md` | Telling a config mistake from a bug from a gap, and filing the last two |
 

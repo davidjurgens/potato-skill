@@ -108,7 +108,7 @@ navbar as plain text — so there is no top-level landmark for heading navigatio
 Custom canvas widgets are a separate question from the form; check those
 yourself if your annotators rely on assistive technology.
 
-### The 24 display types
+### The 27 display types
 
 | Type | For |
 |---|---|
@@ -136,6 +136,9 @@ yourself if your annotators rely on assistive technology.
 | `interactive_chat` | Live chat, then the trace |
 | `live_agent` | Live agent viewer with controls |
 | `live_coding_agent` | Live coding agent with intervention |
+| `image_region` | One rectangle of a larger image (a text line, a word), cropped in the browser; for HTR line correction |
+| `protein_structure` | An mmCIF, BinaryCIF or PDB file in 3Dmol.js, with a residue table. See `modalities.md` |
+| `genome_locus` | A genome locus in igv.js with local reference and tracks. See `modalities.md` |
 
 `display_options` differ per type, and from 2.8.2-11 a key the display does not
 accept is a validation error that names the alternatives:

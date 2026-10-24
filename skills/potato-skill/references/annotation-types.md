@@ -2,7 +2,7 @@
 
 # Annotation types
 
-Potato has 63 annotation types. Set one as `annotation_type` on each entry in `annotation_schemes`.
+Potato has 76 annotation types. Set one as `annotation_type` on each entry in `annotation_schemes`.
 
 Every type also accepts these, regardless of which one you pick:
 
@@ -16,6 +16,8 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`agent_interaction_graph`](#agent-interaction-graph) — Clickable agent-interaction graph: mark critical-path nodes + flag problematic edges
 - [`agent_scorecard`](#agent-scorecard) — Per-agent + per-team scorecard with optional milestones (MultiAgentBench-style)
 - [`audio_annotation`](#audio-annotation) — Audio segmentation and annotation with waveform visualization
+- [`bdm`](#bdm) — Becker-DeGroot-Marschak bid: the most the participant would pay
+- [`belief_elicitation`](#belief-elicitation) — Probability report (0-100) or a distribution over bins that sums to 100
 - [`bws`](#bws) — Best-Worst Scaling: select the best and worst item from a set
 - [`card_sort`](#card-sort) — Drag-and-drop card sorting into predefined or user-created groups
 - [`cloze`](#cloze) — Fill-in-the-blank passage, scored against an answer key kept on the server
@@ -26,27 +28,35 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`constant_sum`](#constant-sum) — Allocate a fixed budget of points across categories
 - [`context_attribution`](#context-attribution) — Tag how each turn uses earlier context (used correctly / hallucinated / ignored) with links to the source turn
 - [`coreference`](#coreference) — Coreference chain annotation for grouping mentions of the same entity
+- [`ego_network`](#ego-network) — Personal (ego) network: name generators, per-person questions, dyad census and a sociogram
 - [`emergent_behavior`](#emergent-behavior) — Cross-lane emergent-behavior tagging: mark turn-sets for collusion/groupthink/cascade/role-drift
 - [`episode_annotation`](#episode-annotation) — Embodied robot episode: synchronized video streams and time-series lanes with phase, outcome and dense-reward annotation
 - [`error_span`](#error-span) — MQM-style error span annotation with typed severity for quality evaluation
 - [`event_annotation`](#event-annotation) — N-ary event annotation with triggers and typed arguments
 - [`extractive_qa`](#extractive-qa) — SQuAD-style extractive question answering with answer span highlighting
 - [`failure_attribution`](#failure-attribution) — Multi-agent failure attribution: responsible agent + decisive step + reason
+- [`free_list`](#free-list) — Free list: items typed one at a time, in order, with timings (cultural domain analysis)
+- [`geo_annotation`](#geo-annotation) — Maps: draw labelled points, lines and polygons, pin places, or label regions (OpenLayers)
 - [`grounding_eval`](#grounding-eval) — Grounding evaluation: bind referring expressions to image regions or points, with an explicit not-present answer
 - [`gui_trajectory`](#gui-trajectory) — Computer-use/GUI agent step review: per-step screenshot + action correctness + click grounding
 - [`handoff_review`](#handoff-review) — Annotate agent-to-agent handoffs: inter-agent misalignment flags + quality
 - [`hierarchical_multiselect`](#hierarchical-multiselect) — Hierarchical tree-structured multi-label selection
 - [`image_annotation`](#image-annotation) — Image annotation with bounding boxes, polygons, freeform drawing, and landmarks
+- [`interlinear_gloss`](#interlinear-gloss) — Interlinear glossed text: morpheme segmentation and glosses aligned per word (Leipzig rules)
 - [`likert`](#likert) — Likert scale rating
+- [`list_experiment`](#list-experiment) — List experiment (item count technique) for a sensitive question
+- [`listening_test`](#listening-test) — Listening tests: MUSHRA, BS.1116, ACR, DCR, CCR, ABX and P.835, with blinded stimuli
 - [`multi_document_event`](#multi-document-event) — Cross-document event annotation: template slots filled with evidence from many documents
 - [`multimodal_reasoning`](#multimodal-reasoning) — Interleaved text/image/tool reasoning trace: per-step coherence + visual-hallucination rating
 - [`multirate`](#multirate) — Rate multiple items on a scale
 - [`multiselect`](#multiselect) — Multiple-choice checkbox selection
 - [`number`](#number) — Numeric input field
 - [`pairwise`](#pairwise) — Pairwise comparison of two items (binary selection or scale rating)
+- [`price_list`](#price-list) — Multiple price list: choose option A or B in each row (Holt & Laury preset, time preference)
 - [`process_reward`](#process-reward) — Per-step process reward signals for PRM training
 - [`pure_display`](#pure-display) — Display-only content (instructions, headers)
 - [`radio`](#radio) — Single-choice radio button selection
+- [`randomized_response`](#randomized-response) — Randomized response (forced response, crosswise) for a sensitive question
 - [`range_slider`](#range-slider) — Dual-thumb slider for selecting an acceptable range
 - [`ranking`](#ranking) — Drag-and-drop ranking of items by preference or relevance
 - [`region_caption`](#region-caption) — Region captioning: a free-text description per region drawn on the image, with caption agreement over matched regions
@@ -59,6 +69,7 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`span`](#span) — Text span annotation/highlighting with optional entity linking to knowledge bases
 - [`span_link`](#span-link) — Create relationships/links between spans (e.g., PERSON works_for ORGANIZATION)
 - [`spatial_annotation`](#spatial-annotation) — 3D point cloud annotation with oriented cuboids, points, polylines, and per-point segments
+- [`spectrogram_annotation`](#spectrogram-annotation) — Time-frequency boxes drawn on a spectrogram of the item's audio (bioacoustics)
 - [`speech_transcript`](#speech-transcript) — Aligned-transcript speech-error annotation: per-segment ASR/TTS error tags + correction
 - [`table_grid`](#table-grid) — Table-cell structure annotation: rows x cols grid + per-cell role (header/data/empty)
 - [`temporal_grounding`](#temporal-grounding) — Video temporal grounding: mark gold event intervals with live IoU vs predicted
@@ -70,10 +81,12 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`trajectory_edit`](#trajectory-edit) — Per-step trajectory correction/editing for SFT/DPO training data
 - [`trajectory_eval`](#trajectory-eval) — Per-step trajectory evaluation with error taxonomy and severity scoring
 - [`tree_annotation`](#tree-annotation) — Annotation of conversation tree nodes with path selection
+- [`triad_test`](#triad-test) — Triad test: which of three items is most different, over a balanced set of triads
 - [`triage`](#triage) — Binary accept/reject triage for rapid data curation
 - [`vas`](#vas) — Continuous visual analog scale for fine-grained magnitude estimation
 - [`video`](#video) — Video player display
 - [`video_annotation`](#video-annotation) — Video annotation with temporal segments, frame classification, keyframes, and object tracking
+- [`viewer_selection`](#viewer-selection) — Selection made in a viewer display (residues in a protein_structure, features and locus in a genome_locus), with optional labels
 - [`voice_interaction`](#voice-interaction) — Voice/full-duplex turn-taking: dual-track timeline + barge-in/overlap classification
 - [`volume_annotation`](#volume-annotation) — 3D medical volumes (DICOM series, NIfTI): three linked slice views, window/level, brush masks with interpolation, boxes and polygons; NIfTI and DICOM SEG export
 
@@ -159,6 +172,55 @@ Audio segmentation and annotation with waveform visualization
 ```
 
 From `examples/audio/audio-annotation/config.yaml`.
+
+## bdm
+
+Becker-DeGroot-Marschak bid: the most the participant would pay
+
+**Required:** `max`
+
+**Optional:** `bid_label`, `currency`, `input`, `instructions`, `label_requirement`, `min`, `step`
+
+```yaml
+- annotation_type: bdm
+  name: voucher
+  description: What is the most you would pay for a voucher worth $3.00?
+  min: 0
+  max: 5
+  step: 0.05
+  input: number
+  instructions: You have $5.00 to spend. A price between $0.00 and $5.00 is drawn
+    after the study. If your bid is at least the price, you buy the voucher and pay
+    the price, not your bid; otherwise you keep the $5.00. Bidding what the voucher
+    is worth to you is your best choice.
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/incentivized-elicitation/config.yaml`.
+
+## belief_elicitation
+
+Probability report (0-100) or a distribution over bins that sums to 100
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `bins`, `instructions`, `label_requirement`, `left_label`, `mode`, `right_label`, `step`
+
+```yaml
+- annotation_type: belief_elicitation
+  name: forecast
+  description: How likely is it that this happens?
+  mode: point
+  left_label: Certainly not
+  right_label: Certainly
+  instructions: 'Move the slider to your probability. You may win $2.00: the closer
+    your report is to what happens, the higher your chance of winning.'
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/incentivized-elicitation/config.yaml`.
 
 ## bws
 
@@ -414,6 +476,55 @@ Coreference chain annotation for grouping mentions of the same entity
 
 From `examples/span/coreference/config.yaml`.
 
+## ego_network
+
+Personal (ego) network: name generators, per-person questions, dyad census and a sociogram
+
+**Required:** `stages`
+
+**Optional:** `label_requirement`, `stage_layout`
+
+```yaml
+- annotation_type: ego_network
+  name: described_network
+  description: Record the network this person describes
+  stage_layout: stacked
+  label_requirement:
+    required: true
+  stages:
+  - type: name_generator
+    id: mentioned
+    title: People mentioned
+    prompt: Add each person the interviewee says they talk to.
+    min_alters: 1
+  - type: name_interpreter
+    id: role
+    title: Role
+    prompt: What is each person to the interviewee?
+    required: true
+    questions:
+    - name: role
+      type: radio
+      description: '{name} is the interviewee''s'
+      labels:
+      - name: family
+        text: Family
+      - name: friend
+        text: Friend
+      - name: work
+        text: Work or school
+      - name: unclear
+        text: Not stated
+  - type: dyad_census
+    id: ties
+    title: Ties between them
+    prompt: Does the excerpt say {a} and {b} know each other?
+    yes_label: 'Yes'
+    no_label: No or not stated
+```
+
+From `examples/advanced/ego-network/config.yaml`.
+
 ## emergent_behavior
 
 Cross-lane emergent-behavior tagging: mark turn-sets for collusion/groupthink/cascade/role-drift
@@ -652,6 +763,70 @@ Multi-agent failure attribution: responsible agent + decisive step + reason
 
 From `examples/agent-traces/failure-attribution/config.yaml`.
 
+## free_list
+
+Free list: items typed one at a time, in order, with timings (cultural domain analysis)
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `allow_duplicates`, `instructions`, `label_requirement`, `max_items`, `min_items`, `normalize`, `placeholder`, `time_limit_s`
+
+```yaml
+- annotation_type: free_list
+  name: fruit_freelist
+  description: List all the kinds of fruit you can think of.
+  instructions: Type one kind of fruit, then press Enter. Keep going until you cannot
+    think of any more. The order you list them in is part of the answer, so write
+    them down as they come to mind.
+  min_items: 3
+  max_items: 60
+  normalize: true
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/cultural-domain/config.yaml`.
+
+## geo_annotation
+
+Maps: draw labelled points, lines and polygons, pin places, or label regions (OpenLayers)
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `basemap`, `basemap_field`, `center`, `coordinate_order`, `feature_text`, `height`, `instructions`, `label_requirement`, `labels`, `max_features`, `min_features`, `preannotation_field`, `projection`, `require_all_regions`, `snapping`, `task`, `tools`, `zoom`
+
+```yaml
+- annotation_type: geo_annotation
+  name: dialect_areas
+  description: Draw the areas where people speak differently
+  instructions: Outline each area where you think people talk differently from other
+    places. Areas may overlap. Give each one the name you would use for the way people
+    talk there, and say how different it sounds to you.
+  task: draw
+  tools:
+  - freehand
+  - polygon
+  labels:
+  - name: A little different
+    color: '#56B4E9'
+  - name: Very different
+    color: '#D55E00'
+  - name: Hard to understand
+    color: '#CC79A7'
+  feature_text:
+    prompt: What do you call how people talk there?
+    required: true
+  basemap:
+    geojson: maps/regions.geojson
+    region_id_property: id
+    region_name_property: name
+  height: 460
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/dialect-map/config.yaml`.
+
 ## grounding_eval
 
 Grounding evaluation: bind referring expressions to image regions or points, with an explicit not-present answer
@@ -726,7 +901,7 @@ Hierarchical tree-structured multi-label selection
 
 **Required:** `taxonomy`
 
-**Optional:** `auto_select_children`, `auto_select_parent`, `max_selections`, `show_search`, `taxonomy_preset`, `tooltips`
+**Optional:** `auto_select_children`, `auto_select_parent`, `max_selections`, `show_codes`, `show_search`, `taxonomy_file`, `taxonomy_preset`, `tooltips`
 
 ```yaml
 - annotation_type: hierarchical_multiselect
@@ -792,6 +967,37 @@ Image annotation with bounding boxes, polygons, freeform drawing, and landmarks
 
 From `examples/image/image-annotation/config.yaml`.
 
+## interlinear_gloss
+
+Interlinear glossed text: morpheme segmentation and glosses aligned per word (Leipzig rules)
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `abbreviations`, `gloss_field`, `instructions`, `label_requirement`, `language`, `metalanguage`, `morphemes_field`, `show_translation`, `source_field`, `tiers`, `translation_field`
+
+```yaml
+- annotation_type: interlinear_gloss
+  name: igt
+  description: Segment each word into morphemes and gloss every morpheme
+  instructions: Put - between affixes and = before a clitic, in both lines. Write
+    grammatical categories in capitals (ACC, PL, 3SG) and join several meanings of
+    one morpheme with a dot (NOM.SG).
+  source_field: text
+  morphemes_field: morphemes
+  gloss_field: glosses
+  translation_field: translation
+  tiers:
+  - pos
+  - notes
+  abbreviations: leipzig
+  language: la
+  metalanguage: en
+  label_requirement:
+    required: true
+```
+
+From `examples/span/interlinear-gloss/config.yaml`.
+
 ## likert
 
 Likert scale rating
@@ -811,6 +1017,59 @@ Likert scale rating
 ```
 
 From `examples/classification/likert/config.yaml`.
+
+## list_experiment
+
+List experiment (item count technique) for a sensitive question
+
+**Required:** `items`, `sensitive_item`, `treatment`
+
+**Optional:** `count_prompt`, `label_requirement`, `sensitive_position`
+
+```yaml
+- name: lists
+  annotation_type: list_experiment
+  description: Here is a list of things some people have done in the last year. How
+    many of them have you done?
+  items:
+  - Gone to a live music concert
+  - Bought a book in a shop
+  - Volunteered for a local group
+  sensitive_item: Driven a car after drinking alcohol
+  treatment:
+    factor: list_group
+    level: treatment
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/sensitive-questions/config.yaml`.
+
+## listening_test
+
+Listening tests: MUSHRA, BS.1116, ACR, DCR, CCR, ABX and P.835, with blinded stimuli
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `allow_replay`, `anchors`, `condition_field`, `hidden_reference`, `instructions`, `label_requirement`, `loop`, `method`, `reference_field`, `require_all_played`, `require_full_playback`, `require_one_at_100`, `scale_labels`, `stimuli_field`
+
+```yaml
+- annotation_type: listening_test
+  name: quality
+  method: mushra
+  description: Rate the audio quality of each sample against the reference
+  instructions: Listen to the reference, then to every sample. One of the samples
+    is the reference itself; rate it 100. Use the loop to compare a short passage.
+  reference_field: reference
+  stimuli_field: stimuli
+  anchors:
+  - 3500
+  - 7000
+  label_requirement:
+    required: true
+```
+
+From `examples/audio/listening-test-mushra/config.yaml`.
 
 ## multi_document_event
 
@@ -974,6 +1233,28 @@ Pairwise comparison of two items (binary selection or scale rating)
 
 From `examples/classification/pairwise-scale/config.yaml`.
 
+## price_list
+
+Multiple price list: choose option A or B in each row (Holt & Laury preset, time preference)
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `amount_now`, `amounts_later`, `currency`, `delay_label`, `instructions`, `label_requirement`, `now_label`, `option_labels`, `preset`, `rows`, `scale`, `single_switch`
+
+```yaml
+- annotation_type: price_list
+  name: risk
+  description: For each decision, choose the option you prefer.
+  preset: holt_laury
+  single_switch: true
+  instructions: If this part is drawn for payment, one of the ten decisions is drawn
+    at random and the option you chose in it is played for real money.
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/incentivized-elicitation/config.yaml`.
+
 ## process_reward
 
 Per-step process reward signals for PRM training
@@ -1020,7 +1301,7 @@ Single-choice radio button selection
 
 **Required:** `labels`
 
-**Optional:** `codebook`, `dynamic_options`, `dynamic_options_field`, `has_free_response`, `horizontal`, `label_requirement`, `option_randomization`, `randomize_order`, `sequential_key_binding`
+**Optional:** `codebook`, `dynamic_options`, `dynamic_options_field`, `has_free_response`, `horizontal`, `label_requirement`, `lextale`, `option_randomization`, `randomize_order`, `sequential_key_binding`
 
 ```yaml
 - annotation_type: radio
@@ -1036,6 +1317,28 @@ Single-choice radio button selection
 ```
 
 From `examples/classification/single-choice/config.yaml`.
+
+## randomized_response
+
+Randomized response (forced response, crosswise) for a sensitive question
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `label_requirement`, `method`, `nonsensitive_prevalence`, `nonsensitive_statement`, `p_no`, `p_truth`, `p_yes`, `question`, `randomizer`
+
+```yaml
+- name: cheating_crosswise
+  annotation_type: randomized_response
+  method: crosswise
+  description: Read both statements. Do not say which is true.
+  question: I have copied someone else's work and handed it in as my own.
+  nonsensitive_statement: My mother was born in January, February or March.
+  nonsensitive_prevalence: 0.25
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/sensitive-questions/config.yaml`.
 
 ## range_slider
 
@@ -1427,6 +1730,36 @@ From `examples/span/span-linking/config.yaml`.
 
 From `examples/spatial/kitti-cuboids/config.yaml`.
 
+## spectrogram_annotation
+
+Time-frequency boxes drawn on a spectrogram of the item's audio (bioacoustics)
+
+**Required:** `labels`
+
+**Optional:** `colormap`, `fft_size`, `height`, `instructions`, `label_requirement`, `max_boxes`, `max_freq`, `min_boxes`, `min_freq`, `source_field`
+
+```yaml
+- annotation_type: spectrogram_annotation
+  name: calls
+  description: 'Check the boxes imported from Raven selection tables: move, resize,
+    relabel or delete them, and draw any call that was missed.'
+  source_field: audio_url
+  labels:
+  - name: whistle
+    color: '#2563eb'
+  - name: upsweep
+    color: '#dc2626'
+  - name: downsweep
+    color: '#16a34a'
+  - name: trill
+    color: '#d97706'
+  instructions: Drag on the spectrogram to draw a box around a call. Drag a box to
+    move it and its corners to resize it; pick the call type with the buttons or keys
+    1-4.
+```
+
+From `examples/audio/bioacoustics-boxes/config.yaml`.
+
 ## speech_transcript
 
 Aligned-transcript speech-error annotation: per-segment ASR/TTS error tags + correction
@@ -1745,6 +2078,28 @@ Annotation of conversation tree nodes with path selection
 
 From `examples/span/conversation-tree/config.yaml`.
 
+## triad_test
+
+Triad test: which of three items is most different, over a balanced set of triads
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `design`, `instructions`, `items_field`, `label_requirement`, `labels`, `max_triads`, `question`
+
+```yaml
+- annotation_type: triad_test
+  name: triads
+  description: Triads
+  question: Which is most different?
+  instructions: Each triad shows three items. Choose the one that is most different
+    from the other two. There are no right answers.
+  items_field: items
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/cultural-domain/config.yaml`.
+
 ## triage
 
 Binary accept/reject triage for rapid data curation
@@ -1840,6 +2195,32 @@ Video annotation with temporal segments, frame classification, keyframes, and ob
 ```
 
 From `examples/video/video-frame-annotation/config.yaml`.
+
+## viewer_selection
+
+Selection made in a viewer display (residues in a protein_structure, features and locus in a genome_locus), with optional labels
+
+**Required:** `viewer_field`
+
+**Optional:** `instructions`, `label_requirement`, `labels`, `max_selections`, `min_selections`
+
+```yaml
+- annotation_type: viewer_selection
+  name: binding_site
+  description: Select the residues that form the binding site
+  viewer_field: structure
+  labels:
+  - zinc ligand
+  - interface
+  min_selections: 1
+  max_selections: 12
+  label_requirement:
+    required: true
+  instructions: Choose a label, then click residues in the 3D view or the residue
+    table. Click a selected residue again to remove it.
+```
+
+From `examples/advanced/protein-binding-site/config.yaml`.
 
 ## voice_interaction
 

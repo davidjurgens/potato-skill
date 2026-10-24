@@ -337,6 +337,14 @@ def test_every_yaml_sample_validates(name, index, body):
     if first_line.startswith((" ", "\t")):
         pytest.skip("an indented fragment of a larger block")
 
+    # SAML sign-in needs the `[saml]` extra, which builds against the system's
+    # libxmlsec1; without it `potato validate` refuses the block and names the
+    # install. A skip rather than a pass, so a run without it says so.
+    if (isinstance(sample, dict)
+            and (sample.get("authentication") or {}).get("method") == "saml"):
+        pytest.importorskip("onelogin.saml2",
+                            reason="SAML samples need potato-annotation[saml]")
+
     work_dir = tempfile.mkdtemp(prefix="pack-sample-")
     try:
         host = _host_config(work_dir)

@@ -16,7 +16,9 @@ Booting a server, reading the startup log, and handing it over. It ships with th
 
 ---
 
-`potato validate` tells you the server will start. `potato preview --screenshot`
+`potato validate` tells you the server will start. Since 2.12.0 it also reports
+keys the scheme's type never reads, so a clean run now covers that too, and
+`--strict` fails on them. `potato preview --screenshot`
 tells you the first 900 pixels of one page did not throw. Neither tells you an
 annotator can get from the login screen to the end of the study, and most of what
 breaks a task lives in that gap.

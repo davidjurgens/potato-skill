@@ -30,7 +30,12 @@ Agent traces and agent evaluation are their own family — `agent-traces.md`.
 | A chat log or conversation | `dialogue` | anything, often `turn_level` | Span target; threading is a display option |
 | A branching conversation | `conversation_tree` | `tree_annotation` | **Not** a span target |
 | Several agents talking | `multi_agent_discussion` | `failure_attribution`, ratings | Span target; see `agent-traces.md` |
-| Point clouds, LiDAR, 3D scans | the cloud path, **unlabelled** | `spatial_annotation` | It reads the path off the page, not the item; `lod` defaults on, which changes what `max_points` does |
+| Point clouds, LiDAR, 3D scans | *(none needed)* | `spatial_annotation` | From 2.12.0 the viewer reads `source_field` from the item; `lod` defaults on, which changes what `max_points` does |
+| Blind listening tests: MUSHRA, ACR, ABX and four more | *(none needed)* | `listening_test` | The page never learns which slot is which condition, so `/media/` refuses the stimulus files; `anchors` need a WAV reference |
+| Calls with a frequency range (birds, bats) | *(none needed)* | `spectrogram_annotation` | `labels` is required, and a label YAML reads as `true` or `no` is refused |
+| A map: draw areas, pin places, label regions | *(none needed)* | `geo_annotation` | Refused at boot with no `basemap`; nothing is fetched from the internet unless you name it |
+| A protein structure or a genome locus | `protein_structure` or `genome_locus` | `viewer_selection` | `viewer_field` is the display's `key`; `engine: molstar` does not validate until its bundle is installed |
+| One line of a scanned page, for correction | `image_region` | `text_edit` | `image` inside the field is a URL the browser loads; media references are not resolved there |
 | Robot episodes, teleop logs | *(none needed)* | `episode_annotation` | Four layers; pick the ones you need |
 | CT or MRI volumes, NIfTI or DICOM | *(none needed)* | `volume_annotation` | The path is relative to `media_directory`; take masks from the `volume_nifti` export, not the stored JSON |
 
@@ -41,7 +46,7 @@ and picking the wrong one gives you an empty widget with nothing in the log.
 
 | Key | Types that read it |
 |---|---|
-| `source_field` | `image_annotation`, `video_annotation`, `audio_annotation`, `spatial_annotation`, `episode_annotation`, `tiered_annotation`, `text_edit` |
+| `source_field` | `image_annotation`, `video_annotation`, `audio_annotation`, `spectrogram_annotation`, `spatial_annotation`, `episode_annotation`, `tiered_annotation`, `interlinear_gloss`, `text_edit` |
 | `video_key`, `events_key` | `temporal_grounding` |
 | `audio_key`, `segments_key`, `turns_key`, `speaker_key`, `text_key` | `speech_transcript`, `voice_interaction`, `tiered_annotation` |
 | `screenshot_key`, `steps_key` | `gui_trajectory` |
@@ -54,9 +59,14 @@ and picking the wrong one gives you an empty widget with nothing in the log.
 | `target_field` | `span` |
 | `source_field` | `error_span` — name the field holding the text to mark, or it falls back to `text_key` |
 | `question_field`, `passage_field` | `extractive_qa` |
-| `items_field` | `card_sort` |
+| `items_field` | `card_sort`, `triad_test` |
 | `profiles_field` | `conjoint` |
 | `span_schema` | `coreference`, `event_annotation`, `span_link` |
+| `stimuli_field`, `reference_field`, `condition_field` | `listening_test` |
+| `viewer_field` | `viewer_selection` (the `key` of the `instance_display` field it records from) |
+| `basemap_field`, `preannotation_field` | `geo_annotation` |
+| `morphemes_field`, `gloss_field`, `translation_field` | `interlinear_gloss` (alongside `source_field`) |
+| `roster_field` | `ego_network` name generators |
 
 Check before you write it:
 
@@ -243,6 +253,43 @@ a region, answered as *absent*, and not answered — because "no region" otherwi
 conflates "there is no referent" with "I did not get to this one", and those
 support opposite conclusions about a model that also produced nothing.
 
+### One line of a scanned page
+
+`image_region` is a display type that crops one rectangle out of a larger image
+in the browser, which is what line-by-line correction of handwriting recognition
+output needs. Pair it with `text_edit` (`source_field` the recognised text,
+`show_diff: true`). `potato import -f page_xml` writes items in this shape, and
+`examples/text/htr-line-correction/` is the runnable project.
+
+```yaml
+instance_display:
+  fields:
+    - key: line_image
+      type: image_region
+      label: Line
+      padding: 12
+annotation_schemes:
+  - annotation_type: text_edit
+    name: transcription
+    description: Correct the transcription of this line
+    source_field: htr_text
+    show_diff: true
+```
+
+```json
+{"id": "letter-r1l1", "htr_text": "Letter to the harbour rnaster",
+ "line_image": {"image": "/media/letter.png", "width": 1000, "height": 700,
+                "region": [120, 60, 640, 56]}}
+```
+
+`region` is `[x, y, width, height]` in image pixels, and `width` and `height`
+are the whole image's size, which the crop needs. Without them the page shows the
+whole image with a note. **The path in `image` is not resolved against
+`media_directory`**: write the URL the browser will load, which for a file in
+`media/` is `/media/<name>`. The answer is `text_edit`'s own JSON, one value
+under `<scheme>:::<scheme>`, holding `edited_text`, `original_text` and the two
+edit distances; the crop adds nothing to it.
+
 ## Video
 
 ```yaml
@@ -287,6 +334,58 @@ events, with a start typed into the first and nothing else, saves
 `{"events":{"0":{"start":1.5}}}` and advances: an interval with no end, one
 event of two, and the study calls the item done. Check for `end` on every event
 before you trust the IoU column.
+
+## Per-object attributes
+
+`attributes` on an `image_annotation`, `video_annotation` (modes `tracking` and
+`combined`) or `spatial_annotation` scheme adds typed fields that are filled in
+once per shape, track or box: occlusion, truncation, parked.
+
+```yaml
+- annotation_type: image_annotation
+  name: objects
+  description: Box each object, then set its attributes
+  source_field: image_url
+  tools: [bbox]
+  labels: [vehicle, person]
+  attributes:
+    - name: occlusion
+      type: select
+      options: [none, partial, heavy]
+      default: none
+      required: true
+    - name: parked
+      type: bool
+      labels: [vehicle]
+```
+
+`type` is `select`, `multi`, `text`, `number` or `bool`; `labels` limits an
+attribute to some of the scheme's labels, and `show_if: {attribute: ..., equals: ...}`
+hides one behind another. On an image the values sit on the shape. A box drawn in
+headless Chromium with `partial` chosen and the bool ticked was stored under
+`objects:::_data` as:
+
+```json
+[{"type": "bbox", "label": "vehicle", "coordinates": {"x": 0.147, "y": 0.138, "width": 0.282, "height": 0.242},
+  "source": "human", "attributes": {"occlusion": "partial", "parked": true}}]
+```
+
+**`per_keyframe: true` is for values that change along a track**, and it is
+refused on an image scheme (the validator says only video tracks and point-cloud
+sequences have keyframes). Without it, a track has one value for its whole
+length. On a video, a `per_keyframe` value changed at frame 5 was stored on that
+keyframe and the track-level value was left alone:
+
+```json
+{"tracks": {"track_1": {"label": "car", "attributes": {"occluded": "none"},
+  "keyframes": {"0": {"frame": 0, "bbox": {"x": 64, "y": 46.2, "width": 100, "height": 100}},
+                "5": {"frame": 5, "bbox": {"x": 164, "y": 66.2, "width": 100, "height": 100},
+                      "attributes": {"occluded": "heavy"}}}}}}
+```
+
+The panel names its scope under the field ("From frame 5 until the next
+keyframe"). Per-attribute agreement appears in `/admin/iaa` once two people have
+annotated an item. That was not run here.
 
 ## Audio and speech
 
@@ -376,6 +475,87 @@ picture. Three things about it on 2.8.2-11:
   again. If the labels matter more than the boundaries, seed nothing and let
   annotators draw.
 
+## Listening tests
+
+`listening_test` runs `mushra`, `bs1116`, `acr`, `dcr`, `ccr`, `abx` or `p835`
+from one scheme. It has no display field; the item names the files.
+
+```yaml
+- annotation_type: listening_test
+  name: quality
+  method: mushra
+  description: Rate the audio quality of each sample against the reference
+  reference_field: reference
+  stimuli_field: stimuli
+  anchors: [3500, 7000]
+  label_requirement:
+    required: true
+```
+
+```json
+{"id": "excerpt_1", "reference": "/media/chord_ref.wav",
+ "stimuli": {"lowrate": "/media/chord_lowrate.wav", "coarse": "/media/chord_coarse.wav"}}
+```
+
+`stimuli` maps condition names to files. The single-clip methods (`acr`, `dcr`,
+`p835`) take one file in `stimuli_field` and a `condition_field` naming its
+condition, so the export can report a mean per codec or noise level.
+
+**The page is never told which sample is which condition.** The plan route
+(`/api/listening/plan`) returned slot names `s1` to `s5` and opaque
+`/api/listening/audio/<scheme>/<item>/<slot>` URLs, with no condition names.
+Two stimuli, the hidden reference and two anchors made five slots, in an order
+seeded per participant and item. The item JSON the page receives omits the
+stimulus, reference and condition fields, and `/media/chord_ref.wav` answered
+404. A file a listening item uses therefore cannot also be shown by another
+scheme through `/media/`; give that scheme its own copy.
+
+What a rating stores is the slot, not the condition. A MUSHRA answer sits under
+`<scheme>:::<scheme>` as one JSON string, `{"ratings": {"s1": 100, "s2": 40, ...},
+"played": ["s1", ...]}`. Reading `user_state.json` alone cannot tell you which
+condition got 40. `python -m potato.export --format listening_test` maps the
+slots back (in a run, `s4` was `hidden_reference` and `s1` was `anchor_lp3500`)
+and writes `listening_ratings.csv` and a summary per condition. Do not decode
+slots yourself.
+
+**`anchors` make low-pass copies of the reference and need a PCM WAV
+reference.** With a `.flac` reference and `anchors: [3500, 7000]` the config
+validated and the server booted, the two anchor slots answered HTTP 500 and the
+reference and conditions played. For another format, drop `anchors` and list
+the anchor files in `stimuli` yourself.
+
+## Spectrogram boxes
+
+`spectrogram_annotation` draws time-frequency boxes on a spectrogram the page
+computes in the browser. Use it where the frequency range of an event matters
+(bird, bat and frog calls); `audio_annotation` marks time only.
+
+```yaml
+- annotation_type: spectrogram_annotation
+  name: calls
+  description: Draw a box around every call and label it
+  source_field: audio_url
+  labels:
+    - {name: whistle, color: "#2563eb"}
+    - unknown
+  max_freq: 4000
+```
+
+```json
+{"id": "site3_0612", "recording": "site3_0612.wav", "audio_url": "/media/site3_0612.wav"}
+```
+
+`labels` is required, and a label YAML reads as `true`, `no` or a number is
+refused at validation with "every label needs a name"; quote it. `source_field`
+defaults to `audio_url`. The answer is one JSON list under `<scheme>:::_data`, in
+seconds and Hz, `low_hz` and `high_hz` null for a box with no frequency range:
+
+```json
+[{"start_s": 0.5, "end_s": 1.1, "low_hz": 300, "high_hz": 900, "label": "whistle", "source": "human"}]
+```
+
+The `raven` and `audacity_labels` exports are in `getting-the-data-out.md`.
+
 ## Dialogue and podcasts
 
 Four displays, and the difference is the shape of the conversation:
@@ -412,25 +592,14 @@ accurate now, and `test_doc_counts.py` fails if it drifts again.)
 
 `tools` and `labels` are required, as with images.
 
-**The viewer finds the cloud on the page, not in the item.** `source_field`
-names the key, and then `pc-viewer.js` looks for a rendered element whose
-`data-field-key` matches and reads its *text*. So the cloud path has to be
-either the item's `text_key` (what the bundled example does) or a display field
-— and that field must have **no `label:`**, because the label ends up in the
-same text node and the path is rejected for containing whitespace. All three of
-these produce "No point cloud for this item: the "point_cloud" field is empty.
-Check item_properties in the config", which is not where the problem is:
-
-```yaml
-# dead: the cloud is in the data and nowhere on the page
-instance_display: {fields: [{key: notes, type: text, label: Notes}]}
-
-# dead: the label is in the way
-instance_display: {fields: [{key: cloud, type: text, label: Cloud}]}
-
-# works: 9,091 points, all loaded
-instance_display: {fields: [{key: cloud, type: text}]}
-```
+**On 2.12.0 the viewer reads the cloud path from the item.** `source_field`
+names the key, the page publishes the item record, and `pc-viewer.js` reads that
+key first. An item with `"point_cloud": "frames/drive_0001/000000.bin"` and only
+a `notes` text on screen loaded "5,427 points, all loaded" in headless Chromium.
+Before 2.12 the viewer read the path out of a rendered element instead, and a
+config written for an older build put the path in `text_key` or in an unlabelled
+display field, because a `label:` ended up in the same text node and the path was
+rejected for containing whitespace. On 2.12.0 neither is needed. The labelled-field case was not re-tested.
 
 Boxes come back in **metres in the sensor frame**, not normalized like image
 annotation: `{"center": [35.47, -7.58, -0.90], "size": [15.71, 1.46, 1.70],
@@ -442,6 +611,29 @@ keys: under LOD the cloud loads as an octree and `point_budget` /
 when `lod: false`**. Setting `max_points` on a default config and expecting a cap
 does nothing at all. `mpr` and `slab_thickness` switch to slab views for
 medical-style data.
+
+**A list of clouds is a sequence.** Give `source_field` a list of paths, one per
+frame, and the viewer adds a frame bar (`[` and `]` step, `f` copies the selected
+box to the next frame). The scheme config does not change:
+
+```json
+{"id": "drive_0001", "point_cloud": ["frames/drive_0001/000000.bin", "frames/drive_0001/000001.bin"], "notes": "A car pulls away."}
+```
+
+Each saved box carries `frame` and `track_id`, boxes exist only at the keyframes
+you drew, and the frames between are interpolated at read time. On the stock
+`lidar-sequence` example the bar read "Frame 1 of 6". A saved two-keyframe track
+lands in `user_state.json` as one JSON list under `<scheme>:::_data`:
+
+```json
+[{"type": "cuboid_3d", "label": "car", "frame": 0, "track_id": "t1",
+  "attributes": {"occluded": "none"},
+  "coordinates": {"center": [9.95, -1.02, -0.95], "size": [4.8, 2.5, 1.6], "rotation": [0, 0, 0, 1]}},
+ {"type": "cuboid_3d", "label": "car", "frame": 3, "track_id": "t1", "attributes": {"occluded": "partly"},
+  "coordinates": {"center": [14.0, -1.0, -0.95], "size": [4.8, 2.5, 1.6], "rotation": [0, 0, 0, 1]}}]
+```
+
+The `kitti_3d` export for sequences is in `getting-the-data-out.md`.
 
 `rollout_evaluation` puts several generated videos on one clock, with
 violations, preference and counterfactual layers. It is the one media widget
@@ -509,6 +701,218 @@ only; a NIfTI item is skipped with a warning naming `volume_nifti`.
 out NIfTI and DICOM files (403) and the viewer still works. With it on, the raw
 files are served to anyone who has the URL, signed in or not.
 
+## Maps
+
+`geo_annotation` puts an OpenLayers map on the page. `task` is `draw` (points,
+lines, polygons, freehand), `pin` (one point per label, each label a question
+such as "where did you grow up") or `classify_region` (give labels to the regions
+of an outline map). It has no display field.
+
+```yaml
+- annotation_type: geo_annotation
+  name: dialect_areas
+  description: Draw the areas where people speak differently
+  task: draw
+  tools: [freehand, polygon]
+  labels:
+    - {name: A little different, color: "#56B4E9"}
+    - {name: Very different, color: "#D55E00"}
+  feature_text: {prompt: "What do you call how people talk there?", required: true}
+  basemap:
+    geojson: maps/regions.geojson
+```
+
+**A scheme without a `basemap` does not boot.** `potato validate` says "give the
+map a basemap" and lists the four sources: `geojson` (an outline file under
+`task_dir`), `image` plus `extent` (a georeferenced PNG or JPEG in plate carree),
+`geotiff` (EPSG:4326 or EPSG:3857 only) and `tiles` (an XYZ URL, with
+`attribution` for an external one). Potato loads no map from the internet unless
+you name one, so an offline study uses `geojson`, `image` or a local `geotiff`.
+`basemap_field` takes a per-item basemap from the item instead.
+
+With the `dialect-map` example's three schemes (`draw`, `pin`, `classify_region`)
+each answer is one GeoJSON FeatureCollection as a string under
+`<scheme>:::<scheme>`, in `[longitude, latitude]` order. A drawn polygon carries
+`properties.label`, `properties.text` (the `feature_text` box) and
+`properties.tool`. A `classify_region` answer has one feature per labelled
+region with `"geometry": null` and `properties.region`; the `geojson` export puts
+the geometry back. `coordinate_order: latlon` is for preannotation or outline
+files that write latitude first, and storage is `[lon, lat]` either way.
+
+## Protein structures and genome loci
+
+Both are display types, and an annotator's picks are recorded by a
+`viewer_selection` scheme whose `viewer_field` is the display field's `key`.
+
+```yaml
+media_directory: media
+instance_display:
+  fields:
+    - key: structure
+      type: protein_structure
+      label: Structure
+      display_options:
+        engine: 3dmol
+        plddt: true
+annotation_schemes:
+  - annotation_type: viewer_selection
+    name: binding_site
+    description: Select the residues that form the binding site
+    viewer_field: structure
+    labels: [zinc ligand, interface]
+    min_selections: 1
+    max_selections: 12
+    label_requirement:
+      required: true
+```
+
+An item names the file relative to `media_directory`:
+`{"id": "model_1", "structure": "structures/model_1.cif"}`. mmCIF, BinaryCIF and
+PDB load, gzipped or not. The default engine, 3Dmol.js, ships with Potato. **A
+URL in the item is refused unless the display sets `allow_remote: true`**, and
+then the annotator's browser fetches it, so the machines need to reach the host.
+
+`engine: molstar` fails `potato validate` ("needs the browser library molstar,
+which is not installed. Install it with `potato vendor fetch molstar`") until the
+bundle is installed. That command downloads Mol* (about 5 MB), so it was not run
+here and Mol* rendering is untested.
+
+The selection is JSON under `<scheme>:::<scheme>`, and nothing validates it on
+save:
+
+```json
+{"viewer": "protein_structure",
+ "items": [{"chain": "A", "resi": 8, "resn": "HIS", "label": "zinc ligand"}]}
+```
+
+`chain` and `resi` are the file's `auth_asym_id` and `auth_seq_id`. There is no
+exporter for it; the JSON is the scheme's value in the `jsonl`, `csv` and `tsv`
+exports.
+
+`genome_locus` is the same pairing with igv.js, which draws on canvas and needs no
+WebGL. The item field holds a locus (`chr1:1201`, `chr1:1,450-1,550` or `chr1`),
+and the reference and tracks are local files in the media directory:
+
+```yaml
+instance_display:
+  fields:
+    - key: locus
+      type: genome_locus
+      label: Locus
+      display_options:
+        reference: {fasta: genome/synthetic.fa, name: synthetic}
+        flank: 60
+        tracks:
+          - {name: Calls, url: calls/sample1.vcf.gz}
+          - {name: Reads, field: bam, height: 260}
+```
+
+The `.fai` sits beside the FASTA, a BAM needs its `.bai`, and a gzipped VCF or BED
+needs a `bgzip` file and a `.tbi`. A `field` track takes its file from the item
+(`"bam": "reads/sample1.bam"`). Genome ids such as `hg38` and every http(s)
+reference or track need `allow_remote: true`. With the `variant-review` example, a
+`viewer_selection` answer was stored as
+`{"viewer": "genome_locus", "locus": "chr1:1141-1261", "items": [{"chr": "chr1", "start": 1201, "end": 1201, "kind": "variant", "name": "call_1", "ref": "C", "alt": "G", "track": "Calls"}]}`
+beside the ordinary radio answer. Rendering in a browser (igv tracks drawing,
+click-to-select) was not exercised.
+
+## Fieldwork, networks and cultural domains
+
+Five schemes that are not media but sit on the same pages. Each stores one
+string under `<scheme>:::<scheme>`; the shapes below are what the server wrote
+after a post of that shape, not what the widget produced from clicks (the
+widgets were not driven).
+
+`interlinear_gloss` shows one column per word with segmentation, gloss and a
+translation line. `source_field` is a sentence string or a word list;
+`morphemes_field`, `gloss_field` and `translation_field` pre-fill; `tiers` adds
+lines such as `pos`; `abbreviations: leipzig` warns on unknown category labels.
+
+```yaml
+- annotation_type: interlinear_gloss
+  name: igt
+  description: Segment each word into morphemes and gloss every morpheme
+  source_field: text
+  morphemes_field: morphemes
+  gloss_field: glosses
+  translation_field: translation
+  tiers: [pos, notes]
+  abbreviations: leipzig
+```
+
+The answer is `{"words": [{"word": "Puella", "morphemes": "puell-a", "gloss":
+"girl-NOM.SG", "pos": "n", "notes": ""}], "translation": "..."}`. Segmentation
+and gloss must have the same `-` and `=` boundaries in the same order, or a
+required scheme will not advance.
+
+`ego_network` is an ordered list of `stages`: `name_generator`, then any of
+`name_interpreter`, `dyad_census` and `sociogram`.
+
+```yaml
+- annotation_type: ego_network
+  name: net
+  description: People mentioned
+  stages:
+    - type: name_generator
+      id: mentioned
+      prompt: Add each person named.
+      min_alters: 1
+    - type: name_interpreter
+      id: about
+      questions:
+        - name: closeness
+          type: radio
+          description: How close is {name}?
+          labels: [{name: near, text: Near}, {name: far, text: Far}]
+    - type: dyad_census
+      id: know
+```
+
+Two refusals at validation: a name interpreter before any name generator, and
+`layout: stacked` (the key is `stage_layout`). The answer holds `alters`
+(`a1`, `a2`, ... with `named_in`), `attributes` per alter, `ties`, `positions`,
+`census` keyed `"a1|a2"` and `tie_attributes`. The respondents' typed names are in
+that string, so treat `annotation_output/` as identifiable data; the
+`ego_network` export leaves names out unless `--option export_names=true`.
+
+`free_list` takes one typed list; `min_items`, `max_items`, `time_limit_s`,
+`allow_duplicates` and `normalize` are the options, and `normalize` is applied by
+the export, never to what is stored. It stores `{"items": [...], "timings_ms":
+[...], "elapsed_ms": 6000, "time_up": false, "started": true}`, in the order
+given.
+
+`triad_test` shows the domain three items at a time and asks which is most
+different. The domain is `labels` or an item's `items_field`, 3 to 60 entries.
+`design` is `auto`, `complete`, `steiner` or `sample`:
+
+```yaml
+- annotation_type: triad_test
+  name: triads
+  description: Triads
+  design: steiner
+  labels: [apple, banana, cherry, grape, lemon, lime, mango]
+```
+
+`steiner` needs 1 or 3 mod 6 items (7, 9, 13, 15, ...); with 8 labels the
+validator said "design: steiner needs a number of items that is 1 or 3 mod 6".
+Each stored triad lists the three items in the order shown, then the pick or
+`null`: `{"design": "steiner", "triads": [["a", "b", "c", "b"]]}`. Every
+participant answers the same triads in a per-person order. The similarity
+matrices come from `python -m potato.export --format cultural_domain`.
+
+`hierarchical_multiselect` can read its tree from a file instead of the config:
+`taxonomy_file` is a CSV with `code`, `label`, `parent` and optional
+`description`, or JSON or YAML in the same mapping shape as `taxonomy`.
+
+The scheme then has `taxonomy_file: codebooks/topics.csv` where a config would
+have `taxonomy`, plus `show_codes: true` (ordinary `name`, `description`).
+
+**The answer stores each entry's displayed text, so two entries with the same
+label are one answer.** A codebook with an "Other" under two parents is refused
+at validation, naming the codes, unless `show_codes: true` makes them read
+`<code> <label>`. With `show_codes` on, the answer is the comma-joined displayed
+text: `1 Economy,101 Taxes`. Give `taxonomy` or `taxonomy_file`, not both.
+
 ## Verifying a non-text task
 
 `potato preview --screenshot` is close to useless here. It renders the viewport
@@ -530,3 +934,28 @@ What actually proves it:
 
 `running-a-task.md` has the driver. `scripts/walk_task.py` will answer a
 media task's classification questions but cannot draw a box for you.
+
+## What has and has not been checked
+
+Checked against Potato 2.12.0 (a snapshot of the unreleased tree), in a
+scratch task per scheme: `potato validate` on every YAML block above or a close
+copy, a booted server, an authenticated `GET /annotate`, a `POST /updateinstance`
+in the page's own key shape, and a read of `user_state.json`. The `listening_test`
+export was run on one MUSHRA answer. A real browser (headless Chromium) drew the
+image box and the video track keyframes that the attribute sections quote, and
+loaded the point-cloud item and the stock `lidar-sequence` example (6 frames).
+
+Not checked:
+
+- Any widget interaction for `spectrogram_annotation`, `geo_annotation`,
+  `interlinear_gloss`, `ego_network`, `free_list`, `triad_test`,
+  `hierarchical_multiselect`, `viewer_selection` and `listening_test`. For these,
+  the stored shapes are what the server kept after a post of that shape, and the
+  option names come from the validator and the schema code.
+- Mol* (`engine: molstar`): the bundle was not fetched.
+- Playback gating in `listening_test` (every sample played, one MUSHRA sample at
+  100) and the other six methods' answer shapes.
+- Interpolation between sequence keyframes, agreement per attribute, and `combined` mode for video attributes.
+- The single-clip `listening_test` methods (`condition_field`), which are quoted from Potato's docs.
+- `geotiff`, `image` and `tiles` basemaps. Only `geojson` was run.
+- The labelled-display-field case for a point cloud on 2.12.0.

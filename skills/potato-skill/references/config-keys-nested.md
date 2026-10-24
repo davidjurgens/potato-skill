@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 551 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 559 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -514,6 +514,20 @@ In-context-learning labeler that builds few-shot prompts from high-confidence an
 | `verification.sample_rate` | number | `0.2` | Share of model-labeled instances sent for checking |
 | `verification.selection_strategy` | string | `low_confidence` | Which of them to check: low_confidence or random |
 
+## `incentives`
+
+Bonus payments for price_list, bdm and belief_elicitation answers. Computed after the participant finishes, from the stored answers, by the `incentives` export and the admin route /admin/api/crowd/incentive_bonuses; never paid automatically
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `currency` | string | `USD` | Currency label written to bonuses.csv. Prolific pays in the study's own currency |
+| `enabled` | boolean | `False` | Compute bonuses: turns on the `incentives` export and the admin route |
+| `max_bonus` | number |  | Upper limit on one participant's bonus. A capped total is marked in bonuses.csv |
+| `only_finished` | boolean | `True` | Draw and pay only for participants who reached the end of the study |
+| `pay` | string | `one_random_item` | one_random_item pays one decision drawn at random from all of a participant's paid decisions; all (or its alias sum) pays the sum of every decision |
+| `rules` | array |  | One rule per paid scheme: `scheme`, `method` (mpl_random_row, bdm or bsr), an optional `name`, and the method's keys -- bdm: `endowment`, `draw: {min, max, step}` or `price_field`, `item_value` or `value_field`; bsr: `prize` and `outcome_field` or `outcome` |
+| `seed` | string |  | Private text mixed into every draw. Without it the draws follow from the user id and rule name alone, which anyone with the code could compute in advance; keep it out of public repositories |
+
 ## `interaction_tracking`
 
 The general behavioural tracker (clicks, focus, scroll, shortcut keys) that feeds the admin Behavioral tab. On by default
@@ -986,6 +1000,7 @@ Run each annotation item as a timed trial: fixation, stimulus duration, response
 | `fixation_symbol` | string | `+` | What the fixation shows |
 | `item_overrides` | object |  | Per-item timing read from item fields, e.g. `{stimulus_duration_ms: soa_ms}` |
 | `iti_ms` | integer | `0` | Minimum blank interval between one response and the next fixation, in ms. Page loading counts toward it |
+| `presentation` | object |  | Show the item's text one region at a time and record each region's reading time: `mode` (moving_window, centered, cumulative or maze), `field`, `region_separator`, `advance_key`, `question_field`, and for the maze `distractor_field`, `maze_keys` and `on_error`. With it, `response` (the comprehension question) is optional |
 | `response` | object |  | `schema` (a radio or likert scheme), `keys` (key to label, e.g. `{f: word, j: nonword}`) and `allow_mouse` |
 | `show_response_options` | boolean |  | Show the scheme's options during the trial. Defaults to true only when `response.allow_mouse` is on |
 | `stimulus_duration_ms` | integer |  | Hide the stimulus after this many ms. Omit to keep it up until the response |

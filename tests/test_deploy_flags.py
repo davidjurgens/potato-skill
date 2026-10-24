@@ -23,6 +23,14 @@ from skillpack import pack_path
 
 FLAG = re.compile(r"(?<![\w-])(--[a-z][a-z0-9-]*)")
 
+#: Flags of other programs that the deploy prose has to name: pip's, for the
+#: upgrade that pulls in a new required dependency, and Docker's, for building
+#: the image with an extra. Neither is Potato's to define.
+FOREIGN_FLAGS = {
+    "--upgrade": "pip install --upgrade potato-annotation",
+    "--build-arg": "docker build --build-arg POTATO_EXTRAS=saml",
+}
+
 
 def _parser_flags(parser):
     """Every option string on a parser and, recursively, its subparsers."""
@@ -48,7 +56,14 @@ def cli_flags():
         capture_output=True, text=True, timeout=120,
     ).stdout
     flags |= set(FLAG.findall(start_help))
-    return flags
+    # `potato import` also builds and parses in one call. D022 is about the
+    # accounts `--keep-annotators` creates, so the deploy prose names it.
+    import_help = subprocess.run(
+        [sys.executable, "-m", "potato.importers", "--help"],
+        capture_output=True, text=True, timeout=120,
+    ).stdout
+    flags |= set(FLAG.findall(import_help))
+    return flags | set(FOREIGN_FLAGS)
 
 
 def _deploy_prose():

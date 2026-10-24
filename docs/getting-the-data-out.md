@@ -84,7 +84,7 @@ reading the log. Check the name against the list below.
 
 ## Which format
 
-36 formats are registered. `GET /admin/api/export/formats` lists them with
+60 formats are registered. `GET /admin/api/export/formats` lists them with
 descriptions against the running server; `potato preview` does not.
 
 | They want | Format |
@@ -107,6 +107,10 @@ descriptions against the running server; `potato preview` does not.
 | Conditions, screen-outs and trial timings from an experiment | `csv` or `tsv`, which add `participants.csv` and `trials.csv` when the study uses them; `jspsych` for jsPsych pages (see `experiments.md`) |
 | The labeling engine's labels, certificate and model-call log | `labeling_engine` (see `labeling-engine.md`) |
 | It published | `huggingface` (see `publish` in `modes-and-subsystems.md`) |
+| Reliability for a methods section | `reliability` (below) |
+| A deposit with metadata for a repository | `data_package`, `psych_ds` (below) |
+| Annotations that open in a viewer or a field tool | the field sections below |
+| Runtime, jsPsych, listening-test, LexTALE, survey-experiment or incentive-payment tables | see `experiments.md`: `runtime`, `jspsych`, `listening_test`, `lextale`, `survey_experiments`, `incentives` |
 
 **An item nobody annotated is not in the export.** I ran a three-image study,
 annotated two and advanced past the third, and every one of the eleven vision
@@ -145,6 +149,189 @@ not by anything in your config.
 The vision and linguistics formats are the reason to ask early: a researcher who
 says "we'll train a detector on this" wants `coco` or `yolo`, and a task designed
 without that in mind can produce geometry that does not survive the conversion.
+
+## Formats by field
+
+The 2.12 formats below are all run the same way. They read `user_state.json`
+from disk, so the server can be stopped, and `--option key=value` carries the
+options:
+
+```bash
+python -m potato.export --config config.yaml --format <name> --output ./export/ --option key=value
+```
+
+Each was driven on a small project with hand-seeded `user_state.json` files
+(or a Potato example with the same), and the file names and columns quoted here
+are what came out. Several only work on projects made by the matching
+`potato import -f <format>`, because the importer is what creates the item
+fields and scheme names the exporter looks for. Where that applies it says so.
+
+### Reliability and deposits
+
+**`reliability`** writes `reliability.csv` and `reliability.md`, one row per
+question:
+
+```
+schema,level,alpha,ci95_low,ci95_high,percent_agreement,units,coders,pairable_values
+sentiment,nominal,0.407,-0.333,0.6,55.556,3,3,9
+issues,masi,0.485,-0.25,0.485,50.0,2,3,6
+severity,ordinal,0.843,-0.333,0.843,33.333,3,3,9
+```
+
+Krippendorff's alpha with a percentile bootstrap over items. The level follows
+the type: `radio` and `select` nominal, `likert` ordinal, `number`, `slider` and
+`vas` interval, `multiselect` and `hierarchical_multiselect` MASI. `--option
+bootstrap=` and `--option seed=` change the resamples (1000 and a fixed seed).
+Two traps. First, `units` counts only items that at least two coders answered with
+something: `issues` shows 2 of 3 items because the third had no box ticked by
+anyone. Second, a handful of items gives a useless interval and a noisy log. Three
+items gave `[-0.333, 0.6]` and one `krippendorff_alpha failed: float division by
+zero` line per degenerate resample, about 300 lines at the default 1000 resamples. Report the
+interval only on a study big enough for a resample to contain both labels.
+
+**`data_package`** wraps the CSV export in a Frictionless Data Package v2:
+`annotations.csv` plus `datapackage.json`, whose resource carries a Table Schema.
+Types are inferred from the values: `sentiment.Negative` came out `boolean` and
+`severity.4` (a `likert`) `integer`. A column takes its question's `description`
+with the label in brackets. No `enum` constraint appeared on any column of the
+test study, so do not count on the package to enforce the label set. **`psych_ds`** writes
+`dataset_description.json` and
+`data/study-ReviewStudy_table-annotations_data.csv`: the task name with
+everything but letters and digits removed, which is how a Psych-DS validator
+wants keyword values. Both are the CSV underneath, so the sparse
+column-per-label shape and the missing item text in the next section apply to
+both. Hand the data file over with the package.
+
+### Annotation interchange
+
+**`web_annotation`** writes one `web_annotations.jsonld`, a W3C
+`AnnotationCollection`: a span is a `TextQuoteSelector` refined by a
+`TextPositionSelector`, an image region a `FragmentSelector` (`xywh=pixel:`) or
+`SvgSelector`, and a radio, multiselect or text answer a `TextualBody` on the
+whole item. An item's target is its `url` field if it has one, otherwise
+`urn:potato:<task>:<id>`; `--option base_iri=https://x.org/i/` gives
+`https://x.org/i/<id>` instead. Local images are written as project-relative
+paths with a warning, and `--option media_base_url=` makes them absolute. A
+structured answer (tiered annotation, rubric) is left out and counted in the
+warnings.
+
+**`iiif_annotations`** is for projects made with `potato import -f iiif`. It
+writes `annotations/<canvas>.json`, one `AnnotationPage` per annotated canvas,
+and a `manifest.json` copy with each page referenced. A box on a 400x300 image
+under an 800x600 canvas came out as `#xywh=200,300,200,120`, scaled to the
+canvas. Without `--option base_url=` the page ids are relative paths, which a
+viewer resolves only when the manifest is opened from that folder.
+
+**`page_xml`** is for projects made with `potato import -f page_xml`. It
+reopens the imported copy and writes it to `page_xml/<source path>` with only the
+corrected lines changed. A corrected line loses its recogniser `conf` and its
+`Word` elements, which no longer match the text; `--option keep_words=true`
+keeps them. A line nobody annotated keeps its machine text and its `conf`, so an
+unreviewed line is still marked by the confidence it came with.
+
+**`tei`** writes `<user>/tei/potato.xml`, a folder per annotator. Each item is a
+`<p xml:id="r02">`; a span is `<rs type="Claim">`, or the element itself when
+the label is `persName`, `placeName`, `orgName`, `geogName`, `name`, `date` or
+`time`. Spans that cross cannot nest, so the later one goes into
+`<standOff>` as `#string-range(r02,5,10)` and the export warns.
+
+### Linguistics
+
+`flextext`, `toolbox` and `igt` need an `interlinear_gloss` scheme. They write
+one file per annotator, `<user>.flextext` and `<user>.txt`, and `igt.txt` plus
+`igt.tex` (gb4e `\gll`, `\glt`, categories in `\textsc`). Toolbox lines:
+
+```
+\ref latin_1
+\tx    Puella        rosam        amat.
+\mb    puell -a      ros  -am     ama  -t
+\ge    girl  -NOM.SG rose -ACC.SG love -3SG
+\ps    n             n            v
+\ft The girl loves the rose.
+```
+
+A word whose segmentation and gloss do not line up is written as stored and
+counted in a warning. The words are stored under `word`, `morphemes` and `gloss`;
+a hand-built state that uses another key for the surface form exports an empty
+`\tx` line without complaint.
+
+### Camera traps and sound
+
+The camera-trap exports find the boxes in the first `image_annotation` scheme,
+the triage in a `radio` with an `empty` label, and the species in a `multiselect`
+named `species`: what `potato import -f megadetector` builds. Other names go in
+`--option box_scheme=`, `triage_scheme=` and `species_scheme=`.
+
+- `megadetector` writes `megadetector_reviewed.json` (format 1.4), one entry per
+  reviewed image, for one annotator (the first by user id unless `annotator=` names one).
+- `camtrap_dp` writes `deployments.csv`, `media.csv`, `observations.csv` and
+  `datapackage.json`. `media.csv` lists every image (8 in the test) while
+  `observations.csv` has rows only for the reviewed ones (3). Coordinates, a
+  contributor, a sampling design and a capture method are not things Potato
+  knows, and the export lists each as a warning; `--option contributor=`,
+  `sampling_design=`, `capture_method=`, `timezone=+HH:MM`, `title=` and
+  `license=` fill what they can.
+- `darwin_core` writes `occurrence.csv`, one row per animal with a scientific
+  name. `basisOfRecord` is `MachineObservation` for a model's identification the
+  reviewer left alone and `HumanObservation` otherwise.
+
+All three warn on an image triaged `empty` that still has a box, and keep the
+box. Deleting it is the reviewer's decision.
+
+`raven` and `audacity_labels` need a `spectrogram_annotation` scheme and write
+one file per reviewed recording, `site_a_0600.selections.txt` and
+`site_a_0600.labels.txt`. A recording nobody reviewed gets none. A box with a
+time range and no frequencies goes into Raven as 0 Hz to the Nyquist frequency
+(`Low Freq (Hz)` 0, `High Freq (Hz)` 11025 for a 22050 Hz item), so the box
+claims the whole band; set `sample_rate` on the item or `max_freq` on the scheme
+or the export warns that High Freq is empty.
+
+### Maps, 3D and tracking
+
+- `geojson` writes `geojson/<item>.geojson`, a FeatureCollection in EPSG:4326
+  with `item_id`, `user_id` and `schema` added to each feature's properties.
+  `--option layout=single` gives one `geo_annotations.geojson`.
+- `geo_overlap` writes `geo_overlap_summary.csv`, `geo_names.csv`,
+  `geo_name_counts.csv` and a GeoJSON and PNG heat map per label. `cells=`,
+  `cell_size=`, `extent=min_lon,min_lat,max_lon,max_lat`, `group_by=label|text`
+  and `schema=` shape it. Typed names are lower-cased before they are counted:
+  "the Burr" and "The burr" were one name used by 2 participants.
+- `kitti_3d` writes `label_2/<scan>.txt` per cloud and, for a sequence,
+  `label_02/<item>.txt`. Only cuboids are written; a `point_3d` is dropped with a
+  warning. The 3D fields are in the camera frame, so each item needs its
+  calibration, and the 2D box is clipped to the image only when the image size
+  is known: pass `--option image_width=1242 --option image_height=375`.
+- `mot` writes `<item>/gt/gt.txt` and `<item>/seqinfo.ini` for image sequences
+  and for `video_annotation` tracks. Two keyframes at frames 0 and 30 gave 31
+  rows, interpolated, 1-indexed. Rows need the video's pixel size, and a remote
+  video URL has none: the export printed "Export successful" with no files and
+  one warning until `--option width=1280 --option height=720 --option fps=30`
+  was given. Read the warnings on a video study.
+
+### Networks and cultural domains
+
+`ego_network` writes `egos.csv`, `alters.csv`, `edges.csv` and
+`graphml/<user>__<item>.graphml`. Alter names are left out and the files carry
+`a1`, `a2`; `--option export_names=true` adds a `name` column. `egos.csv` has a
+`complete` column and an `incomplete_reason` such as `Ties between them: 0 of 3
+pairs answered`, while `density` is still computed, treating pairs never asked
+about as no tie. Filter on `complete` before you report density.
+
+`cultural_domain` reads `free_list`, `triad_test` and `card_sort` answers, from
+items and from phase pages, and writes `freelist_items.csv`, `salience.csv`
+(`smith_s`, `sutrop_csi`), `pilesort_cooccurrence_<scheme>_<item>.csv`,
+`pilesort_informants_<scheme>_<item>.csv` and `pilesort_pairs.csv`. Items are
+lower-cased and trimmed by default, so "Apple", "apple" and "Banana " merge;
+`--option normalize=false` and `--option synonyms=<csv of variant,canonical>`
+change that. Consensus needs `--option consensus_schemes=<names>`.
+
+### Volumes
+
+`volume_nifti` and `dicom_seg` need `pip install "potato-annotation[volumes]"`
+(`dicom_seg` also highdicom). Without it the export fails with `Cannot export:
+needs pip install 'potato-annotation[volumes]'`. `dicom_seg` copies the patient
+and study modules from the source series, so the file carries the series'
+identifying data.
 
 ## The CSV columns
 
@@ -268,6 +455,15 @@ The admin API's response tells you which way it went: `num_phase_responses` and
 `num_phase_responses_excluded` are both in `stats`, and one of them is always
 zero.
 
+A survey-only study has no item labels, and csv and tsv now write
+`phase_responses` for it, but only when the config uses `conditions`, page rules,
+a runtime page or `trial_timing` and a saved state holds a flow or trial record.
+Driven with `conditions` and two poststudy answers, the CSV export wrote
+`phase_responses.csv` and `participants.csv`, warned `No item annotations, so
+annotations.csv was not written`, and `jsonl` still refused with `No annotations
+to export`. The same study without the `conditions` block failed `csv` the same
+way.
+
 `export_include_annotation_changes` adds the revision trail: every answer an
 annotator moved off, with timestamps. Useful for studying how people decide,
 much larger, and not what anyone means by "the data".
@@ -285,3 +481,32 @@ Per scheme it reports the `kind` it inferred and the metrics that follow from
 it. The `kind` is inferred from the schema type, so a rating stored as a `radio`
 is scored as unordered — `assignment-and-agreement.md` has the table, and it is
 worth checking before quoting a number at anyone.
+
+## What has and has not been checked
+
+Against Potato 2.12.0 (unreleased snapshot). Run, with the files read back:
+`web_annotation`, `data_package`, `psych_ds`, `reliability`, `tei` (inline and
+`standOff`), `iiif_annotations` (from an imported one-canvas manifest),
+`page_xml` (from the `htr-line-correction` example), `flextext`, `toolbox`,
+`igt`, `megadetector`, `camtrap_dp`, `darwin_core` (from `camera-trap-review`),
+`raven`, `audacity_labels` (from `bioacoustics-boxes`), `geojson`, `geo_overlap`
+(from `dialect-map`), `kitti_3d` (from `kitti-cuboids`, single cloud), `mot`
+(video tracks), `ego_network`, `cultural_domain` (free list and pile sort), and
+`csv` and `tsv` on a phase-only study. All stored answers were seeded by hand
+into `user_state.json` in the shape the exporter reads, not produced by
+annotating in a browser.
+
+Not run: `volume_nifti` and `dicom_seg` past the missing-extra error (the test
+environment had no nibabel), `kitti_3d` on a point-cloud sequence, `mot` on an
+image sequence, `triad_test` and consensus output of `cultural_domain`,
+`geo_overlap` on a `classify_region` scheme (`geo_regions.csv`), the multi-annotator
+file names of `raven` and `audacity_labels`, `psych_ds` and `data_package` with
+phase answers on, `parquet` (pyarrow was not installed), and the six formats
+`experiments.md` covers.
+
+Option names taken from the exporters' docstrings and not passed: `annotator=`
+(megadetector, tei, raven, audacity_labels), `layout=single`, `extent=`,
+`group_by=`, `schema=`, `cell_size=`, `consensus_schemes=`, `consensus_choices=`,
+`synonyms=`, `normalize=`, `title=`, `license=`, `contributor=`,
+`sampling_design=`, `capture_method=` and `timezone=`. The `label_02` sequence
+folder of `kitti_3d` is from the same source.

@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 174 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 175 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -187,6 +187,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `crowdsourcing` | object |  |  | Crowd platform integration (Prolific, MTurk and others) |
 | `database` | object |  |  | Database connection for item or user storage |
 | `huggingface_backup` | object |  |  | Mirror the annotation directory to a Hugging Face dataset repo on a schedule. Needs `enabled` and `repo_id`; the token comes from `token` (env substitution is applied) or HF_TOKEN, and `schedule_minutes` sets the cadence. A misconfiguration logs an error and lets the server run |
+| `incentives` | object |  |  | Bonus payments for price_list, bdm and belief_elicitation answers. Computed after the participant finishes, from the stored answers, by the `incentives` export and the admin route /admin/api/crowd/incentive_bonuses; never paid automatically |
 | `mcp` | object |  |  | Model Context Protocol control surface, letting an agent query and control this running task. Off unless every tool is named explicitly |
 | `mturk` | object |  |  | Amazon Mechanical Turk. Needs `enabled: true` and `config_file_path` pointing at the credentials YAML, plus boto3 installed. MTurk closed to new customers in July 2026 and the loader says so on startup |
 | `trace_ingestion` | object |  |  | Accept agent traces posted to /api/traces/* |
@@ -282,7 +283,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 
 ## Display types
 
-`instance_display.fields[].type` accepts 24 values:
+`instance_display.fields[].type` accepts 27 values:
 
 | Type | Description | Span target |
 |------|-------------|-------------|
@@ -298,14 +299,17 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `document` | Document display for DOCX, Markdown, and other formats | yes |
 | `eval_trace` | Three-pane agent trace eval: reasoning, function calls, and final answer side-by-side | yes |
 | `gallery` | Scrollable image gallery with captions |  |
+| `genome_locus` | Genome locus in igv.js: reference, reads, variants and annotation tracks |  |
 | `html` | HTML content display (sanitized) |  |
 | `image` | Image display with optional zoom |  |
+| `image_region` | One rectangle of a larger image (a text line, a word, a figure), cropped in the browser |  |
 | `interactive_chat` | Interactive agent chat with post-interaction trace display | yes |
 | `live_agent` | Live AI agent viewer with real-time screenshots, controls, and interaction |  |
 | `live_coding_agent` | Live coding agent viewer with real-time streaming and intervention controls |  |
 | `multi_agent_discussion` | Multi-agent discussion with agent legend, colors, addressees, and filtering | yes |
 | `pairwise` | Side-by-side comparison display |  |
 | `pdf` | PDF document display with PDF.js rendering |  |
+| `protein_structure` | Protein structure (mmCIF, BinaryCIF, PDB) in 3Dmol.js or Mol*, with residue selection |  |
 | `spreadsheet` | Spreadsheet/table display with row or cell annotation |  |
 | `text` | Plain text content display | yes |
 | `video` | Video player display |  |

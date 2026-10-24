@@ -31,6 +31,8 @@ def _counts():
     from potato.export.registry import export_registry
     from potato.importers.registry import import_registry
     from potato.importers.text.registry import text_import_registry
+    from potato.importers import projects as import_projects
+    from potato.importers import surveys as import_surveys
     from potato.mcp_server.live_tools import TOOLS as live_tools
     from potato.server_utils.examples_manifest import load_manifest
     from potato.server_utils.schemas.registry import schema_registry
@@ -91,9 +93,13 @@ def _counts():
 
     return {
         "export_formats": len(export_registry.get_supported_formats()),
-        # `potato import --list-formats` prints both registries, in two groups.
+        # `potato import --list-formats` prints four groups: the image/video
+        # and text registries, whole projects and surveys. Counting only the
+        # first two kept passing at 21 while the CLI listed 45.
         "import_formats": (len(import_registry.get_supported_formats())
-                           + len(text_import_registry.get_supported_formats())),
+                           + len(text_import_registry.get_supported_formats())
+                           + len(import_projects.list_importers())
+                           + len(import_surveys.list_importers())),
         "live_tools": len(live_tools),
         "examples_with_phases": with_phases,
         "annotation_types": len(schema_registry.get_supported_types()),

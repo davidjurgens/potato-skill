@@ -399,6 +399,32 @@ an error field, and Elo, Bradley-Terry and win-rate-interval columns once
 somebody picks a winner. The same server can appear twice under different labels,
 which is the cheap way to compare decoding settings rather than models.
 
+**`ai_support.holdout`** (2.12.0) withholds every assistance surface from a random
+share of (annotator, item) pairs, so the study can measure how far suggestions
+pull answers:
+
+```yaml
+ai_support:
+  holdout:
+    fraction: 0.2      # share of (annotator, item) pairs shown no assistance
+    salt: my-study     # fixed for the whole study
+```
+
+The draw is a salted hash per annotator and item, so a pair stays in its group
+across visits and restarts, and changing `fraction` or `salt` mid-study
+reshuffles the groups. It works with `ai_support.enabled: false`: pre-annotations
+count as assistance and are withheld too. The admin dashboard gets an **AI
+influence** tab, and `/admin/api/ai_influence` returns the same report as JSON.
+Per scheme it holds `assisted` and `held_out` groups (`n_pairs`,
+`model_agreement`, `gold_accuracy`, `alpha`) and `model_agreement_difference`
+with `difference_ci95`. Without `fraction` the report carries a note saying to set
+one. Run on the packaged `examples/ai-assisted/assist-holdout` example (30%) with
+three annotators on ten reviews: the pre-selected answer was absent on 11 of 30
+item views, and the endpoint reported 19 assisted and 11 held-out pairs. Potato
+says the tab prints a difference only once each group has 10 answers on items
+with a model answer; that threshold, and the tab itself, I did not look at in a
+browser.
+
 ## Verifying one
 
 `validate --strict` will pass a config whose assistants never appear. Boot it and
@@ -511,6 +537,13 @@ dozen items: without it, the same item re-queries the model on every page view.
 is not waiting on the first token.
 
 ## What I have and have not verified
+
+Run on 2.12.0: `ai_support.holdout` on the packaged holdout example, in headless
+Chromium with three annotators, and `/admin/api/ai_influence` read back (numbers
+quoted above). Not run: holdout against a live model endpoint (the example's
+suggestions are pre-annotations in the data file), the other withheld surfaces
+(hints, chat, critique, visual AI), and the dashboard tab. The older notes below
+were run on the versions they name.
 
 Run against a Potato checkout at v2.8.2 plus the endpoint fixes that followed
 it (bullets naming 2.9.0 or 2.9.1 were run on that release, except where a

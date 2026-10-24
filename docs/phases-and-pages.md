@@ -25,8 +25,8 @@ below was established by running the server and reading the startup log.
 
 ## Which of these you actually need
 
-Start from none of them. **8 of Potato's 229 bundled examples declare a `phases`
-block at all**; the other 207 open on the first item. A phase is a page an
+Start from none of them. **14 of Potato's 249 bundled examples declare a `phases`
+block at all**; the other 235 open on the first item. A phase is a page an
 annotator has to get through before doing any work, and every one you add costs
 attrition and setup time, so add them because someone asked or because the
 protocol requires it — not because a study "should" have them.

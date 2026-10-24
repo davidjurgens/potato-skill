@@ -49,8 +49,8 @@ The lifecycle is the same on every target, with two gaps: `potato deploy logs`
 does not work on `fly` (use `fly logs -a <app>`), and `aws-ecs` has logs but no
 SSH, because there is no server to log in to.
 
-The host runs the image for the Potato version you have installed: on 2.11.1,
-`up --dry-run` plans `docker.pull ghcr.io/davidjurgens/potato:2.11.1`. Up to
+The host runs the image for the Potato version you have installed: on 2.12.0,
+`up --dry-run` plans `docker.pull ghcr.io/davidjurgens/potato:2.12.0`. Up to
 2.10.3 the default was `:latest`, so two `up`s of one study could run different
 releases; on those versions pass `--image ghcr.io/davidjurgens/potato:2.10.3`,
 or whichever version you tested the study on. `--image` picks any other tag.
@@ -434,6 +434,17 @@ PASS — safe to deploy
 
 Exit codes: **0 for PASS, 2 for BLOCKED.** Errors block; warnings do not.
 
+Two errors changed in 2.12.0. **D006** (a pasted credential) used to match a
+fixed list of key names; it now also matches any key ending in `_api_key`,
+`_secret`, `_token` or `_password`, so a config that passed before can block now.
+Replace the value
+with `${ENV_VAR}` and pass `--secret NAME=value`. **D022** blocks a public
+deployment where the study does not require a password and the roster holds an
+account with no password whose name already owns saved work, which is what
+`potato import --keep-annotators` produces. Anyone with the URL could sign in as
+that person. Set `require_password: true` and give each roster row a password, or
+use `authentication.method: oauth`. `--private` skips it.
+
 The one that blocks most often:
 
 ```
@@ -496,8 +507,7 @@ other people running their own copy in their own accounts, not for hosting the
 study you run.
 
 ```bash
-potato deploy button config.yaml --target heroku --backup hf \
-    --hf-backup-repo lab/pilot-annotations --dry-run    # print the files, write nothing
+potato deploy button config.yaml --target heroku --backup hf --dry-run    # print the files, write nothing
 ```
 
 | `--target` | Writes | Needs |
@@ -511,13 +521,62 @@ Without `--backup`, the heroku, render and aws targets exit 1 before writing
 anything. All of them also write `potato.deploy.yaml` beside your config, a copy
 with `debug: false`, `persist_sessions: true` and the backup block, and
 `.dockerignore` if the repository has none. Your `config.yaml` is not changed.
-No secrets are written.
+No secrets are written. Since 2.12.0 your own backup destination is not
+written either: `--hf-backup-repo` and `--s3-bucket` are accepted and ignored
+(the command says `Ignored --s3-bucket: each person who deploys the button names
+their own backup destination`), and the files carry `${POTATO_BACKUP_HF_REPO}` or
+`${POTATO_BACKUP_S3_BUCKET}` for each deployer to fill in. A button generated
+before 2.12.0 still holds the destination you gave it; regenerate it with
+`--force`.
 
 Read the warnings it prints before you commit. It lists anything that should
 not reach a public repository and is not gitignored (`.potato`, which holds the
 admin key, plus `annotation_output` and `project.sqlite`). With no `origin`
 remote, the badge carries a `<repo-url>` placeholder for you to fill in.
-Existing files are kept unless you pass `--force`.
+Existing files are kept unless you pass `--force`, which replaces them.
+
+## Signing in
+
+`authentication.method` takes `in_memory`, `database`, `clerk`, `oauth` and
+`saml`. A public deployment needs one of the last three, or a closed roster
+(`user_config.allow_all_users: false`). Two ways in arrived in 2.12.0.
+
+**SAML**, for an institution's identity provider (Shibboleth, ADFS, Okta, Entra):
+
+```yaml
+authentication:
+  method: saml
+  saml:
+    display_name: "University sign-in"
+    idp_metadata_url: https://idp.example.edu/idp
+    sp_base_url: https://annotate.example.edu
+    user_identity_attribute: urn:oid:1.3.6.1.4.1.5923.1.1.1.6
+    single_logout: true
+secret_key: "${POTATO_SECRET_KEY}"
+```
+
+It needs `pip install 'potato-annotation[saml]'`, which builds against the
+system's libxmlsec1 (`brew install libxmlsec1`, or `apt-get install
+libxmlsec1-dev`); without it `potato validate` fails with the command to run.
+The Docker image includes it when built with `--build-arg POTATO_EXTRAS=saml`.
+`sp_cert_file` and `sp_key_file` sign Potato's requests for an IdP that asks, and
+must be given together (`validate` refuses one without the other).
+`single_logout` defaults to true and ends the IdP session when the annotator
+signs out. Set `sp_base_url` behind a proxy that ends TLS, or the IdP's response
+fails its destination check. Send the IdP's administrator Potato's metadata from
+`https://<host>/saml/metadata`. Browsers keep the sign-in cookie only over HTTPS,
+so over plain HTTP it works only against an IdP on the same site.
+
+**Hugging Face**, on a Space: `potato deploy up config.yaml --provider
+huggingface --hf-oauth` sets the `huggingface` provider and asks Hugging Face to
+supply the OAuth app. `--hf-oauth-org my-lab` limits sign-in to that
+organization's members. On any other provider both flags exit with `REFUSED`;
+configure `authentication.providers.huggingface` by hand there. Annotators are
+keyed by account id, not username, so exports list the id.
+
+Neither sign-in round trip was run (see the last section). `validate` checks the
+SAML block's shape and not the IdP, so the first real sign-in is the test: walk
+it from a second browser profile before you hand out the URL.
 
 ## Behind a reverse proxy
 
@@ -550,12 +609,42 @@ The preflight will say all of this, but decide it before you type `up`:
 
 | Question | Where it is answered |
 |---|---|
-| Who can sign in? | `user_config.allow_all_users: false` plus `user_config.users`, or `authentication.method: oauth`. The default lets anyone with the URL create an account |
+| Who can sign in? | `user_config.allow_all_users: false` plus `user_config.users`, or `authentication.method: oauth` or `saml`. The default lets anyone with the URL create an account |
 | Is `debug` off? | It must be. It can sign everyone in as one user and opens admin to the host without a key |
 | Do sessions survive a restart? | `secret_key`, or let deploy generate one |
 | Where do annotations live if the host restarts? | A volume (`--volume-gb`), or `--backup` with restore on boot |
 | Who holds the admin key? | Generated per deployment; `potato deploy status` and the provider's env |
 | Is anything identifiable in the data or the survey answers? | `export_include_phase_data` defaults to false for a reason |
+
+## No internet on the host
+
+Every stylesheet, script and font Potato serves ships in the package, so a
+machine with no route out renders the same pages. `potato vendor` manages the one
+library that does not ship, the Mol* viewer for `protein_structure` with `engine:
+molstar`:
+
+```bash
+potato vendor list      # name, pinned version, installed or not, size
+potato vendor verify    # re-check installed files against their hashes
+potato vendor path      # the directory they live in ($POTATO_VENDOR_DIR to move it)
+```
+
+On a clean install `list` shows `molstar 5.12.0 ... not installed, ~5.3 MB` and
+`verify` prints `0 bundle(s) intact.` and exits 0, so a pass on an empty
+directory means nothing was checked. For an air-gapped host, fetch on a
+connected machine with the same `POTATO_VENDOR_DIR`, copy the directory across
+and run `verify` there. A config that needs a library that is not installed
+fails `potato validate` with the command to run. The fetch itself was not run
+for this page.
+
+## Platform changes that reach a deployment
+
+- `defusedxml` is a required dependency from 2.12.0. `pip install --upgrade
+  potato-annotation` installs it; a hand-built image that pins its own list needs
+  it added.
+- MTurk closed on 30 September 2026. An MTurk config still loads, so an archived
+  study starts and exports. Move a live study to Prolific, CloudResearch Connect
+  or SONA.
 
 ## Getting the data back
 
@@ -596,6 +685,30 @@ how to pull them, and how to take it down. A deployment nobody can pull from or
 destroy is worse than a local server.
 
 ## What I have and have not verified
+
+Run on 2.12.0 (`5b1ec643`), from a checkout, with Docker stopped: `up --dry-run` on
+`local`, `render` and `railway` plans the `2.12.0` image. When I asked ghcr.io for
+that tag (`docker manifest inspect` said `manifest unknown`, the registry API
+answered 404), it was not published yet, so a real `up` would fail to pull until
+it is; check again before you rely on it. Also: `potato vendor list`,
+`verify` and `path` on an empty vendor directory (output quoted above);
+`deploy check` blocks on D006 for `extra_session_secret: <16 characters>` with
+exit 2 and on D022 for a roster row with no password beside a `user_state.json`,
+and neither fires with `--private` or `require_password: true`; `deploy button
+--dry-run` and a real write for `heroku` and `render` ignore `--hf-backup-repo`
+and `--s3-bucket` and write `${POTATO_BACKUP_*}` placeholders, and a second run
+keeps the files until `--force`; `deploy up --provider huggingface --hf-oauth
+--dry-run` plans and `--provider fly --hf-oauth` is `REFUSED`; `potato validate`
+accepts the SAML block above with python3-saml installed and fails without it,
+and refuses `sp_cert_file` without `sp_key_file`. Not run: any SAML round trip
+against an IdP (sign-in, single logout, the `/saml/metadata` and `/saml/acs`
+routes), a Hugging Face sign-in on a deployed Space, and `potato vendor fetch`. The behaviours of SAML and the Hugging Face sign-in
+that go beyond `validate` (the HTTPS cookie rule, `sp_base_url` behind a proxy,
+account-id keying, the Docker build argument) are Potato's documentation, not my
+runs.
+The dry run with `--hf-oauth` still prints D003 (open sign-in), so do not read
+that warning as proof the OAuth setting did not apply; I did not open the
+bundled config.
 
 Run on 2.11.1 (`cf0873a0`; the retagged `68880e8c` changes only wording), from a checkout, with Docker stopped: `up
 --dry-run` on `local`, `render` and `railway` plans the 2.11.1 image, which is

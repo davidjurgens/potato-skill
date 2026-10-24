@@ -97,6 +97,8 @@ curl -H "X-API-Key: $K" localhost:8000/admin/api/overview
 |---|---|
 | How far along is the study | `/admin/api/overview` |
 | Who has done what, and how fast | `/admin/api/annotators` |
+| How fast does each person work | `/admin/api/throughput` (the Throughput tab) |
+| Open and resolved notes raised as issues | `/admin/api/memo_issues?status=open`, and the counts in `/admin/api/overview` |
 | Do they agree | `/admin/iaa` (prefer this), `/admin/api/agreement` |
 | Who is failing the attention checks | `/admin/api/quality_control` |
 | Is anyone clicking through | `/admin/api/suspicious_activity`, `/admin/annotation-integrity` |
@@ -104,6 +106,23 @@ curl -H "X-API-Key: $K" localhost:8000/admin/api/overview
 | What is one annotator's state | `/admin/user_state/<user>` |
 | What happened to one item | `/admin/item_state/<item_id>` |
 | Give me the data | `/admin/api/export`, `/admin/api/data/archive` |
+
+`/admin/api/throughput` returns one row per annotator under `annotators`, and
+the same totals under `project`. Each row has `items`, `active_seconds`,
+`items_per_active_hour`, `median_active_seconds`, `by_day` and
+`time_distribution`: `n`, `p10` to `p90`, `max` and nine `bins` of active time
+per item (`0` to `5` seconds up to `600` and over). Only saved items count, rates
+are `null` until an item has timing, and `time_distribution` is `null` with none.
+After two items answered in a browser, one annotator showed `items: 2`,
+`median_active_seconds: 3.2` and both items in the first bin. A block of items in
+that first bin is the quick check for someone clicking through.
+
+Notes (`annotation_ui: {memos: true}`) are threads since 2.12.0: `POST
+/api/memos/<id>/reply` answers one, and `issue: true` on `POST /api/memos` raises
+it as an issue that `PATCH /api/memos/<id>` with `{"status": "resolved"}` closes.
+Run in that order, the issue showed under `status=open` until resolved and then
+under `status=resolved`, and `/admin/api/overview` counted it as
+`resolved_issues: 1`.
 
 `/admin/api/quality_control` answers `{"enabled": false, "message": "Quality
 control not configured"}` rather than erroring when there are no checks, which
@@ -122,6 +141,18 @@ is a useful way to confirm from outside that the feature really is off.
 Wiping `annotation_output/` **while the server runs** resets nothing: item and
 user state are already in memory, and the next arrival gets the completion page.
 Stop, wipe, start.
+
+## Freezing a state to cite
+
+`potato snapshot create config.yaml --note "pilot done" --tag pilot` writes
+`snapshots/<id>/` (`manifest.json`, `bundle.tar.gz`, `annotations.jsonl`,
+`items.json`) with a content hash, and `potato snapshot verify config.yaml pilot`
+re-hashes it and exits 0 on a match. I ran those, and `list`, against a running
+server; `show`, `diff` and `tag` take the same ids and I did not run them. The
+bundle leaves out the account roster and key files, per Potato's docs. `potato snapshot deposit config.yaml pilot --check` lists
+what a Zenodo deposit would send and refuses until you pass
+`--annotator-ids-public`, because the bundle carries each annotator's id and saved
+state. I did not make a deposit: the Zenodo upload is unverified here.
 
 ## What to say at handover
 

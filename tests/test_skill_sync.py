@@ -112,7 +112,7 @@ PROSE_IDENTIFIERS = {
     # instance_display field keys, validated by validate_instance_display_config
     "span_target", "display_options",
     # phase names
-    "consent", "instructions", "annotation", "poststudy",
+    "consent", "annotation", "poststudy",
     # literals and example values
     "y", "n", "not_relevant",
     # what a pairwise scheme stores, alongside "A" and "B". A data value rather
@@ -142,9 +142,21 @@ PROSE_IDENTIFIERS = {
     "response.schema",
     # files the CSV export writes (experiment_sidecars.py, the csv exporter)
     "annotations.csv", "participants.csv", "trials.csv",
-    # files the jspsych export writes, named in jspsych_exporter.py's own
-    # docstring and passed to write() as literals the token pattern skips
-    "jspsych_runs.csv", "jspsych_trials.csv", "jspsych_interaction.csv",
+    # files the survey_experiments, lextale and incentives exports and the
+    # payout endpoint write, and the reading sidecar of the CSV export. Passed
+    # to open() or write() as literals the token pattern skips
+    "survey_experiments.csv", "lextale.csv", "bonuses.csv",
+    "bonuses_prolific.csv", "incentive_payments.json", "regions.csv",
+    # trial columns the jsPsych mouse-tracking extension writes; they come
+    # from the vendored JavaScript, not from Potato's Python
+    "mouse_tracking_data", "mouse_tracking_targets",
+    # values too short for the source token pattern (three characters or
+    # more): a headphone check's `<page>_passed` is `yes` or `no`, and the
+    # survey_experiments export's standard-error column is `se`
+    "no", "se",
+    # the page name in experiments.md's headphone-check example, and the
+    # `<page>_passed` answer that page name produces
+    "headphones", "headphones_passed",
     # `phases.<page>.csp.extra_sources`, written as a path because the bare
     # leaf is not what an author types; jspsych/phase.py:106 reads it
     "csp.extra_sources",
@@ -174,7 +186,7 @@ PROSE_IDENTIFIERS = {
     "alphabet", "bullet",
     # column names keyword_highlights_file accepts in its CSV/TSV header, and
     # the accepted spellings of the first one. File-format strings, not config
-    "keyword", "word", "pattern", "term",
+    "keyword", "pattern", "term",
     # the argument names the live MCP tools publish in their own schemas,
     # quoted in SKILL.md so an agent can call them without a round trip
     "username",
@@ -242,13 +254,29 @@ def _experiment_read_keys() -> set:
 
     try:
         from potato import trial_timing
-        from potato.export import experiment_sidecars, jspsych_exporter
-        from potato.jspsych import phase as jspsych_phase
-        from potato.server_utils import (experiment_conditions, phase_flow,
-                                         question_order)
+        from potato.export import (experiment_sidecars, jspsych_exporter,
+                                   runtime_exporter)
+        from potato.runtimes import phase as runtime_phase
+        from potato.runtimes.adapters import external, headphone_check, jspsych
+        from potato.server_utils import (display_logic, experiment_conditions,
+                                         phase_flow, question_order)
+        # Survey experiments, LexTALE and incentive payments: the scheme
+        # options, the columns their exports write, and the fields the payout
+        # endpoint takes and returns (`expected_total`, `skip_paid`).
+        from potato import incentives
+        from potato.crowdsourcing import admin_api as crowd_admin_api
+        from potato.export import (incentives_exporter, lextale_exporter,
+                                   survey_experiment_exporter)
+        from potato.server_utils.schemas import (price_list,
+                                                 randomized_response,
+                                                 survey_experiments)
         source = "".join(inspect.getsource(m) for m in (
             trial_timing, experiment_sidecars, experiment_conditions,
-            phase_flow, question_order, jspsych_phase, jspsych_exporter))
+            phase_flow, question_order, runtime_phase, jspsych,
+            headphone_check, external, jspsych_exporter, runtime_exporter,
+            display_logic, incentives, crowd_admin_api, incentives_exporter,
+            lextale_exporter, survey_experiment_exporter, price_list,
+            randomized_response, survey_experiments))
     except Exception:
         return set()
     return set(re.findall(r"""["']([a-z][a-z0-9_]{2,})["']""", source))
