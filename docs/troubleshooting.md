@@ -39,7 +39,7 @@ Each row was run on 2.12.0.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Annotators see a dark page | `ui.theme` defaults to `auto`, so the page follows the browser's setting (`data-theme="dark"` under a dark browser, `data-theme-mode="auto"`) | `ui: {theme: light}` for everyone on the light theme |
-| A follow-up question gated on a multiselect with `equals` stops showing | `equals` no longer matches a list of selected options on the server | Use `contains` |
+| A follow-up question gated on a multiselect with `equals` stops showing when two or more options are ticked | Two or more selections are a list, and a list never equals a value. Before 2.12.0 the browser compared the comma-joined text, so `equals: "a,b"` matched a and b ticked together. One ticked option is still compared as that option, so `equals: a` works with one tick | Use `contains`, once per option |
 | A `matches` rule shows its question before anyone answers | It does not any more: `matches` on an unanswered question is false, pattern `^$` included | Use `empty` to branch on unanswered |
 | A `length_gt` / `length_lt` rule on a multiselect changed behaviour | It counts the options selected, not characters: `length_lt 3` is true for two options | `count_gt`, `count_lt` and `count_equals` say the same thing |
 | `second video_annotation scheme in tracking or combined mode` | Two trackers on one page share keyboard shortcuts | One tracking scheme with several labels, or the second in its own phase |

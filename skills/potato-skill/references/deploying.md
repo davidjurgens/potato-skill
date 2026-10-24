@@ -687,10 +687,10 @@ destroy is worse than a local server.
 ## What I have and have not verified
 
 Run on 2.12.0 (`5b1ec643`), from a checkout, with Docker stopped: `up --dry-run` on
-`local`, `render` and `railway` plans the `2.12.0` image. When I asked ghcr.io for
-that tag (`docker manifest inspect` said `manifest unknown`, the registry API
-answered 404), it was not published yet, so a real `up` would fail to pull until
-it is; check again before you rely on it. Also: `potato vendor list`,
+`local`, `render` and `railway` plans the `2.12.0` image, and ghcr.io answers 200
+for `ghcr.io/davidjurgens/potato:2.12.0` (checked through the registry API on
+24 October 2026, a few hours after the release; it had answered 404 before the
+image workflow finished). No real `up` was run. Also: `potato vendor list`,
 `verify` and `path` on an empty vendor directory (output quoted above);
 `deploy check` blocks on D006 for `extra_session_secret: <16 characters>` with
 exit 2 and on D022 for a roster row with no password beside a `user_state.json`,
