@@ -330,30 +330,18 @@ nothing beyond those three lines.
 Only pass a phase the task actually has, or every route redirects toward a page
 that does not exist and the render fails with a redirect loop.
 
-## `surveyflow` versus `phases`
+## The `surveyflow` block
 
-`surveyflow` is the older way to attach pages before and after annotation:
+Potato 1.x attached pages before and after annotation with a `surveyflow:`
+block. Potato 2.12.1 reads nothing in it. A config whose pages are only in a
+`surveyflow` block passes `validate --strict` with "OK — no issues found",
+boots, and sends the annotator straight to the first item without showing any
+of them. Move each page into `phases`: a `pre_annotation` file becomes a
+`consent`, `prestudy` or `instructions` phase, and a `post_annotation` file
+becomes a `poststudy` phase.
 
-```yaml
-surveyflow:
-  "on": true
-  order: [pre_annotation, post_annotation]
-  pre_annotation: [surveyflow/consent.jsonl, surveyflow/instructions.jsonl]
-  post_annotation: [surveyflow/news_habits.jsonl]
-  sample_status: []
-```
-
-Quote the `"on"` key. Bare `on:` is a YAML boolean, and the loader warns:
-
-```
-`on:` at surveyflow was read as the boolean True … quote the key ("on":) to be explicit.
-```
-
-Prefer `phases`. It names the phase types explicitly, it controls order in one
-place, and it is what the training phase and `--debug-phase` key off. A directory
-called `surveyflow/` holding the page files is a convention worth keeping even
-when the `surveyflow:` block is absent — that is where the pages in the example
-above live.
+Keeping the page files in a directory called `surveyflow/` is still fine; the
+examples above do. Potato ignores only the config block.
 
 ## Checking the workflow actually assembled
 

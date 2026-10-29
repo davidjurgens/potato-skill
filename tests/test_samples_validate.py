@@ -33,9 +33,14 @@ GENERATED = {"annotation-types.md", "config-keys.md", "config-keys-nested.md"}
 
 # A warning saying the validator dropped a key it did not recognise. Not
 # "ignored" alone: "phases.order entry 'x' is not a phase name; it will be
-# ignored" is an artefact of splicing a fragment, not a dead key.
+# ignored" is an artefact of splicing a fragment, not a dead key. Potato after
+# 2.13.0 adds two phrasings without "ignored": "Config key 'surveyflow' is not
+# read, so it has no effect", and a label key with a suggestion ("... .labels[0]
+# .key_binding' (labels on radio schemes do not read it). Did you mean").
 IGNORED_KEY_WARNING = re.compile(
-    r"(unknown key|unrecognized config key|not recognized).*\bignored\b",
+    r"(unknown key|unrecognized config key|not recognized).*\bignored\b"
+    r"|\bis not read, so it has no effect\b"
+    r"|schemes do not read it\b",
     re.IGNORECASE)
 
 # worked-example.md is a byte mirror of Potato's full-study-skeleton config, so
