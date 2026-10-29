@@ -913,19 +913,24 @@ def walk(url: str, task_dir: str | None, shots: str | None, max_steps: int,
 
         page.goto(url)
         _settle(page)
-        try:
-            page.evaluate("switchTab('register')")
-        except Exception:
+        # With `require_password: false` the landing page has no register tab,
+        # only the /auth form, which signs a new name straight in.
+        form = "form[action$='/register']"
+        if page.query_selector(form):
+            page.evaluate("typeof switchTab === 'function' && switchTab('register')")
+        elif page.query_selector("form[action$='/auth']"):
+            form = "form[action$='/auth']"
+        else:
             report["problems"].append(
-                "No register tab on the landing page. If this is a re-run, the "
-                "previous account may still be logged in.")
-        for element in page.query_selector_all("form[action='/register'] input"):
+                "No register or sign-in form on the landing page. If this is a "
+                "re-run, the previous account may still be logged in.")
+        for element in page.query_selector_all(f"{form} input"):
             name = element.get_attribute("name")
             if name == "email":
                 element.fill(user)
             elif name == "pass":
                 element.fill("walkcheck-pw")
-        button = page.query_selector("form[action='/register'] button[type=submit]")
+        button = page.query_selector(f"{form} button[type=submit]")
         if button:
             button.click()
             _settle(page)
