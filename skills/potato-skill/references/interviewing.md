@@ -102,7 +102,7 @@ two · three (recommended if they want to report agreement) · more. Sets
 most people to want none of it.
 
 **A task needs only the annotation itself.** Most do not declare a `phases` block
-at all: 14 of the example projects Potato ships use one, and 235 do not. This is
+at all: 17 of the example projects Potato ships use one, and 235 do not. This is
 a multi-select that is allowed to come back empty, not a menu to talk someone
 through.
 

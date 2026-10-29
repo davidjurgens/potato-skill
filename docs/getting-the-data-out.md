@@ -84,7 +84,7 @@ reading the log. Check the name against the list below.
 
 ## Which format
 
-60 formats are registered. `GET /admin/api/export/formats` lists them with
+71 formats are registered. `GET /admin/api/export/formats` lists them with
 descriptions against the running server; `potato preview` does not.
 
 | They want | Format |
@@ -458,16 +458,21 @@ The admin API's response tells you which way it went: `num_phase_responses` and
 `num_phase_responses_excluded` are both in `stats`, and one of them is always
 zero.
 
-A survey-only study has no item labels. On 2.12.1, with
-`export_include_phase_data: true`, `csv`, `tsv` and `jsonl` each write
-`phase_responses` for it: a prestudy answer came out as
-`U1,prestudy,intro,0,age,text_box,33`, csv and tsv warned `No item annotations,
-so annotations.csv was not written`, and jsonl wrote no empty
-`annotations.jsonl`. Without the key the export writes nothing and its error
-names `export_include_phase_data` and the number of answers left out. On 2.12.0
-only csv and tsv wrote them, and only when the study used `conditions`, page
-rules, a runtime page or `trial_timing`; upgrade rather than add a `conditions`
-block to get the answers out.
+From 2.13.1 a survey-only study does not boot. `validate` refuses a config
+with no annotation scheme, and a `phases.order` with no annotation phase. Give
+the study one item and a radio with a single label, such as `Finish`, and list
+`annotation` last in `phases.order`. Do not use `pure_display` for that item:
+it saves nothing, so the item never completes and Next returns the same page.
+On 2.13.1, with `export_include_phase_data: true`, `csv` wrote
+`phase_responses.csv`, with the prestudy answer as
+`U1,prestudy,prestudy,0,age,number,33`, and `annotations.csv`, with the item as
+`i0,U1,Finish`. `jsonl` wrote the same pair. Without the key, `csv` wrote only
+`annotations.csv` and warned `1 phase/survey responses were found but NOT
+exported. Set 'export_include_phase_data: true'`.
+
+On 2.12.1 the same study needed no item. With the key set, csv, tsv and jsonl
+wrote `phase_responses` alone. Without it the export wrote nothing, and its
+error named the key.
 
 `export_include_annotation_changes` adds the revision trail: every answer an
 annotator moved off, with timestamps. Useful for studying how people decide,
@@ -493,6 +498,10 @@ Against Potato 2.12.0 (`5b1ec643`; the tree these runs used matched the release
 in every file under `potato/`). On 2.12.1 (`49c1be61`) the three changed
 behaviours above were re-run: `reliability` and `mot` through their exporter
 classes, the survey-only export with and without `export_include_phase_data`.
+On 2.13.1 (`ab18c251`) the survey-only study was re-run in a browser with its
+`Finish` item, then exported with `csv` and `jsonl` with and without the key;
+`tsv` was not re-run. Both `validate` and `potato start` refused the config
+with no annotation scheme.
 Run on 2.12.0, with the files read back:
 `web_annotation`, `data_package`, `psych_ds`, `reliability`, `tei` (inline and
 `standOff`), `iiif_annotations` (from an imported one-canvas manifest),

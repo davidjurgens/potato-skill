@@ -31,6 +31,7 @@ decides whether the items you care about ever reach three annotators.
 | `per_annotator_quota` | Per-annotator caps: `default`, `by_user`, `by_user_role`. Beats the key above | unset |
 | `automatic_assignment.instance_per_annotator` | Nothing. See below. | — |
 | `assignment_strategy` | Order items are handed out in | `fixed_order` |
+| `assignment_hold_minutes` | From 2.13.1: an item someone is working on is not handed to anyone else. See below | unset (off) |
 | `random_seed` | Makes the ordering reproducible | unset |
 
 The three are one setting. With none of them set there is no cap: on 2.11.0,
@@ -251,6 +252,31 @@ not stop the relaxation above: an annotator whose items were reclaimed, arriving
 back to a study with nothing free, is handed items the *other* annotator now
 holds, and the log prints its "Enable instance_reclaim" advice even though
 `instance_reclaim` is enabled.
+
+### Holding an item: `assignment_hold_minutes`
+
+From 2.13.1, `assignment_hold_minutes: N` stops that relaxation from handing
+out an item someone else is working on. The setting is opt-in and off by
+default. It must be a positive number of minutes, so `--strict` rejects `0`,
+`-1`, `true` and `"10"`. A hold binds while its holder has reached the item and
+was active within N minutes. Items further down a holder's queue go to the next
+arrival.
+
+Run on 2.13.1 with three items, `max_annotations_per_item: 1`, `fixed_order`
+and `max_annotations_per_user: 10`, five annotators logged in without saving:
+
+- **With the hold:** they got i0, i1 and i2. The fourth and fifth got a
+  no-work page: "Every item is taken right now. Each remaining item is with
+  another annotator who is working on it." When u1 saved i0 and pressed Next,
+  they got the same page and stayed in the study rather than being sent to the
+  completion page.
+- **Without it:** all five were given i0.
+- **A lapsed hold:** with `assignment_hold_minutes: 0.1`, u1's reload after 12
+  seconds handed on the items whose holders had gone quiet, and they left the
+  lapsed holders' queues. Each item ended with one answer.
+
+A no-work page with a hold set does not mean the study is full. Someone may be
+mid-item.
 
 ## Giving cohorts different items and different questions
 

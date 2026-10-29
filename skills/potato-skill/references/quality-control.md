@@ -339,6 +339,24 @@ and it is not in the export. The raw answers are also in
 the scores can be recomputed by hand against the items files if you ever need to
 show your working.
 
+### Keeping answer fields off the page
+
+A data file that carries the answer beside the item, such as a gold label, an
+expected class or a model's score, sends that field to the browser. On 2.13.1
+a field `secret_gold` appeared twice in the `/annotate` page source.
+`item_properties.private_keys` lists fields the annotator must not get:
+
+```yaml
+item_properties:
+  id_key: id
+  text_key: text
+  private_keys: [secret_gold]
+```
+
+With it set, the value appeared in none of `/annotate`, `/api/instance_data`
+or `/api/current_instance`. The data file is not changed. `id_key` and
+`text_key` cannot be listed, because the page needs them.
+
 ## Seeding answers with `pre_annotation`
 
 Not quality control in the sense the rest of this file is — it is the same

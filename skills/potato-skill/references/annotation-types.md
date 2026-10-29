@@ -2,7 +2,7 @@
 
 # Annotation types
 
-Potato has 76 annotation types. Set one as `annotation_type` on each entry in `annotation_schemes`.
+Potato has 80 annotation types. Set one as `annotation_type` on each entry in `annotation_schemes`.
 
 Every type also accepts these, regardless of which one you pick:
 
@@ -20,6 +20,7 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`belief_elicitation`](#belief-elicitation) — Probability report (0-100) or a distribution over bins that sums to 100
 - [`bws`](#bws) — Best-Worst Scaling: select the best and worst item from a set
 - [`card_sort`](#card-sort) — Drag-and-drop card sorting into predefined or user-created groups
+- [`chemical_structure`](#chemical-structure) — Draw or correct a chemical structure (OpenChemLib editor); stores molfile V3000, canonical SMILES and, with RDKit.js, the InChIKey
 - [`cloze`](#cloze) — Fill-in-the-blank passage, scored against an answer key kept on the server
 - [`code_review`](#code-review) — GitHub PR-style code review with inline comments and file ratings
 - [`confidence`](#confidence) — Confidence rating meta-annotation for any primary annotation
@@ -43,15 +44,18 @@ The examples below are lifted from configs in `examples/` that use each type, so
 - [`hierarchical_multiselect`](#hierarchical-multiselect) — Hierarchical tree-structured multi-label selection
 - [`image_annotation`](#image-annotation) — Image annotation with bounding boxes, polygons, freeform drawing, and landmarks
 - [`interlinear_gloss`](#interlinear-gloss) — Interlinear glossed text: morpheme segmentation and glosses aligned per word (Leipzig rules)
+- [`interval_label`](#interval-label) — Label intervals and point events on a time_series signal; free or fixed-epoch mode
 - [`likert`](#likert) — Likert scale rating
 - [`list_experiment`](#list-experiment) — List experiment (item count technique) for a sensitive question
 - [`listening_test`](#listening-test) — Listening tests: MUSHRA, BS.1116, ACR, DCR, CCR, ABX and P.835, with blinded stimuli
+- [`microscopy`](#microscopy) — Multichannel microscopy (OME-Zarr, OME-TIFF): channel contrast, z/t, ROIs and per-cell classes from a label image
 - [`multi_document_event`](#multi-document-event) — Cross-document event annotation: template slots filled with evidence from many documents
 - [`multimodal_reasoning`](#multimodal-reasoning) — Interleaved text/image/tool reasoning trace: per-step coherence + visual-hallucination rating
 - [`multirate`](#multirate) — Rate multiple items on a scale
 - [`multiselect`](#multiselect) — Multiple-choice checkbox selection
 - [`number`](#number) — Numeric input field
 - [`pairwise`](#pairwise) — Pairwise comparison of two items (binary selection or scale rating)
+- [`peak_picking`](#peak-picking) — Peaks and integrated regions picked on a spectrum display, with suggested peaks to accept or reject and per-peak fields
 - [`price_list`](#price-list) — Multiple price list: choose option A or B in each row (Holt & Laury preset, time preference)
 - [`process_reward`](#process-reward) — Per-step process reward signals for PRM training
 - [`pure_display`](#pure-display) — Display-only content (instructions, headers)
@@ -268,13 +272,38 @@ Drag-and-drop card sorting into predefined or user-created groups
 
 From `examples/classification/card-sort/config.yaml`.
 
+## chemical_structure
+
+Draw or correct a chemical structure (OpenChemLib editor); stores molfile V3000, canonical SMILES and, with RDKit.js, the InChIKey
+
+**Required:** nothing beyond `name` and `description`
+
+**Optional:** `allow_empty`, `answer_field`, `editor_height`, `instructions`, `label_requirement`, `prefill_field`, `prefill_format`, `rdkit`, `require_valid`, `show_identifiers`
+
+```yaml
+- annotation_type: chemical_structure
+  name: corrected
+  description: Correct the structure so it matches the source image
+  prefill_field: recognised_smiles
+  answer_field: true_smiles
+  rdkit: auto
+  editor_height: 380
+  label_requirement:
+    required: true
+  instructions: The editor starts from the recognised structure. Edit it with the
+    mouse, or paste a SMILES string and press Load. Leave it unchanged when it is
+    already right.
+```
+
+From `examples/advanced/chemical-structure-correction/config.yaml`.
+
 ## cloze
 
 Fill-in-the-blank passage, scored against an answer key kept on the server
 
 **Required:** nothing beyond `name` and `description`
 
-**Optional:** `answer_field`, `input_width`, `label_requirement`, `scoring`, `source_field`, `text`
+**Optional:** `answer_field`, `input_width`, `label_requirement`, `scoring`, `source_field`, `text`, `tolerance`
 
 ```yaml
 - annotation_type: cloze
@@ -937,7 +966,7 @@ Image annotation with bounding boxes, polygons, freeform drawing, and landmarks
 
 **Required:** `labels`, `tools`
 
-**Optional:** `ai_support`, `attributes`, `brush_size`, `carry_over`, `eraser_size`, `fill_max_pixels`, `fill_mode`, `fill_tolerance`, `freeform_brush_size`, `freeform_simplify`, `instance_masks`, `keybinding_profile`, `mask_mode`, `mask_opacity`, `max_annotations`, `min_annotations`, `pan_enabled`, `segmentation`, `skeletons`, `source_field`, `text_prompt`, `tiles`, `viewer`, `zoom_enabled`
+**Optional:** `ai_support`, `attributes`, `brush_size`, `carry_over`, `eraser_size`, `fill_max_pixels`, `fill_mode`, `fill_tolerance`, `freeform_brush_size`, `freeform_simplify`, `instance_masks`, `keybinding_profile`, `label_source`, `mask_mode`, `mask_opacity`, `max_annotations`, `min_annotations`, `pan_enabled`, `segmentation`, `skeletons`, `source_field`, `text_prompt`, `tiles`, `viewer`, `zoom_enabled`
 
 ```yaml
 - annotation_type: image_annotation
@@ -997,6 +1026,42 @@ Interlinear glossed text: morpheme segmentation and glosses aligned per word (Le
 ```
 
 From `examples/span/interlinear-gloss/config.yaml`.
+
+## interval_label
+
+Label intervals and point events on a time_series signal; free or fixed-epoch mode
+
+**Required:** `labels`, `signal_field`
+
+**Optional:** `allow_overlap`, `auto_advance`, `channel_scope`, `epoch_length`, `instructions`, `label_requirement`, `min_annotations`, `mode`, `next_key`, `pre_annotations`, `preannotation_field`, `preannotation_labels`, `previous_key`, `require_all_epochs`
+
+```yaml
+- annotation_type: interval_label
+  name: segments
+  description: Mark artefacts, spindles, movement and arousals
+  signal_field: signal
+  mode: free
+  channel_scope: either
+  labels:
+  - name: artefact
+    key_value: '1'
+  - name: spindle
+    key_value: '2'
+  - name: walking
+    key_value: '3'
+  - name: arousal
+    key_value: '4'
+    kind: event
+  preannotation_labels:
+    Sleep stage W: null
+    Sleep stage 1: null
+    Sleep stage 2: null
+    Sleep stage 3: null
+    Arousal: arousal
+  preannotation_field: events
+```
+
+From `examples/advanced/time-series-intervals/config.yaml`.
 
 ## likert
 
@@ -1070,6 +1135,49 @@ Listening tests: MUSHRA, BS.1116, ACR, DCR, CCR, ABX and P.835, with blinded sti
 ```
 
 From `examples/audio/listening-test-mushra/config.yaml`.
+
+## microscopy
+
+Multichannel microscopy (OME-Zarr, OME-TIFF): channel contrast, z/t, ROIs and per-cell classes from a label image
+
+**Required:** `labels`
+
+**Optional:** `cell_labels`, `channels`, `height`, `image_key`, `instructions`, `label_image`, `label_max_side`, `label_requirement`, `labels_key`, `max_pixels`, `min_cells`, `min_rois`, `tile_size`, `tools`
+
+```yaml
+- annotation_type: microscopy
+  name: cells
+  description: Classify the cells, and outline any region that looks damaged.
+  instructions: Turn channels on and off and set their contrast in the Channels panel.
+    Click a cell to select it, then choose its class (or press 1-3). Use Rectangle,
+    Polygon or Point to mark regions.
+  image_key: image
+  labels_key: cells
+  tools:
+  - bbox
+  - polygon
+  - landmark
+  labels:
+  - name: damaged
+    color: '#e8590c'
+  - name: debris
+    color: '#868e96'
+  cell_labels:
+  - name: marker positive
+    color: '#f03e3e'
+  - name: marker negative
+    color: '#4dabf7'
+  - name: dividing
+    color: '#fab005'
+  channels:
+  - name: DAPI
+    label: DAPI (nuclei)
+  min_cells: 1
+  label_requirement:
+    required: true
+```
+
+From `examples/image/multichannel-microscopy/config.yaml`.
 
 ## multi_document_event
 
@@ -1165,7 +1273,7 @@ Multiple-choice checkbox selection
 
 **Required:** `labels`
 
-**Optional:** `codebook`, `display_config`, `dynamic_options`, `dynamic_options_field`, `has_free_response`, `label_requirement`, `option_randomization`, `randomize_order`, `sequential_key_binding`, `video_as_label`
+**Optional:** `codebook`, `display_config`, `dynamic_options`, `dynamic_options_field`, `has_free_response`, `label_requirement`, `label_source`, `option_randomization`, `randomize_order`, `sequential_key_binding`, `video_as_label`
 
 ```yaml
 - annotation_type: multiselect
@@ -1232,6 +1340,45 @@ Pairwise comparison of two items (binary selection or scale rating)
 ```
 
 From `examples/classification/pairwise-scale/config.yaml`.
+
+## peak_picking
+
+Peaks and integrated regions picked on a spectrum display, with suggested peaks to accept or reject and per-peak fields
+
+**Required:** `viewer_field`
+
+**Optional:** `allow_manual`, `instructions`, `label_requirement`, `max_peaks`, `min_peaks`, `peak_fields`, `region_fields`, `require_review`
+
+```yaml
+- annotation_type: peak_picking
+  name: peaks
+  description: Pick the peaks and describe each one
+  viewer_field: spectrum
+  peak_fields:
+  - name: assignment
+    type: text
+    placeholder: e.g. OCH2, C=O
+  - name: multiplicity
+    type: choice
+    options:
+    - s
+    - d
+    - t
+    - q
+    - m
+    - br
+  region_fields:
+  - name: protons
+    label: nH
+    type: text
+    placeholder: e.g. 2
+  min_peaks: 1
+  require_review: true
+  label_requirement:
+    required: true
+```
+
+From `examples/advanced/spectrum-peak-picking/config.yaml`.
 
 ## price_list
 
@@ -1301,7 +1448,7 @@ Single-choice radio button selection
 
 **Required:** `labels`
 
-**Optional:** `codebook`, `dynamic_options`, `dynamic_options_field`, `has_free_response`, `horizontal`, `label_requirement`, `lextale`, `option_randomization`, `randomize_order`, `sequential_key_binding`
+**Optional:** `codebook`, `dynamic_options`, `dynamic_options_field`, `has_free_response`, `horizontal`, `label_requirement`, `label_source`, `lextale`, `option_randomization`, `randomize_order`, `sequential_key_binding`
 
 ```yaml
 - annotation_type: radio
@@ -1602,7 +1749,7 @@ Text span annotation/highlighting with optional entity linking to knowledge base
 
 **Required:** `labels`
 
-**Optional:** `allow_discontinuous`, `bad_text_label`, `codebook`, `columns`, `displaying_score`, `entity_linking`, `sequential_key_binding`, `show_span_labels`, `target_field`, `title`
+**Optional:** `allow_discontinuous`, `bad_text_label`, `codebook`, `columns`, `displaying_score`, `entity_linking`, `label_source`, `sequential_key_binding`, `show_span_labels`, `target_field`, `title`
 
 ```yaml
 - annotation_type: span
@@ -2266,6 +2413,15 @@ From `examples/agent-traces/voice-interaction/config.yaml`.
   - name: Lesion
     color: '#e6553a'
     key_value: '1'
+    dicom:
+      category:
+        code: '49755003'
+        scheme: SCT
+        meaning: Morphologically Altered Structure
+      type:
+        code: '52988006'
+        scheme: SCT
+        meaning: Lesion
   - name: Bone
     color: '#3a8ee6'
     key_value: '2'

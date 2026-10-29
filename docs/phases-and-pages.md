@@ -25,7 +25,7 @@ below was established by running the server and reading the startup log.
 
 ## Which of these you actually need
 
-Start from none of them. **14 of Potato's 249 bundled examples declare a `phases`
+Start from none of them. **17 of Potato's 260 bundled examples declare a `phases`
 block at all**; the other 235 open on the first item. A phase is a page an
 annotator has to get through before doing any work, and every one you add costs
 attrition and setup time, so add them because someone asked or because the
@@ -349,10 +349,12 @@ that does not exist and the render fails with a redirect loop.
 ## The `surveyflow` block
 
 Potato 1.x attached pages before and after annotation with a `surveyflow:`
-block. Potato 2.12.1 reads nothing in it. A config whose pages are only in a
-`surveyflow` block passes `validate --strict` with "OK — no issues found",
-boots, and sends the annotator straight to the first item without showing any
-of them. Move each page into `phases`: a `pre_annotation` file becomes a
+block. Potato 2.12.1 and 2.13.1 read nothing in it. A config whose pages are only in a
+`surveyflow` block boots and sends the annotator straight to the first item
+without showing any of them. On 2.12.1 `validate --strict` passed it with "OK
+— no issues found". On 2.13.1 it fails with "Config key 'surveyflow' is not
+read, so it has no effect. Its survey pages are not shown.", and `potato start`
+logs the same warning and boots anyway. Move each page into `phases`: a `pre_annotation` file becomes a
 `consent`, `prestudy` or `instructions` phase, and a `post_annotation` file
 becomes a `poststudy` phase.
 

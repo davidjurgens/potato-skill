@@ -2,7 +2,7 @@
   "name": "potato-skill",
   "displayName": "Potato annotation tasks",
   "description": "Design, build, run and visually check Potato annotation tasks.",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "author": {
     "name": "Potato Development Team",
     "email": "jurgens@umich.edu"

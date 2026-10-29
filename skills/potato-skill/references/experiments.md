@@ -54,11 +54,15 @@ Three behaviours to plan around:
 - **Every arrival takes an arrival number,** including people who are later
   screened out and people who logged in and went no further. The numbers
   in `condition_ordinal` have gaps; they are not a count of participants.
-- **`balance_on: completed` only counts people who have finished.** Anyone
-  still mid-study is invisible to it, so a burst of simultaneous arrivals all
-  see the same counts, and the cells split by the tie-break draw rather than by
-  alternation. Use it to replace dropouts in a trickle of arrivals. With a
-  recruitment burst, `assigned` balances better.
+- **`balance_on: completed` counts finishers and people still working.** From
+  2.13.1 a participant counts toward their cell once they finish, or while
+  they were assigned or last active within `conditions.in_progress_minutes`
+  (default 60). Someone who has gone quiet for longer stops counting, so their
+  slot is refilled. Twelve participants who arrived together split 6/6.
+  `in_progress_minutes: 0` counts finishers only, which is what 2.13.0 and
+  earlier did. Then a burst all see the same counts, and the same twelve split
+  7/5 by the tie-break draw. Last activity is not saved, so after a restart
+  only the assignment time counts.
 - **`max_per_cell` does not close the study.** With every cell full, the next
   participant is still admitted, to the least-filled cell, and the server logs
   (here with a cap of 3) `Every condition cell has reached max_per_cell=3; assigning the least-filled

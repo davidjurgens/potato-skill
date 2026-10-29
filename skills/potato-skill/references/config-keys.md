@@ -2,7 +2,7 @@
 
 # Config keys
 
-The 175 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
+The 180 documented top-level keys. The complete list of recognized keys, including nested ones, is in `docs/configuration/config_reference.md`.
 
 Unrecognized keys only produce a warning, so a typo silently disables whatever you meant to switch on. Run `potato validate --strict` to make that a failure.
 
@@ -70,9 +70,9 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `annotation_schemes` | array |  |  | The questions annotators answer. Each entry needs an annotation_type from the schema registry plus a name and description |
-| `phases` | array|object |  |  | Per-phase configuration (consent, instructions, training, annotation, post-study). Either a list of phase objects or a mapping with an `order` key. Phase-level annotation_schemes replace the top-level list rather than adding to it |
+| `phases` | array|object |  |  | Per-phase configuration. Either a list of phase objects or a mapping with an `order` key. Page types: consent, prestudy, instructions, training, annotation and poststudy, plus the runtime pages jspsych, headphone_check and external (oTree, Empirica, hosted surveys). `counterbalance` (a list of {pages, method: random \| latin_square}) orders groups of pages per participant. Phase-level annotation_schemes replace the top-level list rather than adding to it |
 | `pre_annotation` | object |  |  | Seed annotations to show as a starting point for each item |
-| `surveyflow` | object |  |  | Survey pages shown before and after annotation |
+| `surveyflow` | object |  |  | Potato 1.x survey pages. Not read in 2.x, and named at boot if set; survey pages go under `phases` |
 | `training` | object |  |  | Qualification phase annotators must pass before real items |
 
 ## Annotation Features
@@ -94,8 +94,9 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | `alert_time_each_instance` | integer |  | `10000000` | Seconds an annotator may spend on one item before being warned. The default is effectively no limit |
+| `assignment_hold_minutes` | number |  |  | When an annotator would otherwise get no work, items other annotators hold are handed out anyway, and both keep them. With this set, items the holder has not reached move to the new annotator instead, and an item the holder has been shown stays theirs while they were given it or saved anything within this many minutes; after that it moves too. Use it with overlap_sample, where sharing held items double-codes more than the design asks |
 | `assignment_strategy` | string |  | `fixed_order` | How items are handed out: random, fixed_order, active_learning, max_diversity, least_annotated, category_based, diversity_clustering, batch, priority, model_review, psychometric or engine (the labeling engine's human requests). `llm_confidence` is accepted and assigns at random -- it is not implemented |
-| `automatic_assignment` | object |  |  | Assign items to annotators automatically as they arrive |
+| `automatic_assignment` | object |  |  | Potato 1.x assignment block. Not read, and named at boot if set; use `assignment_strategy`, `num_annotators_per_item` and `max_annotations_per_user` |
 | `batch_assignment` | object |  |  | Split items into named groups and assign whole batches |
 | `conditions` | object |  |  | Between-subjects conditions. Each participant is assigned one cell (one level of every factor) on arrival and keeps it. Page `show_when` rules and question `display_logic` can test `condition.<factor>` |
 | `instance_reclaim` | object |  |  | Take assignments back from annotators who abandoned them so the items can go out again. `enabled` (false) and `timeout_hours` (24), plus optional `stale`, `manual`, `quality_control` and `prolific` sections each carrying `preserve_completed_annotations` |
@@ -190,6 +191,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `incentives` | object |  |  | Bonus payments for price_list, bdm and belief_elicitation answers. Computed after the participant finishes, from the stored answers, by the `incentives` export and the admin route /admin/api/crowd/incentive_bonuses; never paid automatically |
 | `mcp` | object |  |  | Model Context Protocol control surface, letting an agent query and control this running task. Off unless every tool is named explicitly |
 | `mturk` | object |  |  | Amazon Mechanical Turk. Needs `enabled: true` and `config_file_path` pointing at the credentials YAML, plus boto3 installed. MTurk closed to new customers in July 2026 and the loader says so on startup |
+| `notifications` | object |  |  | Messages for scheduled sessions: channels (log, smtp, twilio, prolific), base_url, dry_run, contact consent and templates. Credentials come from environment variables only |
 | `trace_ingestion` | object |  |  | Accept agent traces posted to /api/traces/* |
 | `webhooks` | object |  |  | Post task events to external URLs as they happen |
 
@@ -204,6 +206,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
+| `consensus_aggregation` | object |  |  | Parameters of the `consensus` export: vote fractions per answer, point clusters and consensus boxes across annotators |
 | `dataset_metadata` | object |  |  | Descriptive metadata for the generated dataset card and Zenodo deposit: license, authors, citation, keywords, version, funding, related_links, tags, task_categories. Title and description fall back to the task's own name and description |
 | `publish` | object |  |  | Dataset publishing options: `default_target` (archive, huggingface or zenodo) and an `options` block covering which splits are included, aggregation, min_annotators, PII scrubbing, media bundling and file format. Publishing works with none of this set |
 
@@ -238,7 +241,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
-| `base_html_template` | string |  |  | Base template every page extends |
+| `base_html_template` | string |  |  | Ignored. Every page renders through the built-in base_template_v2.html, so nothing reads this key -- `potato validate` reports it |
 | `config_file` | string |  |  | Path to the config file being run. Written by the loader from the command line, not something to set yourself; task_dir falls back to its directory |
 | `credentials` | object |  |  | How credentials in the config are resolved before use |
 | `customjs` | boolean |  |  | Enable custom JavaScript injection |
@@ -267,6 +270,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `jumping_to_id_disabled` | boolean |  |  | Remove the jump-to-item control |
 | `layout` | object |  |  | How the annotation questions are arranged on the page: a grid, collapsible groups, an explicit order, and responsive breakpoints. Without it every scheme stacks full-width in config order |
 | `list_as_text` | object |  |  | How a list-valued field is laid out. Sub-keys: text_list_prefix_type (alphabet, number, bullet or none), horizontal, alternating_shading. `true` turns it on with the defaults |
+| `math` | object |  |  | Render LaTeX math ($...$, $$...$$, \(...\), \[...\]) in item text, display fields and process_reward / trajectory_eval steps with KaTeX. Span targets are left as source |
 | `task_layout` | string |  |  | Custom HTML for the annotation form area |
 | `ui` | object |  |  | Interface toggles. `ui.theme` (auto \| light \| dark, default auto) sets the annotator pages' theme: auto follows the browser and shows a toggle; light or dark gives every annotator that theme |
 | `ui_config` | object |  |  | Additional interface settings |
@@ -276,14 +280,15 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
-| `prestudy` | object |  |  | Legacy pre-study screening block. The only code that reads it is an unreferenced method, so it has no effect -- configure the screening phase through `phases` or `surveyflow` with `type: prestudy` |
+| `prestudy` | object |  |  | Legacy pre-study screening block. Not read, and named at boot if set; add a phase with `type: prestudy` under `phases` |
 | `review_mode` | object |  |  | Hotkey review queue. Once the current item is complete the page moves on by itself, which turns keyboard-labelled schemes into press-key-and-advance |
 | `review_workflow` | object |  |  | Reviewer routing and the kanban board at /admin/review. Keeps its own state per instance (pending, in_review, needs_second, adjudication, done) alongside the annotations |
+| `schedule` | object |  |  | Sessions after the regular flow: waves, experience-sampling prompts and Delphi rounds, computed per participant at enrolment (when they finish the regular flow). See docs/workflow/scheduling.md |
 | `triage` | object |  |  | Rank items by a priority signal so failures, thumbs-down feedback and low scores get annotated first. Scoring runs as items are added, so it covers traces ingested at runtime as well as loaded files |
 
 ## Display types
 
-`instance_display.fields[].type` accepts 27 values:
+`instance_display.fields[].type` accepts 31 values:
 
 | Type | Description | Span target |
 |------|-------------|-------------|
@@ -298,6 +303,7 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `dialogue` | Dialogue/conversation turns, optionally threaded by reply-to with timestamps and per-turn metadata | yes |
 | `document` | Document display for DOCX, Markdown, and other formats | yes |
 | `eval_trace` | Three-pane agent trace eval: reasoning, function calls, and final answer side-by-side | yes |
+| `fits_cutout` | FITS image cutouts (one image, or science/reference/difference) with an RA/Dec readout and a light curve |  |
 | `gallery` | Scrollable image gallery with captions |  |
 | `genome_locus` | Genome locus in igv.js: reference, reads, variants and annotation tracks |  |
 | `html` | HTML content display (sanitized) |  |
@@ -306,11 +312,14 @@ Unrecognized keys only produce a warning, so a typo silently disables whatever y
 | `interactive_chat` | Interactive agent chat with post-interaction trace display | yes |
 | `live_agent` | Live AI agent viewer with real-time screenshots, controls, and interaction |  |
 | `live_coding_agent` | Live coding agent viewer with real-time streaming and intervention controls |  |
+| `molecule` | Small molecule from SMILES or molfile (OpenChemLib or RDKit.js), with atom selection |  |
 | `multi_agent_discussion` | Multi-agent discussion with agent legend, colors, addressees, and filtering | yes |
 | `pairwise` | Side-by-side comparison display |  |
 | `pdf` | PDF document display with PDF.js rendering |  |
 | `protein_structure` | Protein structure (mmCIF, BinaryCIF, PDB) in 3Dmol.js or Mol*, with residue selection |  |
+| `spectrum` | Spectrum (NMR, IR, MS from JCAMP-DX, mzML or CSV) with zoom, peak picking and integration |  |
 | `spreadsheet` | Spreadsheet/table display with row or cell annotation |  |
 | `text` | Plain text content display | yes |
+| `time_series` | Multi-channel signal (EDF, WFDB, CSV, Parquet) in uPlot, with zoom, pan and labelled overlays |  |
 | `video` | Video player display |  |
 | `web_agent_trace` | Web agent trace viewer with screenshots, SVG overlays, and step navigation |  |

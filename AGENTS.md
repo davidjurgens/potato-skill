@@ -63,7 +63,7 @@ pages beside it.
 
 ## Start from a working example
 
-There are 249 example projects. Copying one beats assembling a config from field
+There are 260 example projects. Copying one beats assembling a config from field
 lists, and every one of them is checked in CI.
 
 ```bash
@@ -111,7 +111,7 @@ rejected.** This is a security check, not a convenience. If you see
 `ConfigSecurityError: Path ... is outside the project directory`, you are running
 from the wrong directory or pointing outside the project.
 
-**`annotation_type` must come from the registry.** There are 76 of them. Do not
+**`annotation_type` must come from the registry.** There are 80 of them. Do not
 guess a plausible-sounding name. `sentiment` and `classification` are not types.
 
 ```bash

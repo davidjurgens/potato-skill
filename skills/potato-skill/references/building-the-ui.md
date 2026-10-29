@@ -108,7 +108,7 @@ navbar as plain text — so there is no top-level landmark for heading navigatio
 Custom canvas widgets are a separate question from the form; check those
 yourself if your annotators rely on assistive technology.
 
-### The 27 display types
+### The 31 display types
 
 | Type | For |
 |---|---|
@@ -139,6 +139,13 @@ yourself if your annotators rely on assistive technology.
 | `image_region` | One rectangle of a larger image (a text line, a word), cropped in the browser; for HTR line correction |
 | `protein_structure` | An mmCIF, BinaryCIF or PDB file in 3Dmol.js, with a residue table. See `modalities.md` |
 | `genome_locus` | A genome locus in igv.js with local reference and tracks. See `modalities.md` |
+| `time_series` | A multi-channel signal (EDF, WFDB, CSV, Parquet) in uPlot, with zoom, pan and labelled overlays |
+| `spectrum` | An NMR, IR or MS spectrum (JCAMP-DX, mzML or CSV) with zoom, peak picking and integration |
+| `molecule` | A small molecule from SMILES or a molfile (OpenChemLib or RDKit.js), with atom selection |
+| `fits_cutout` | FITS image cutouts (one image, or science, reference and difference) with an RA/Dec readout and a light curve |
+
+The last four are new in 2.13. Their rows give Potato's own description from
+the display registry. None of the four has been run for this pack.
 
 `display_options` differ per type, and from 2.8.2-11 a key the display does not
 accept is a validation error that names the alternatives:

@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 559 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 602 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -14,11 +14,14 @@ Order items by model uncertainty
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `annotation_routing` | boolean | `False` | Route high-confidence predictions past the annotator instead of asking |
+| `annotation_routing` | boolean | `False` | Not read: nothing routes items on model confidence, and the key is named at boot if set. Accepting machine labels above a confidence is a `labeling_engine` contract |
 | `bald_params` | object | `{'n_estimators': 5, 'bootstrap_fraction': 0.8}` | Ensemble size and bootstrap fraction for `query_strategy: bald` |
 | `calibrate_probabilities` | boolean | `True` | Calibrate the fitted model's probabilities, and keep the calibration only when it measurably helps |
 | `classifier` | object |  | The model that scores unlabeled items. `{name: ...}`, optionally with `hyperparameters`. `name` takes a short name (`logistic`, `random_forest`, `svm`) or a fully qualified import path such as `sklearn.linear_model.LogisticRegression` |
+| `classifier_kwargs` | object |  | Flat form of `classifier.hyperparameters`; merged with `classifier_params` |
+| `classifier_name` | string | `sklearn.linear_model.LogisticRegression` | Flat form of `classifier.name` |
 | `classifier_params` | object |  | Extra keyword arguments passed to the classifier constructor |
+| `cold_start_batch_size` | integer | `20` | How many unannotated items `cold_start_strategy: llm` samples for the LLM to score |
 | `cold_start_strategy` | string | `random` | How items are ordered before the first fit: random or llm |
 | `confidence_method` | string |  | How an LLM's confidence is read: logprobs, verbalized or consistency |
 | `database` | object |  | Ignored. Run history is recorded through the project database and needs no configuration |
@@ -26,19 +29,27 @@ Order items by model uncertainty
 | `hybrid_weights` | object | `{'uncertainty': 0.7, 'diversity': 0.3}` | Weights for `query_strategy: hybrid`. Must sum to 1.0 |
 | `icl_ensemble_params` | object |  | How the ICL weight decays as real annotations accumulate |
 | `llm` | object |  | Use a model rather than a classifier for cold start and confidence: `{enabled, endpoint_url, model_name}` |
+| `llm_config` | object |  | Flat form of the `llm` block |
+| `llm_enabled` | boolean | `False` | Flat form of `llm.enabled` |
 | `max_instances_to_reorder` | integer |  | Cap on how many unlabeled items are ranked per pass. They are sampled, not taken from the head of the file |
 | `min_annotations_per_instance` | integer | `1` | How many annotations an item needs before it can be training data |
 | `min_instances_for_training` | integer | `10` | How many labeled items must exist before the first fit. Below this the cold-start strategy decides the order |
 | `model_persistence` | object |  | Save fitted models to disk: `{enabled, save_directory, retention_count}` |
+| `model_persistence_enabled` | boolean | `False` | Flat form of `model_persistence.enabled` |
+| `model_retention_count` | integer | `2` | Flat form of `model_persistence.retention_count` |
+| `model_save_directory` | string |  | Flat form of `model_persistence.save_directory` |
 | `query_strategy` | string | `uncertainty` | What "informative" means: uncertainty, diversity, badge, bald or hybrid |
 | `random_sample_percent` | number | `0.2` | Fraction of each reordered batch left random, so the queue keeps exploring instead of only exploiting the model |
 | `resolution_strategy` | string | `majority_vote` | How several annotators' labels become one training label: majority_vote, first, or unanimous |
-| `routing_thresholds` | object |  | Confidence bounds for routing: `{auto_label_min_confidence, show_suggestion_below}` |
+| `routing_thresholds` | object |  | Not read; see `annotation_routing` |
 | `schema_names` | array |  | Which schemes are learned. Defaults to every scheme with something learnable to predict |
 | `update_frequency` | integer | `5` | Retrain after this many new annotations |
 | `use_icl_ensemble` | boolean | `False` | Blend in-context-learning predictions into the ranking |
 | `vectorizer` | object |  | How items become features. `{name: ...}`, optionally with `hyperparameters`. `name` takes `tfidf`, `count` or `sentence-transformers`, or a fully qualified import path |
+| `vectorizer_kwargs` | object |  | Flat form of `vectorizer.hyperparameters`; merged with `vectorizer_params` |
+| `vectorizer_name` | string | `sklearn.feature_extraction.text.TfidfVectorizer` | Flat form of `vectorizer.name` |
 | `vectorizer_params` | object |  | Extra keyword arguments passed to the vectorizer constructor. A YAML list for `ngram_range` is coerced to the tuple sklearn wants |
+| `verification_sample_rate` | number |  | Not read, and named at boot if set. The auto-label spot-check rate is `icl_labeling.verification.sample_rate` |
 
 ## `adjudication`
 
@@ -120,6 +131,7 @@ The drawing-process analogue of keystroke_logging: content-blind telemetry on ge
 | `flush_interval_ms` | integer | `10000` | How often the browser posts its buffered events |
 | `idle_ms` | integer | `120000` | Gap above which the annotator is charged to idle rather than active time. Two minutes rather than something tighter, because studying a hard image is real work that produces no events at all |
 | `include_schemas` | array | `[]` | Schemes to record. Empty means every geometry schema |
+| `phases` | array |  | Record only on these phases: phase types (consent, prestudy, instructions, training, annotation, poststudy) or phase names from `phases.order`. Elsewhere the script is not loaded and the server drops its posts. Omit it to record on every page. The recording notice stays on every page |
 | `store_events` | boolean | `True` | Write raw event streams. Does nothing at summary fidelity |
 
 ## `annotation_ui`
@@ -206,6 +218,7 @@ Page-level, content-blind authenticity paradata on every task type: leaving the 
 | `enabled` | boolean | `False` | Record authenticity paradata |
 | `flush_interval_ms` | integer | `10000` | How often the browser posts the current item's running totals |
 | `min_away_ms` | integer | `1000` | Absences from the page shorter than this are not counted |
+| `phases` | array |  | Record only on these phases: phase types (consent, prestudy, instructions, training, annotation, poststudy) or phase names from `phases.order`. Elsewhere the script is not loaded and the server drops its posts. Omit it to record on every page. The recording notice stays on every page |
 | `track_pointer` | boolean | `True` | Record pointer movement totals and clicks that land with no movement in between. false removes the pointermove listener |
 
 ## `automation`
@@ -235,6 +248,7 @@ Split items into named groups and assign whole batches
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `group_by_condition` | string |  | A `conditions` factor whose levels name the auto-assigned groups. Each participant gets the group of their assigned level, so each condition can carry its own items |
+| `randomize_within_list` | boolean | `False` | Give each participant their group's items in their own order, seeded per participant, instead of file order |
 
 ## `boundary_probing`
 
@@ -329,10 +343,27 @@ Between-subjects conditions. Each participant is assigned one cell (one level of
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `assignment` | string | `balanced` | How a cell is chosen: `balanced` (fewest participants, by weight), `random` (seeded per participant) or `round_robin` (arrival order) |
-| `balance_on` | string | `assigned` | What `balanced` counts: everyone `assigned`, or only participants who `completed` without being screened out, so dropouts are replaced |
+| `balance_on` | string | `assigned` | What `balanced` counts: everyone `assigned`, or participants who `completed` without being screened out plus those still in progress (see in_progress_minutes), so dropouts are replaced |
 | `cells` | array |  | Explicit cells (a subset of the full factorial), each a mapping of factor to level with an optional `weight` |
 | `factors` | object |  | Factor name to list of levels, e.g. `{feedback: [none, immediate]}`. Several factors form a full factorial design unless `cells` lists a subset |
+| `in_progress_minutes` | number | `60` | With `balance_on: completed`, how long after assignment or last activity an unfinished participant still counts toward their cell. 0 counts finishers only |
 | `max_per_cell` | integer |  | Skip a cell once it has this many participants. When every cell is full, the least-filled one is still assigned and a warning is logged |
+
+## `consensus_aggregation`
+
+Parameters of the `consensus` export: vote fractions per answer, point clusters and consensus boxes across annotators
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `agreement_threshold` | number | `0.8` | Share of classifiers the top answer needs for an item to be marked retired; for multiselect, each option must be ticked or left unticked by at least this share |
+| `boxes` | object |  | Parameters for grouping bounding boxes across annotators |
+| `boxes.iou_threshold` | number | `0.5` | Least IoU between any two boxes in one consensus group |
+| `min_classifiers` | integer | `2` | Items with fewer classifiers than this are marked needs_review |
+| `points` | object |  | DBSCAN parameters for clustering image_annotation points |
+| `points.eps` | number | `0.02` | Neighbourhood radius for point clustering, in the unit eps_unit names |
+| `points.eps_unit` | string | `fraction` | `fraction` (x as a share of the width, y of the height) or `pixels` (needs the image size) |
+| `points.min_samples` | integer | `2` | Points within eps (the point itself included) needed to form a cluster |
+| `schemes` | array |  | Scheme names to aggregate; default every radio, select, likert, multiselect, slider, number and image_annotation scheme |
 
 ## `corpus_map`
 
@@ -537,6 +568,7 @@ The general behavioural tracker (clicks, focus, scroll, shortcut keys) that feed
 | `disclose_to_annotators` | boolean | `False` | Show a notice that page interaction is recorded |
 | `disclosure_text` | string |  | Replace the default notice with your own wording |
 | `enabled` | boolean | `True` | Record the click, focus, scroll and key stream. When false, item loads, saves, navigation and an activity mark with no target or detail are still recorded, so time per item (Throughput tab, adjudication, dashboard) keeps working. AI-assistant usage and the annotation change trail are recorded either way |
+| `phases` | array |  | Record only on these phases: phase types (consent, prestudy, instructions, training, annotation, poststudy) or phase names from `phases.order`. Elsewhere items keep only the timing marks, as with `enabled: false`, so time per item still works, and consent and survey pages keep nothing. Omit it to record on every page. The recording notice stays on every page |
 
 ## `item_properties`
 
@@ -548,6 +580,7 @@ Maps the fields of your data file onto the roles Potato needs: which field is th
 | `id_key` | string |  | Field holding each item's unique identifier |
 | `image_key` | string |  | Item field holding the image, the counterpart of `text_key`. `ai_support.image_key` overrides it |
 | `kwargs` | object |  | Extra per-item fields to carry through to the display layer |
+| `private_keys` | array |  | Item fields the annotator's browser never receives: left out of the page's item data and the instance-data APIs, and kept in exports. Use it for fields such as the model behind each response in a blind pairwise comparison |
 | `text_key` | string |  | Field holding the text shown to the annotator |
 
 ## `item_store`
@@ -608,6 +641,7 @@ Content-blind typing dynamics on free-text fields -- when someone pauses, revise
 | `idle_session_ms` | integer | `30000` | Gap that ends one typing session and starts the next |
 | `include_schemas` | array | `[]` | Schemes to record. Empty means every free-text field |
 | `pause_thresholds_ms` | array | `[500, 1000, 2000, 5000, 10000]` | Pause buckets the summary counts against. Must be positive integers |
+| `phases` | array |  | Record only on these phases: phase types (consent, prestudy, instructions, training, annotation, poststudy) or phase names from `phases.order`. Elsewhere the script is not loaded and the server drops its posts. Omit it to record on every page. The recording notice stays on every page |
 | `store_events` | boolean | `True` | Write raw event streams to the typing store. Does nothing at summary fidelity, which the loader warns about |
 
 ## `labeling_engine`
@@ -752,6 +786,17 @@ Declare raters that are tools or models rather than people, so agreement, adjudi
 | `enabled` | boolean | `False` | Read the roster and record declared participants as machines |
 | `require_declaration` | boolean | `False` | Refuse annotations from an undeclared machine. Off by default, and turning it on adds a check to the login routes |
 
+## `math`
+
+Render LaTeX math ($...$, $$...$$, \(...\), \[...\]) in item text, display fields and process_reward / trajectory_eval steps with KaTeX. Span targets are left as source
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `delimiters` | array | `['$$', '$', '\\(', '\\[']` | Which delimiters start math: any of $$, $, \(, \[. Drop $ for text with prices in it |
+| `enabled` | boolean | `False` | Turn math rendering on. Off by default, so text with dollar signs is unchanged unless a project asks for it |
+| `fields` | array |  | instance_display field keys to render. Default: every field that is not a span target |
+| `macros` | object | `{}` | KaTeX macros available in every expression, as name -> expansion |
+
 ## `mcp`
 
 Model Context Protocol control surface, letting an agent query and control this running task. Off unless every tool is named explicitly
@@ -788,6 +833,18 @@ Train models on the study's annotations from the admin Training page, and option
 | `writeback.include_unlabeled` | boolean | `False` | Also predict on, and prelabel, the items nobody has labelled yet (otherwise only the held-out val and test items get predictions) |
 | `writeback.min_confidence` | number | `0.0` | Predictions below this confidence are not published |
 | `writeback.schemas` | array |  | Schemes whose predictions are published |
+
+## `notifications`
+
+Messages for scheduled sessions: channels (log, smtp, twilio, prolific), base_url, dry_run, contact consent and templates. Credentials come from environment variables only
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `base_url` | string |  | Public address used in resume links. Required for any channel other than log unless dry_run is on |
+| `channels` | array |  | List of channels: {type: log}, {type: smtp, host, port, security, from, username_env, password_env}, {type: twilio, account_sid_env, auth_token_env, from_number or messaging_service_sid_env}, {type: prolific, token_env, study_id} |
+| `contact` | object |  | consent {question, value}: the phase-page question whose answer allows contact (required with any channel); delete_after_study (default true) |
+| `dry_run` | boolean | `False` | Render and log every message without delivering it |
+| `templates` | object |  | Override subject/body per message kind (before_open, open, reminder, prompt, delphi_round) with {study}, {session}, {opens}, {closes}, {time_left}, {link}, {stop_link} |
 
 ## `pocket`
 
@@ -859,6 +916,20 @@ Multiplayer rooms at /rooms: live norming sessions, adjudication huddles and sha
 | `poll_interval_ms` | integer | `1500` | How often clients poll for room events. Clamped to 500-30000 |
 | `schema` | string |  | Scheme members vote on. Defaults to the first radio or likert scheme; with neither present, rooms disable themselves |
 | `who_can_create` | string | `any` | Who may open a room: any member, or admin only |
+
+## `schedule`
+
+Sessions after the regular flow: waves, experience-sampling prompts and Delphi rounds, computed per participant at enrolment (when they finish the regular flow). See docs/workflow/scheduling.md
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `delphi` | object |  | Delphi rounds: items or items_file, scale, comments, max_rounds, round_length, gap, start, stop {iqr_at_most, median_change_at_most, changed_share_below}, min_panel, reminders. See docs/workflow/delphi.md |
+| `experience_sampling` | object |  | Repeated short prompts: days, start_day, daily_window, signal {per_day, min_gap} or interval {every} / {times}, expires_after, questions or questions_file, reminders. See docs/workflow/experience_sampling.md |
+| `poll_seconds` | number | `30` | How often the background loop sends due messages and closes rounds |
+| `scheduler` | boolean | `True` | Run the background loop. Off, nothing is sent until an admin presses Send due messages now (or calls /admin/api/schedule/tick) |
+| `seed` | string | `""` | Text mixed into the random prompt times, so a plan can be recomputed |
+| `timezone` | string | `UTC` | IANA time zone used when the participant's browser reports none |
+| `waves` | array |  | Follow-up sessions: name, title, offset (after enrolment), optional at (local clock time), window, questions or questions_file, reminders, completion_code, intro |
 
 ## `search`
 

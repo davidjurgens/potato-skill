@@ -134,7 +134,7 @@ These are the eleven types a config reference lists and nothing routes you to.
 All eleven have a working example under `examples/`, all render cleanly, and
 `search_examples(annotation_type=...)` finds each one.
 
-There are 76 types. `references/annotation-types.md` lists all of them with a
+There are 80 types. `references/annotation-types.md` lists all of them with a
 worked example lifted from a config that really runs. Never invent a type name:
 `sentiment`, `classification` and `qa` are not types.
 

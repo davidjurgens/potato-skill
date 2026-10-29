@@ -146,12 +146,16 @@ edit.
 items file logs one warning, then `Loaded 0 attention check items`, then runs the
 whole study with quality control off. Check the count, not the config.
 
-**`--strict` does not reach everything.** It checks the top level and one level
-into most blocks. It does **not** check inside `phases`, `surveyflow`,
-`quality_control`, `crowdsourcing`, `publish`, `automatic_assignment`, `ui`,
-`ui_config`, or inside any entry of `annotation_schemes` or
-`instance_display.fields`. `key_binding` instead of `key_value` validates clean
-and does nothing. So does a phase `type:` that does not exist.
+**`--strict` does not reach everything.** On 2.13.1 it catches four mistakes
+that 2.12.1 validated clean:
+- `key_binding` instead of `key_value` on a radio label fails, with "Did you
+  mean: 'key_value'?".
+- A phase `type:` that does not exist is an error that lists the real types.
+- An `automatic_assignment` block is reported as not read.
+- So is a `surveyflow` block.
+
+A clean `--strict` still means only that none of its checks fired. Boot the
+task and look at it.
 
 **The screenshot is the viewport, not the page.** `--screenshot` writes
 1280×900. On a task with an instructions banner, that is the banner and half the
@@ -168,8 +172,8 @@ expensive to discover after the config is written:
 | Ask | Because |
 |---|---|
 | What format is the data in, and where is the media? | Transcripts and conversation corpora have their own converters |
-| Do you already have annotations? | `potato import` reads 45 formats and writes a runnable project |
-| What has to come out at the end? | 60 export formats. Check the target one **before** anyone annotates |
+| Do you already have annotations? | `potato import` reads 47 formats and writes a runnable project |
+| What has to come out at the end? | 71 export formats. Check the target one **before** anyone annotates |
 | Who runs it after handover, and for how long? | Decides hosting, logins and the allowlist |
 
 ```bash
@@ -241,7 +245,8 @@ Two that are easy to get wrong and expensive to discover late:
   reaches the cap is shown the ordinary completion page, which tells them they
   finished the task rather than that they hit a quota.
   `automatic_assignment.instance_per_annotator` looks like the key for this and
-  is not read at all; `per_annotator_quota` is real and overrides
+  is not read at all. From 2.13.1 `--strict` says so and names
+  `max_annotations_per_user`. `per_annotator_quota` is real and overrides
   `max_annotations_per_user`.
 
 ## The design record and the cost
@@ -324,7 +329,7 @@ Two things to get right without reading further:
 
 ## Building the interface
 
-`references/building-the-ui.md` covers `instance_display`, the 27 display types,
+`references/building-the-ui.md` covers `instance_display`, the 31 display types,
 `span_target`, keyboard shortcuts, `display_logic`, and the **form layout** —
 `layout.grid` puts short questions side by side, `layout.groups` gives them
 collapsible headings, and a per-scheme `layout` says how many columns each one
@@ -406,7 +411,7 @@ annotation itself and a closing survey — with every side-file format filled in
 It validates under `--strict` and boots clean. Copy it and replace the labels
 and prose.
 
-Potato also ships 249 example projects, all checked in CI:
+Potato also ships 260 example projects, all checked in CI:
 
 ```python
 from potato.server_utils.examples_manifest import search_examples
@@ -420,7 +425,7 @@ are single-purpose demos, so none of them shows a whole workflow.
 
 ## Picking an annotation type
 
-There are 76. `references/annotation-types.md` has all of them with fields and a
+There are 80. `references/annotation-types.md` has all of them with fields and a
 worked example lifted from a config that really runs.
 
 ```python
@@ -432,8 +437,8 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 
 ## Config keys
 
-`references/config-keys.md` lists the 175 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 559 documented **sub-keys** — the
+`references/config-keys.md` lists the 180 documented **top-level** keys.
+`references/config-keys-nested.md` lists the 602 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 24 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -645,7 +650,7 @@ anything an annotator will come back to — it matters most on `render` and
 ## Getting the data out
 
 There is one storage format — `annotation_output/<user>/user_state.json` — and
-60 export formats. `output_annotation_format` is deprecated: the loader
+71 export formats. `output_annotation_format` is deprecated: the loader
 reads it as `export_annotation_format` and warns. Write the live key.
 
 ```yaml
@@ -776,10 +781,10 @@ refuses a body still holding a placeholder.
 | `labeling-engine.md` | Models label, people label a blind sample, contracts decide what is accepted (2.11) |
 | `interrogating-potato.md` | Recovering an undocumented block from the validator and the boot log |
 | `data-and-access.md` | Where items come from, output files, login, serving |
-| `getting-the-data-out.md` | The 60 export formats, what the CSV holds, phase data |
+| `getting-the-data-out.md` | The 71 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
-| `config-keys.md` | 175 top-level keys *(generated)* |
-| `config-keys-nested.md` | 559 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys.md` | 180 top-level keys *(generated)* |
+| `config-keys-nested.md` | 602 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, SAML and Hugging Face sign-in, offline hosts, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |

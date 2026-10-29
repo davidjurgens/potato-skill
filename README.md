@@ -51,7 +51,7 @@ pip install potato-annotation
 | `AGENTS.md` | The same guidance for Codex and Cursor, which read this filename directly |
 
 Three references are generated from Potato's registries by
-`scripts/generate_references.py`: `annotation-types.md` (all 76 types, each with
+`scripts/generate_references.py`: `annotation-types.md` (all 80 types, each with
 a worked example lifted from a real project), `config-keys.md` and
 `config-keys-nested.md`. The rest are hand-written and checked rather than
 generated.

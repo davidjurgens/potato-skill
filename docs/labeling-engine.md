@@ -206,14 +206,21 @@ accuracy from the human labels.
 
 ## Configs with the older keys
 
-`pre_annotation`, `icl_labeling` and `judge_calibration` still work in 2.11,
-and each prints a note pointing at the engine:
+`icl_labeling` and `judge_calibration` still work, and each prints a note
+pointing at the engine. From 2.11 through 2.13.0, `pre_annotation` printed one
+too:
 
 ```
 NOTE: pre_annotation still works, but the labeling engine now does this: use
 labeling_engine (a static source). `potato label migrate-config` writes the
 equivalent block. pre_annotation is planned for removal in 3.0.
 ```
+
+On 2.13.1 it prints nothing, because `pre_annotation` is no longer deprecated.
+It shows a model's or an import's answer as an editable starting point. The
+engine's `static` source does something else: it accepts a label only where a
+contract certifies it. The importers write `pre_annotation` for that reason,
+so keep it when the answers are meant to be corrected by hand.
 
 `potato label migrate-config config.yaml --out new.yaml` writes a copy with a
 `labeling_engine` block. For `pre_annotation` it wrote a `static` source on the

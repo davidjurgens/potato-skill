@@ -32,7 +32,7 @@ potato import --list-formats
 potato import -i instances_val.json -f coco -o ./project --image-url-prefix /media
 ```
 
-45 formats, which `--list-formats` prints in four groups, the last being seven
+47 formats, which `--list-formats` prints in four groups, the last being seven
 survey formats. Image and video: `coco`, `cvat`, `labelme`, `labelbox`,
 `pascal_voc`, `via`, `darwin`, `cityscapes`, `kitti`, `kitti_tracking`, `mot`,
 `davis`, `openimages`, `webdataset`, `yolo` and `huggingface`, which also takes a
