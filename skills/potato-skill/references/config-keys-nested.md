@@ -2,7 +2,7 @@
 
 # Nested config keys
 
-`config-keys.md` lists the top-level keys and stops there. The 602 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
+`config-keys.md` lists the top-level keys and stops there. The 624 keys below are the documented **sub-keys** -- the level where a feature is actually configured.
 
 `get_key_doc("attention_checks.frequency")` returns any of these individually.
 
@@ -296,7 +296,7 @@ Group instances into units of analysis -- a participant, an interview -- so code
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `attributes` | array |  | Item fields lifted onto the case so they can be crosstabbed |
-| `auto_detect` | boolean | `True` | Scan loaded items for cases at startup. Set false to assign cases by hand |
+| `auto_detect` | boolean | `True` | Scan loaded items for cases at startup. Set false to skip detection; no cases are then created, since no page or HTTP endpoint assigns them (only the Python function potato.cases.assign_instance does) |
 | `enabled` | boolean |  | Turn case grouping on or off explicitly. Unset, it follows qda_mode |
 | `key` | string |  | Item field to group on. Unset, detection scans participant_id, respondent_id and case_id |
 
@@ -818,16 +818,32 @@ Train models on the study's annotations from the admin Training page, and option
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `aggregation` | string | `consensus` | How several annotators' labels become one training label |
-| `auto_retrain` | object |  | Retrain as annotations arrive: `enabled`, `trainer`, `schemas`, `min_interval_s` (default 600, seconds since the last run), `update_frequency` (default 25, new annotations since the last run) and `params` (passed to the trainer) |
+| `auto_retrain` | object |  | Retrain as annotations arrive: `enabled`, `trainer`, `schemas`, `min_interval_s` (default 600, seconds since the last run), `update_frequency` (default 25, new annotations since the last run), `params` (passed to the trainer) and `accept_licence` (true to confirm the licence of a trainer that asks, such as `ultralytics-detect`) |
+| `backend` | string | `local` | Backend runs use unless one is chosen on the Training page: `local` or a name under `model_training.backends` |
+| `backends` | object |  | Named places to run training. `type: ssh` (Potato connects, copies its code and starts the agent; keys `host`, `user`, `port`, `identity_file`, `python`, `gpus`, `min_free_gpu_mb`, `remote_dir`, `fetch_artifacts`, `max_artifact_mb`, `keep_remote`, `ssh_options`, `env`, `packages`, `num_threads`, `connect_timeout_s`) or `type: agent` (a `potato training agent` started by hand), or `type: slurm` (the agent runs on a cluster's login node and submits the worker with sbatch; the ssh keys except `gpus` and `packages`, plus `job_python`, `gres`, `time`, `nice`, `partition`, `cpus_per_task`, `mem`, `sbatch_options`, `prelude`, `poll_interval_s`, `exit_grace_s`, `job_name`; `remote_dir` is required and must be shared with the compute nodes). All take `heartbeat_timeout_s` and `queue_timeout_s` |
 | `device` | string | `auto` | auto, cpu, cuda or mps |
 | `enabled` | boolean | `False` | Turn model training on |
 | `grace_seconds` | integer | `20` | Seconds a cancelled run is given to exit before it is killed |
+| `max_predictions_mb` | number | `512` | Largest predictions upload accepted from a remote agent |
 | `max_ram_mb` | number |  | Memory limit for one run |
 | `max_wall_seconds` | number |  | Time limit for one run |
 | `num_threads` | integer |  | CPU threads for one run |
+| `queue_max` | integer | `10` | Runs that may wait behind the one in progress. A start from the Training page or the API while a run is in progress joins the queue; beyond this many it is refused |
 | `retain_runs` | integer | `5` | Finished runs kept in the run ledger. Older runs are dropped from it unless their predictions are still stored; run directories stay on disk |
 | `split_seed` | integer | `0` | Seed for the train/validation/test split |
 | `splits` | object | `{'train': 0.7, 'val': 0.15, 'test': 0.15}` | Split fractions as a mapping of train, val and test. Unset, 0.7 / 0.15 / 0.15. Membership is a seeded hash of the instance id, so it is stable across runs |
+| `tiling` | object |  | Cut whole-slide and other large images into tiles when a detection or segmentation bundle is built, and merge the tile predictions back into one prediction per image |
+| `tiling.auto_min_side` | integer | `4096` | Longer side, in pixels, from which auto tiles an image |
+| `tiling.background` | number | `0.25` | Empty tiles sampled per tile with an object, as negatives. Assumes every object on an annotated image was drawn; set 0 when slides are annotated sparsely |
+| `tiling.downsample` | number | `1.0` | Full-resolution pixels per tile pixel; 4 trains a 40x slide at 10x |
+| `tiling.enabled` | string | `auto` | auto tiles slide formats and images whose longer side is at least auto_min_side; true tiles every image; false never tiles |
+| `tiling.max_predict_tiles` | integer | `2000` | Most tiles predicted on per image; the ones with the most tissue are kept |
+| `tiling.min_visible` | number | `0.4` | Share of an object that must be inside a tile to train on it there |
+| `tiling.mpp` | number |  | Microns per tile pixel, from the slide's own resolution; overrides downsample when the slide records one |
+| `tiling.overlap` | integer | `128` | Pixels shared by neighbouring tiles, at most half of tile_size. An object larger than this can be found in pieces |
+| `tiling.tile_size` | integer | `1024` | Side of a tile in the pixels the trainer sees |
+| `tiling.tissue_threshold` | number | `0.05` | Share of a slide tile that must be tissue to predict on it |
+| `trainer_params` | object |  | Parameter defaults per trainer, such as `hf-text-classification: {model_name: ..., lora: true}`. A run's own parameters override them. Names a trainer does not take are refused |
 | `writeback` | object |  | Publish a run's predictions as prelabels |
 | `writeback.field` | string | `predictions` | Item field the prelabels are written to |
 | `writeback.include_unlabeled` | boolean | `False` | Also predict on, and prelabel, the items nobody has labelled yet (otherwise only the held-out val and test items get predictions) |
@@ -878,9 +894,9 @@ Qualitative data analysis mode. Turning it on moves the defaults for memos, the 
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `codebook` | object |  | QDA codebook defaults: `enabled` (true) and `mode` (open). Sub-keys of qda_mode are not recursed into, so an unrecognized block is carried through for forward compatibility -- and a typo passes silently |
+| `codebook` | object |  | QDA codebook settings. `mode` (default open) sets the codebook mode under QDA mode; codebook_mode and codebook.mode take precedence over it. `enabled` is informational, reported by /qda/status and read by nothing else. Sub-keys of qda_mode are not recursed into, so an unrecognized block is carried through for forward compatibility -- and a typo passes silently |
 | `enabled` | boolean | `False` | Master switch for QDA mode |
-| `memos` | object |  | QDA memo defaults: `enabled` and `show_sidebar_by_default`, both true. Memo storage itself is universal; this block only sets the QDA defaults |
+| `memos` | object |  | Whether the Notes sidebar starts open under QDA mode: it does when `enabled` and `show_sidebar_by_default` (both default true) are both true. It does not switch memos on or off; annotation_ui.memos does |
 
 ## `review_mode`
 
@@ -937,7 +953,7 @@ Full-text search over loaded items, backed by SQLite FTS5. Admin search is read-
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `annotator_claim` | boolean | `False` | Let annotators search the corpus and claim their own next item. Refused at startup when combined with a sampling-dependent assignment strategy or an overlap cap, since self-selection breaks both. Allowed unconditionally under qda_mode/solo_mode |
+| `annotator_claim` | boolean | `False` | Let annotators search the corpus and add matching items to the end of their queue. Claims count toward max_annotations_per_user. Refused at startup when combined with a sampling-dependent assignment strategy, overlap (more than one annotator per item), attention checks or gold standards, ICL labeling, adjudication, or a crowdsourcing backend, since self-selection breaks each of them. Allowed under qda_mode/solo_mode; qda_mode with overlap logs a warning |
 | `backend` | string | `fts5` | Index backend. fts5 is the only one built in; any other name disables search with a warning |
 | `enabled` | boolean | `True` | Build the search index at startup |
 | `max_instances` | integer | `100000` | Ceiling on how many instances are indexed |
@@ -1094,6 +1110,12 @@ Interface language code
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `catalog_builtin` | string | `built-in` | Marker beside a built-in slice, such as model-found-nothing, on the Catalog page |
+| `catalog_status_pinned_mid` | string |  | Catalog status line after pinning, between the count of new items and the total |
+| `catalog_status_pinned_total` | string | `pinned in all` | Catalog status line after pinning, after the total pinned count |
+| `catalog_status_pinning` | string | `Pinning…` | Catalog status line while a slice is being pinned for training |
+| `catalog_to_training_button` | string | `Train on these` | Label of the Catalog button that pins a slice's items to the train split of later training runs |
+| `catalog_to_training_title` | string |  | Tooltip of the Catalog's Train on these button |
 | `dark_mode` | string | `Dark mode` | Label of the light/dark toggle on annotator pages |
 | `iaa_drift_approx` | string |  | Marks a codebook revision whose date was inferred rather than recorded |
 | `iaa_drift_baseline` | string |  | Row label for the whole-project agreement figure |

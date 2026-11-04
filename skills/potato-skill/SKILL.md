@@ -81,7 +81,7 @@ one.
 | `boot_and_check.py config.yaml -p 8000` | Boots, waits for a 200, and names every feature that is configured but loaded nothing |
 | `walk_task.py --url … --config … --task-dir .` | Registers an annotator, walks the whole study, and checks the answers reached `user_state.json` **as the values it submitted**. `--grade` answers the gold and attention items from their own files and reports the verdict Potato recorded; `--answers file.json` annotates with judgements you supply instead of first options |
 | `estimate_effort.py config.yaml --rate 15` | Items, annotators needed, minutes each, total hours and cost |
-| `find_design.py --type span --with-instructions` | Searches 440 published task designs in the Potato Showcase |
+| `find_design.py --type span --with-instructions` | Searches 444 published task designs in the Potato Showcase |
 | `handover.py config.yaml --confirm` | Removes the accounts you made while testing and writes `RUNNING.md` |
 | `check_ui.py --url … --config config.yaml` | Renders every page and reports schemes below the fold, empty media, empty choice tiles, schemes with no control to answer with, answers nothing collects, what the widgets say went wrong, keybinding conflicts and schemes that never appeared. `--phase poststudy` measures a page the walk cannot reach |
 | `study_status.py --url … --task-dir .` | Progress, per-annotator pace, agreement, and what looks wrong on a **running** study |
@@ -172,8 +172,8 @@ expensive to discover after the config is written:
 | Ask | Because |
 |---|---|
 | What format is the data in, and where is the media? | Transcripts and conversation corpora have their own converters |
-| Do you already have annotations? | `potato import` reads 47 formats and writes a runnable project |
-| What has to come out at the end? | 71 export formats. Check the target one **before** anyone annotates |
+| Do you already have annotations? | `potato import` reads 48 formats and writes a runnable project |
+| What has to come out at the end? | 72 export formats. Check the target one **before** anyone annotates |
 | Who runs it after handover, and for how long? | Decides hosting, logins and the allowlist |
 
 ```bash
@@ -297,8 +297,8 @@ python <skill-dir>/scripts/find_design.py --query "stance" --with-instructions
 python <skill-dir>/scripts/find_design.py --show text/argumentation-stance/argument-quality
 ```
 
-The Potato Showcase is 440 annotation task designs, most built from a published
-paper, with real label sets and real question wording — and **281 of them carry
+The Potato Showcase is 444 annotation task designs, most built from a published
+paper, with real label sets and real question wording — and **285 of them carry
 written instructions**. None of them has a `phases` block, a consent page or a
 training round, so take the questions from there and the study around them from
 `worked-example.md`. `references/finding-a-design.md` covers what to change
@@ -411,7 +411,7 @@ annotation itself and a closing survey — with every side-file format filled in
 It validates under `--strict` and boots clean. Copy it and replace the labels
 and prose.
 
-Potato also ships 260 example projects, all checked in CI:
+Potato also ships 261 example projects, all checked in CI:
 
 ```python
 from potato.server_utils.examples_manifest import search_examples
@@ -438,7 +438,7 @@ Never invent a type name. `sentiment`, `classification` and `qa` are not types.
 ## Config keys
 
 `references/config-keys.md` lists the 180 documented **top-level** keys.
-`references/config-keys-nested.md` lists the 602 documented **sub-keys** — the
+`references/config-keys-nested.md` lists the 624 documented **sub-keys** — the
 level where features are actually configured, and the level the generated pack
 drops. It also lists the 24 blocks whose sub-keys `--strict` does not check at
 all, where a typo is silent.
@@ -650,7 +650,7 @@ anything an annotator will come back to — it matters most on `render` and
 ## Getting the data out
 
 There is one storage format — `annotation_output/<user>/user_state.json` — and
-71 export formats. `output_annotation_format` is deprecated: the loader
+72 export formats. `output_annotation_format` is deprecated: the loader
 reads it as `export_annotation_format` and warns. Write the live key.
 
 ```yaml
@@ -777,14 +777,14 @@ refuses a body still holding a placeholder.
 | `quality-control.md` | Training, attention checks, gold standards, adjudication, side-file formats |
 | `assignment-and-agreement.md` | Quotas, ordering, and which metric each schema kind gets |
 | `modes-and-subsystems.md` | The rest of Potato, routed from what the researcher said |
-| `model-assistance.md` | `ai_support` against a self-hosted LLM: where the keys go, which `endpoint_type` works |
+| `model-assistance.md` | `ai_support` against a self-hosted LLM: where the keys go, which `endpoint_type` works; training a model on the annotations |
 | `labeling-engine.md` | Models label, people label a blind sample, contracts decide what is accepted (2.11) |
 | `interrogating-potato.md` | Recovering an undocumented block from the validator and the boot log |
 | `data-and-access.md` | Where items come from, output files, login, serving |
-| `getting-the-data-out.md` | The 71 export formats, what the CSV holds, phase data |
+| `getting-the-data-out.md` | The 72 export formats, what the CSV holds, phase data |
 | `after-annotators-start.md` | Monitoring a live study, what is safe to change, fixing things |
 | `config-keys.md` | 180 top-level keys *(generated)* |
-| `config-keys-nested.md` | 602 sub-keys, plus what is undocumented and what is unvalidated |
+| `config-keys-nested.md` | 624 sub-keys, plus what is undocumented and what is unvalidated |
 | `running-a-task.md` | Backgrounding, logs, browser driving, handover |
 | `deploying.md` | Sharing, choosing a host, credentials, backups, the preflight, bundles, deploy buttons, SAML and Hugging Face sign-in, offline hosts, pulling data back |
 | `troubleshooting.md` | Symptom → cause → fix |

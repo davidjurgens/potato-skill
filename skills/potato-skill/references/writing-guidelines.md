@@ -245,7 +245,7 @@ every definition as a draft, and put the borderline cases you could not settle
 at the top of `QUESTIONS.md`. Say plainly that these are the sentences that
 decide what the dataset means.
 
-`potato-showcase` is the other place to look: 281 of its 440 designs carry
+`potato-showcase` is the other place to look: 285 of its 444 designs carry
 written instructions, most drawn from a published annotation scheme. See
 `finding-a-design.md`.
 

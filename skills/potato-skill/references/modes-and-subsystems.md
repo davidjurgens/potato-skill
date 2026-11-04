@@ -94,6 +94,7 @@ agent traces are their own family, in `agent-traces.md`.
 | "label everything with a model first", "we can only afford to label a sample", "how good are the model's labels" | `labeling_engine` with `assignment_strategy: engine`, which tests the machine labels against a blind human sample — see `labeling-engine.md`. `icl_labeling` still works and prints a note pointing at the engine. `pre_annotation` is not deprecated from 2.13.1: it seeds editable answers, which the engine does not |
 | "use the labels we already have as examples" | `icl_labeling` |
 | "show me where the model is unsure" | `active_learning`, `llm_confidence` assignment |
+| "train a model on what they label", "have the model pre-fill the rest" | `model_training` with `writeback` — see "Training a model on the annotations" in `model-assistance.md` |
 | "does the judge agree with our humans" | `judge_alignment`, `judge_calibration` |
 | "compare two models' answers" | `arena`, or a `pairwise` / `bws` scheme |
 | "let them ask a model while annotating" | `chat_support` — a sidebar, not per-scheme buttons; `model-assistance.md` |

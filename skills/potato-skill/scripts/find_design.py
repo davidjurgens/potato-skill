@@ -6,7 +6,7 @@ Search the Potato Showcase for a design close to the task you are building.
     python find_design.py --query "dialogue safety" --with-instructions
     python find_design.py --show text/argumentation-stance/argument-quality
 
-The showcase is 440 annotation task designs, most built from a published paper
+The showcase is 444 annotation task designs, most built from a published paper
 or dataset, at https://github.com/davidjurgens/potato-showcase. Each one is a
 `config.yaml` with real labels and real question wording, a `metadata.json` with
 the paper it came from, and sample data.
@@ -15,7 +15,7 @@ Two reasons to look there before writing a config from a field list:
 
   * **Question wording and label sets.** A scheme that a published paper used
     and reported agreement on beats one invented in a chat window.
-  * **Written instructions.** 281 of the 440 carry `annotation_instructions`,
+  * **Written instructions.** 285 of the 444 carry `annotation_instructions`,
     which is the part of a study this pack otherwise leaves you to write from
     nothing. See `writing-guidelines.md`.
 

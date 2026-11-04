@@ -22,7 +22,7 @@ wrong one wastes an hour.
 | Source | What it gives | What it does not |
 |---|---|---|
 | `examples/` in Potato, 214 of them | One scheme or display type demonstrated cleanly | Question wording worth copying; a whole study |
-| **potato-showcase**, 440 designs | Real label sets, real question wording, written instructions, the paper each came from | Any workflow at all |
+| **potato-showcase**, 444 designs | Real label sets, real question wording, written instructions, the paper each came from | Any workflow at all |
 | `worked-example.md` | The whole study: consent, instructions, training, checks, survey | Anything about your construct |
 
 The usual route on a new task is showcase for the questions, worked example for
@@ -30,7 +30,7 @@ the workflow, `examples/` when one scheme is behaving oddly.
 
 ## The showcase
 
-<https://github.com/davidjurgens/potato-showcase> — 440 annotation task designs,
+<https://github.com/davidjurgens/potato-showcase> — 444 annotation task designs,
 most built from a published paper or dataset. Each is a folder with
 `config.yaml`, `metadata.json` (title, paper, dataset, tags, complexity) and
 `sample-data.json`.
@@ -39,7 +39,7 @@ Two things make it worth checking before writing a scheme from a field list:
 
 - **The wording is not invented.** A label set a paper used and reported
   agreement on has survived a pilot. Yours has not.
-- **281 of the 440 carry written `annotation_instructions`** — the part of a
+- **285 of the 444 carry written `annotation_instructions`** — the part of a
   study this pack otherwise leaves you to write from nothing. See
   `writing-guidelines.md` for what to do with them.
 

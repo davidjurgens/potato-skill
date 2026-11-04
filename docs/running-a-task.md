@@ -166,7 +166,7 @@ page.on("dialog", lambda d: (print("DIALOG:", d.message), d.dismiss()))
 They are not linked from the annotation page, and the JSON APIs are not open.
 
 ```bash
-cat admin_api_key.txt      # generated into task_dir at first boot; the log says so
+cat admin_api_key.txt      # written into task_dir, mode 0600, on the first admin request; the log names the path
 curl -H "X-API-Key: $(cat admin_api_key.txt)" localhost:8000/admin/iaa
 ```
 

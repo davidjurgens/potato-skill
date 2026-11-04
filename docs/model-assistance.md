@@ -425,6 +425,80 @@ says the tab prints a difference only once each group has 10 answers on items
 with a model answer; that threshold, and the tab itself, I did not look at in a
 browser.
 
+## Training a model on the annotations
+
+From 2.14.0, `model_training` fits a model on what annotators have saved,
+scores it on items it did not train on, and writes its predictions back as
+prelabels. `active_learning` uses its classifier only to reorder the queue;
+here the annotator sees the model's answer on the page.
+
+```yaml
+annotation_schemes:
+  - annotation_type: radio
+    name: sentiment
+    description: Is this review positive or negative?
+    labels: [positive, negative]
+
+model_training:
+  enabled: true
+  writeback:
+    schemas: [sentiment]       # whose predictions become prelabels
+    include_unlabeled: true    # predict on unlabelled items, not only held-out ones
+    min_confidence: 0.6        # leave out predictions below this
+```
+
+A run starts from the admin Training page (`/admin/training`, **Train now**) or
+from the API, with the admin key:
+
+```bash
+curl -X POST http://localhost:8000/admin/training/api/runs \
+  -H 'X-API-Key: <admin_api_key>' -H 'Content-Type: application/json' \
+  -d '{"trainer": "sklearn-text", "schemas": ["sentiment"]}'
+curl -H 'X-API-Key: <admin_api_key>' http://localhost:8000/admin/training/api/status
+```
+
+I ran this on 2.14.0 with the bundled `examples/ai-assisted/model-training`
+example: 160 synthetic reviews, the `sklearn-text` trainer, and three simulated
+annotators who labelled 120 of them. The run trained on 76, scored macro-F1
+0.842 on 19 validation items and 0.799 on 25 test items, and made 84
+predictions. 77 were published as prelabels; the other 7 were below
+`min_confidence`. A new annotator's first page opened with the model's answer
+already selected.
+
+- **Quote the held-out score.** The status response carries it as
+  `metrics.heldout_score`, with the metric's name in `heldout_metric`
+  (`val macro_f1` above). `train_accuracy` sits beside it (0.895 on that run)
+  and says how well the model fits what it was trained on. Potato's notes say
+  the Runs table shows the held-out score from 2.14.0; I read the API, not the
+  table.
+- **Predictions are stored apart from the annotations**, in the
+  `training_predictions` table of `project.sqlite`: one row per item and scheme,
+  with the payload, its confidence and the run. Each run's spec, event log and
+  stdout/stderr are under `annotation_output/training/runs/<run_id>/`.
+- **A prelabel anchors the person who sees it.** If the study needs to know how
+  far the model pulled the answers, set `ai_support.holdout` (above). On 2.12.0
+  it withheld prelabels that came from the data file. I have not run it against
+  prelabels written by a training run.
+- **To serve the doubtful items first**, use `assignment_strategy:
+  llm_confidence` (see `assignment-and-agreement.md`). I ran it on
+  `pre_annotation` prelabels. Potato's notes say a trainer's acquisition score
+  feeds it too; I have not run that.
+- `potato training check local config.yaml` prints where a run would go:
+  `local: this machine, Apple Metal (mps)` here. Runs can also go to a GPU
+  server over ssh, a SLURM cluster, or a machine running `potato training
+  agent`, under `model_training.backends`. During 2.14 development I ran ssh end
+  to end against a GPU server, and SLURM against a fake `squeue` over real NFS,
+  both on pre-release snapshots. Neither was re-run on the tag, and a real SLURM
+  time limit was never run.
+- `sklearn-text` needs nothing past the base install. Potato's notes name the
+  extras the other trainers draw on (`train`, or `train-text`, `train-vision`,
+  `train-audio`, `train-llm`) and say none of them is in `all`. I installed
+  none of them.
+
+Each trainer's parameters are in Potato's
+`docs/ai-intelligence/model_training.md`. It runs to 2,700 lines, so read the
+section for the trainer you pick.
+
 ## Verifying one
 
 `validate --strict` will pass a config whose assistants never appear. Boot it and
@@ -538,6 +612,11 @@ is not waiting on the first token.
 
 ## What I have and have not verified
 
+Run on 2.14.0: the training loop on the bundled example and `potato training
+check local`, with the numbers quoted above. Not run on the tag: any trainer
+but `sklearn-text`, the ssh, slurm and agent backends, and the Training page
+in a browser.
+
 Run on 2.12.0: `ai_support.holdout` on the packaged holdout example, in headless
 Chromium with three annotators, and `/admin/api/ai_influence` read back (numbers
 quoted above). Not run: holdout against a live model endpoint (the example's
@@ -599,7 +678,8 @@ reading the response body and the rendered DOM:
   annotator — and the same log and the same `/admin/active-learning/stats`
   appearing on a `fixed_order` arm where it reaches nobody
 - `llm_confidence` assigning at random, on 24 items, with a fitted classifier
-  available to it
+  available to it. That held up to 2.13.1; 2.14.0 implements it, and
+  `assignment-and-agreement.md` has the order it serves
 - `icl_labeling` collecting examples once a second annotator agreed — 0 across 0
   on one annotator, 6 across 2 schemas on two
 - `arena` running two models against one prompt and recording a preference

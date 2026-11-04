@@ -68,7 +68,7 @@ reading the log. Check the name against the list below.
 
 ## Which format
 
-71 formats are registered. `GET /admin/api/export/formats` lists them with
+72 formats are registered. `GET /admin/api/export/formats` lists them with
 descriptions against the running server; `potato preview` does not.
 
 | They want | Format |
@@ -80,6 +80,7 @@ descriptions against the running server; `potato preview` does not.
 | To go back to the tool they came from | `cvat`, `labelme`, `darwin`, `cityscapes`, `kitti` |
 | Tracking ground truth | `mot`, `davis` |
 | Phonetics or linguistic tiers | `textgrid`, `eaf` |
+| Audio or video segments as rows, or RTTM for a diarization scorer | `segments` (below) |
 | A ConvoKit corpus with the labels attached | `convokit` |
 | Their qualitative codebook and quotes | `codebook`, `quotation_report` |
 | To open it in NVivo, MAXQDA or ATLAS.ti | `qdpx` |
@@ -95,6 +96,26 @@ descriptions against the running server; `potato preview` does not.
 | A deposit with metadata for a repository | `data_package`, `psych_ds` (below) |
 | Annotations that open in a viewer or a field tool | the field sections below |
 | Runtime, jsPsych, listening-test, LexTALE, survey-experiment or incentive-payment tables | see `experiments.md`: `runtime`, `jspsych`, `listening_test`, `lextale`, `survey_experiments`, `incentives` |
+
+**`segments`** (2.14.0) writes the segments of `audio_annotation` and
+`video_annotation` schemes, which every other format leaves as one JSON string
+in a column. On 2.14.0, with two segments saved on one item, it wrote
+`segments.jsonl`, one line per segment:
+
+```
+{"instance_id": "audio_001", "user_id": "ann1", "schema": "audio_segmentation", "start": 1.5, "end": 4.25, "duration": 2.75, "label": "speech", "media": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"}
+```
+
+and `rttm/ann1.rttm`, one file per annotator:
+
+```
+SPEAKER SoundHelix-Song-1 1 1.500 2.750 <NA> <NA> speech <NA> <NA>
+```
+
+One file per annotator because an RTTM file is one reference, and two people's
+segments in one file read as overlapping speech. The recording name is the media
+file's name without its extension. `potato import -f rttm` reads the file back,
+as model suggestions rather than answers (see `importing-existing-work.md`).
 
 **An item nobody annotated is not in the export.** I ran a three-image study,
 annotated two and advanced past the third, and every one of the eleven vision

@@ -322,11 +322,11 @@ are a narrative and order carries meaning; `least_annotated` when you care most
 about finishing every item; `active_learning` when a model is in the loop and
 the point is to spend annotator time where it changes something.
 
-`llm_confidence` is in the list and is not implemented: it assigns at random and
-takes no model into account — I got a shuffled order out of it on a server with
-a fitted classifier sitting unused. It warns at boot now and names the two
-strategies that do the job: `active_learning`, or `model_review` when the model
-has already produced labels for people to check.
+`llm_confidence` serves the items a model is least sure of first, from the
+prelabels in `pre_annotation`: items with an acquisition score (highest first),
+then confidence from lowest to highest, then prelabels with no confidence, then
+items with no prelabel, in file order. Up to 2.13.1 it assigned at random. See
+`assignment-and-agreement.md` for the data shape.
 
 Set `random_seed` if the ordering ever needs to be reproduced.
 

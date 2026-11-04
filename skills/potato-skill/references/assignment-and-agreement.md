@@ -359,8 +359,28 @@ and say what it costs.
   `assignment_strategy: active_learning`. With `active_learning.enabled: true`
   on its own the classifier is still fitted and its ordering serves nobody; the
   reorder log line and `ordering_is_served` in `/admin/active-learning/stats`
-  both name which case you are in. `llm_confidence` sits beside it in the list,
-  is not implemented, and assigns at random
+  both name which case you are in
+- `llm_confidence` when a model's labels are already on the items and people
+  should see the doubtful ones first. It reads them from `pre_annotation`.
+  Before 2.14.0 it assigned at random
+
+On 2.14.0, with `pre_annotation: {enabled: true, field: predictions}` and items
+shaped `"predictions": {"sentiment": {"label": "positive", "confidence": 0.9}}`,
+eight items came out as i7, i6, i2, i4, i1, i5, i3, i8:
+
+| Item | Prelabel | Served |
+|---|---|---|
+| i7 | confidence 0.8, `acquisition` 0.7 | 1st |
+| i6 | confidence 0.1, `acquisition` 0.2 | 2nd |
+| i2 | confidence 0.3 | 3rd |
+| i4 | confidence 0.6 | 4th |
+| i1 | confidence 0.9 | 5th |
+| i5 | a label and no confidence | 6th |
+| i3, i8 | none | 7th and 8th, in file order |
+
+An acquisition score outranks every confidence, so i7 at 0.8 comes before i2 at
+0.3. The confidence can also be spelt `score`, `probability` or `prob`, and a
+number in a string counts. Nothing is logged at boot either way.
 
 ## The response format decides the metric
 

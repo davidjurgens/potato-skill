@@ -32,7 +32,7 @@ potato import --list-formats
 potato import -i instances_val.json -f coco -o ./project --image-url-prefix /media
 ```
 
-47 formats, which `--list-formats` prints in four groups, the last being seven
+48 formats, which `--list-formats` prints in four groups, the last being seven
 survey formats. Image and video: `coco`, `cvat`, `labelme`, `labelbox`,
 `pascal_voc`, `via`, `darwin`, `cityscapes`, `kitti`, `kitti_tracking`, `mot`,
 `davis`, `openimages`, `webdataset`, `yolo` and `huggingface`, which also takes a
@@ -40,10 +40,11 @@ HuggingFace Hub id through `--hf-dataset`. Text: `brat`, `conll`, `doccano`,
 `prodigy`, `qdpx` and `tei`. Whole projects, which bring questions, annotators
 and suggestions along with the items: `label_studio`, `argilla`, `zooniverse`,
 `ibex`, `textgrid`, `eaf`, `flextext`, `toolbox`, `megadetector`,
-`coco_camera_traps`, `birdnet`, `raven`, `audacity_labels`, `iiif`,
-`web_annotation` and `page_xml`. The seven survey formats have their own
-section below. What comes out is a runnable project: `config.yaml`, a data file
-and the annotations, rather than a converted file you still have to wrap.
+`coco_camera_traps`, `birdnet`, `raven`, `audacity_labels`, `rttm`, `iiif`,
+`web_annotation`, `page_xml`, `qupath_geojson` and `asap_xml`. The seven survey
+formats have their own section below. What comes out is a runnable project:
+`config.yaml`, a data file and the annotations, rather than a converted file you
+still have to wrap.
 
 The decision that matters is what the imported annotations *are*:
 
@@ -208,6 +209,14 @@ potato import -i selections.txt -o ./calls
   `spectrogram_annotation` boxes. `--min-confidence` cuts Raven and BirdNET
   rows (BirdNET defaults to 0.1) and `--label-column` chooses the column that
   names the box. Potato reads BirdNET's output and runs no model.
+- `rttm` (2.14.0): NIST RTTM speaker turns, as written by diarization tools and
+  by Potato's own `segments` export. They become `audio_annotation` segments
+  in a scheme named `speakers`, one label per speaker. On 2.14.0 a two-turn
+  file gave one item, its turns under `predictions.speakers.segments`, and
+  `pre_annotation` with `allow_modification: true`. The import warned "no audio
+  file named SoundHelix-Song-1.* beside x.rttm" and left `audio_url` empty: put
+  the recording beside the `.rttm` file, named as the RTTM names it, before
+  importing.
 
 Detections arrive as pre-annotations. The images and recordings are not copied
 for you: put them in `media/` and pass `--image-url-prefix /media`, or
@@ -299,6 +308,10 @@ file and a URL served from localhost), `web_annotation`, `page_xml`, `tei`,
 `kitti_tracking`, `label_studio` and `argilla` (a `to_disk` folder). The
 `--into`, `--prefix`, `--survey-slot` and containment behaviour were run with
 the files named above.
+
+Checked against 2.14.0 the same way: `rttm`, on a file from the `segments`
+export. `validate` passed, and the project answered HTTP 200 on its login and
+annotation pages. The audio widget with an empty `audio_url` was not opened.
 
 Not checked, or checked only on a fixture that ships with Potato's tests
 rather than one built here:
