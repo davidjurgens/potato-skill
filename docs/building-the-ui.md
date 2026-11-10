@@ -531,16 +531,30 @@ untouched. The second scheme's shortcut is silently dead. Nothing warns at
 startup — a claim to the contrary was in an earlier version of this file and is
 wrong.
 
-Two behaviours to keep apart:
+Three behaviours to keep apart:
 
-- **`sequential_key_binding` schemes are allocated distinct keys.** Three schemes
-  all using it come out as `Q W E R T`, then `A S D F G H J`, then `N Y`. Preview
-  lists these as conflicts on `1`, `2`, `3` because it reports the raw claim
-  rather than the allocation. Those are not real.
+- **`sequential_key_binding` schemes are allocated distinct keys,** unless one
+  of the three types in the last item is on the page. Three schemes all using
+  it come out as `Q W E R T`, then `A S D F G H J`, then `N Y`. Preview lists
+  these as conflicts on `1`, `2`, `3` because it reports the raw claim rather
+  than the allocation. Those are not real.
 - **Explicit `key_value` is honoured as written and never reallocated.** Two
   schemes claiming the same character collide for real, and the loser is silent.
   Mixing explicit `key_value` with `sequential_key_binding` elsewhere is the
   usual way to get one.
+- **Three types use keys the allocator does not account for.**
+  - `triage` uses `1`, `2`, `3` and reserves none of them, so a sequential
+    scheme on the same page is given `1`, `2`, `3` as well.
+  - `likert` ignores its allocation and always numbers its points from `1`. A
+    sequential scheme listed before it gets the same digits. One listed after
+    it is moved to the letter row, starting at `Q`.
+  - `bws` takes `Q W E R` for the worst column, but the allocator reserves
+    `A`–`D` for it. Next to a `tuple_size: 4` bws, a sequential scheme of seven
+    labels runs out of digits and is given `Q W E R T Y U`. With `tuple_size: 5`,
+    worst positions 3 and 5 are both `E`.
+
+  These come from running Potato 2.14.0's allocator and generators. Which
+  scheme answers the key press on a live page has not been checked.
 
 A scheme with its own tool keys — `image_annotation` reserves keys for the bbox
 and polygon tools — can have a label key and a tool key fire together on the same
