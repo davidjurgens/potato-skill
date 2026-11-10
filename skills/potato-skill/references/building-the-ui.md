@@ -518,7 +518,7 @@ wrong.
 Three behaviours to keep apart:
 
 - **`sequential_key_binding` schemes are allocated distinct keys,** unless one
-  of the three types in the last item is on the page. Three schemes all using
+  of the types in the last item is on the page. Three schemes all using
   it come out as `Q W E R T`, then `A S D F G H J`, then `N Y`. Preview lists
   these as conflicts on `1`, `2`, `3` because it reports the raw claim rather
   than the allocation. Those are not real.
@@ -526,7 +526,7 @@ Three behaviours to keep apart:
   schemes claiming the same character collide for real, and the loser is silent.
   Mixing explicit `key_value` with `sequential_key_binding` elsewhere is the
   usual way to get one.
-- **Three types use keys the allocator does not account for.**
+- **Some types use keys the allocator does not account for.**
   - `triage` uses `1`, `2`, `3` and reserves none of them, so a sequential
     scheme on the same page is given `1`, `2`, `3` as well.
   - `likert` ignores its allocation and always numbers its points from `1`. A
@@ -536,6 +536,13 @@ Three behaviours to keep apart:
     `A`–`D` for it. Next to a `tuple_size: 4` bws, a sequential scheme of seven
     labels runs out of digits and is given `Q W E R T Y U`. With `tuple_size: 5`,
     worst positions 3 and 5 are both `E`.
+  - `image_annotation` picks its tools by key, and the allocator does not
+    reserve those keys either. The `bbox` tool is `R`, and the image viewer
+    listens for it on the whole page while the image is visible. Next to an
+    image scheme with `bbox`, a radio of ten labels takes the ten digits, and a
+    radio of five listed after it is given `Q W E R T`, so its fourth label
+    shares `R` with the tool. Video, audio and point-cloud annotation bind keys
+    of their own; they were not run against the allocator.
 
   These come from running Potato 2.14.0's allocator and generators. Which
   scheme answers the key press on a live page has not been checked.

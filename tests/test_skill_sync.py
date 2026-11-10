@@ -88,6 +88,11 @@ PROSE_IDENTIFIERS = {
     # below it lives in no registry -- the display types' data contracts are
     # documented only in their own module docstrings
     "headers",
+    # a value of an `image_annotation` scheme's `tools` list, named in the
+    # building-the-ui item on keys the allocator does not reserve. The tool
+    # names live in image_annotation.py:174 as the keys of its tool-key map,
+    # which no registry reads
+    "bbox",
 
     # the id `bws_config` gives a generated tuple, measured off a running
     # server. bws_tuple_generator.py's own docstring says `bws_tuple_001`, one
